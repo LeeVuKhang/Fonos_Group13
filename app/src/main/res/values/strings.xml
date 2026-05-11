@@ -1,3 +1,18 @@
 <resources>
-    <string name="app_name">Fonos_Group13</string>
+    <string name="app_name">Book Reader</string>
+    <string name="welcome_back">Welcome Back</string>
+    <string name="sign_in_continue">Sign in to continue reading.</string>
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="sign_in">Sign In</string>
+    <string name="dont_have_account">Don\'t have an account? </string>
+    <string name="register">Register</string>
+    <string name="create_account">Create Account</string>
+    <string name="join_reading_journey">Join to start your reading journey.</string>
+    <string name="already_have_account">Already have an account? </string>
+    <string name="sign_in_link">Sign In</string>
+    <string name="hint_username">Enter your username</string>
+    <string name="hint_choose_username">Choose a username</string>
+    <string name="hint_create_password">Create a password</string>
 </resources>
