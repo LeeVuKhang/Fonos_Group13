@@ -4,4 +4,13 @@
     <color name="white">#FFFFFFFF</color>
     <color name="background">#F4ECD8</color>
     <color name="accent">#8BA888</color>
+
+    <!-- Reader Colors -->
+    <color name="reader_bg">#F4ECD8</color>
+    <color name="player_bg">#EFE6CF</color>
+    <color name="accent_green">#8BA888</color>
+    <color name="text_main">#2D2D2D</color>
+    <color name="text_secondary">#7A7A7A</color>
+    <color name="text_muted">#7A7A7A</color>
+    <color name="text_dark">#2D2D2D</color>
 </resources>

@@ -15,4 +15,13 @@
     <string name="hint_username">Enter your username</string>
     <string name="hint_choose_username">Choose a username</string>
     <string name="hint_create_password">Create a password</string>
+    <string name="app_lumina">Lumina</string>
+    <string name="best_seller">BEST SELLER</string>
+    <string name="audiobooks_for_you">Audiobooks for You</string>
+    <string name="discover">Discover</string>
+    <string name="search">Search</string>
+    <string name="library">Library</string>
+    <string name="profile">Profile</string>
+    <string name="subtitle_handpicked">Handpicked selections based on your taste</string>
+    <string name="book_content_sample">Sample content</string>
 </resources>
