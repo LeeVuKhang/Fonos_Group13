@@ -15,4 +15,5 @@
     <string name="hint_username">Nhập tên người dùng</string>
     <string name="hint_choose_username">Chọn tên người dùng</string>
     <string name="hint_create_password">Tạo mật khẩu</string>
+    <string name="book_content_sample">Nội dung mẫu</string>
 </resources>
