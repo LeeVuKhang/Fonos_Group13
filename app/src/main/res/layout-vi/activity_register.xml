@@ -66,6 +66,7 @@
                 <EditText
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
+                    android:id="@+id/inputUsername"
                     android:background="@drawable/edittext_bg_new"
                     android:hint="@string/hint_choose_username"
                     android:paddingHorizontal="16dp"
@@ -84,6 +85,7 @@
                 <EditText
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
+                    android:id="@+id/inputPassword"
                     android:background="@drawable/edittext_bg_new"
                     android:hint="@string/hint_create_password"
                     android:paddingHorizontal="16dp"
@@ -102,6 +104,7 @@
                 <EditText
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
+                    android:id="@+id/inputConfirmPassword"
                     android:background="@drawable/edittext_bg_new"
                     android:hint="@string/confirm_password"
                     android:paddingHorizontal="16dp"
@@ -114,6 +117,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="64dp"
                 android:layout_marginTop="32dp"
+                android:id="@+id/btnRegister"
                 android:text="@string/create_account"
                 android:textAllCaps="false"
                 android:textSize="18sp"
@@ -136,6 +140,7 @@
                     android:textColor="#7A7A7A" />
 
                 <TextView
+                    android:id="@+id/tv_sign_in"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/sign_in_link"

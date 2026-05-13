@@ -66,6 +66,7 @@
                 <EditText
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
+                    android:id="@+id/inputUsername"
                     android:background="@drawable/edittext_bg_new"
                     android:hint="@string/hint_username"
                     android:paddingHorizontal="16dp"
@@ -84,6 +85,7 @@
                 <EditText
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
+                    android:id="@+id/inputPassword"
                     android:background="@drawable/edittext_bg_new"
                     android:hint="••••••••"
                     android:paddingHorizontal="16dp"
@@ -96,6 +98,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="64dp"
                 android:layout_marginTop="48dp"
+                android:id="@+id/btnLogin"
                 android:text="@string/sign_in"
                 android:textAllCaps="false"
                 android:textSize="18sp"
@@ -117,6 +120,7 @@
                     android:textColor="#7A7A7A" />
 
                 <TextView
+                    android:id="@+id/tv_register"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/register"

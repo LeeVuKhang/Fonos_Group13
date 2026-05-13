@@ -3,12 +3,15 @@ package com.example.fonos_group13;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import com.google.android.material.button.MaterialButton;
 
 public class RegisterActivity extends AppCompatActivity {
 
@@ -17,6 +20,7 @@ public class RegisterActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
+        // 1. Edge-to-Edge System Bar Padding
         View mainView = findViewById(R.id.main);
         if (mainView != null) {
             ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, insets) -> {
@@ -26,13 +30,52 @@ public class RegisterActivity extends AppCompatActivity {
             });
         }
 
-        TextView tvSignIn = findViewById(R.id.tv_sign_in);
+        TextView tvSignIn = findViewById(R.id.tv_sign_in); // Make sure this ID matches your XML!
         tvSignIn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(RegisterActivity.this, LoginActivity.class);
                 startActivity(intent);
-                finish(); // Optional: finish register activity when going back to login
+                finish();
+            }
+        });
+
+        // 3. Hardware Hooks
+        EditText inputUsername = findViewById(R.id.inputUsername);
+        EditText inputPassword = findViewById(R.id.inputPassword);
+        EditText inputConfirmPassword = findViewById(R.id.inputConfirmPassword);
+        MaterialButton btnRegister = findViewById(R.id.btnRegister);
+
+        // 4. Validation Engine
+        btnRegister.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Extract text and remove accidental spaces using .trim()
+                String username = inputUsername.getText().toString().trim();
+                String password = inputPassword.getText().toString().trim();
+                String confirmPassword = inputConfirmPassword.getText().toString().trim();
+
+                // Rule 1: No empty fields allowed
+                if (username.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
+                    Toast.makeText(RegisterActivity.this, "Please fill in all fields", Toast.LENGTH_SHORT).show();
+                    return; // Stop execution here
+                }
+
+                // Rule 2: Passwords must match
+                if (!password.equals(confirmPassword)) {
+                    // This creates a cool red error tooltip directly on the input field!
+                    inputConfirmPassword.setError("Passwords do not match");
+                    inputConfirmPassword.requestFocus();
+                    return; // Stop execution here
+                }
+
+                // If it passes all rules: Success!
+                Toast.makeText(RegisterActivity.this, "Account Created Successfully!", Toast.LENGTH_SHORT).show();
+
+                // Usually, you would send data to a database here, then send them to the Login screen
+                Intent intent = new Intent(RegisterActivity.this, LoginActivity.class);
+                startActivity(intent);
+                finish();
             }
         });
     }
