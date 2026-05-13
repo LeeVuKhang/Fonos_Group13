@@ -15,5 +15,14 @@
     <string name="hint_username">Nhập tên người dùng</string>
     <string name="hint_choose_username">Chọn tên người dùng</string>
     <string name="hint_create_password">Tạo mật khẩu</string>
+
+    <string name="app_lumina">Lumina</string>
+    <string name="best_seller">BÁN CHẠY</string>
+    <string name="audiobooks_for_you">Sách nói cho bạn</string>
+    <string name="discover">Khám phá</string>
+    <string name="search">Tìm kiếm</string>
+    <string name="library">Thư viện</string>
+    <string name="profile">Cá nhân</string>
+    <string name="subtitle_handpicked">Lựa chọn riêng dựa trên sở thích của bạn</string>
     <string name="book_content_sample">Nội dung mẫu</string>
 </resources>
