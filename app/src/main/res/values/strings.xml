@@ -23,4 +23,5 @@
     <string name="library">Library</string>
     <string name="profile">Profile</string>
     <string name="subtitle_handpicked">Handpicked selections based on your taste</string>
+    <string name="book_content_sample">Sample content</string>
 </resources>
