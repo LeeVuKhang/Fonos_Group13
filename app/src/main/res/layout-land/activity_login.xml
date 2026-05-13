@@ -60,6 +60,7 @@
                 <EditText
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
+                    android:id="@+id/inputUsername"
                     android:background="@drawable/edittext_bg_new"
                     android:hint="@string/hint_username"
                     android:paddingHorizontal="16dp"
@@ -78,6 +79,7 @@
                 <EditText
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
+                    android:id="@+id/inputPassword"
                     android:background="@drawable/edittext_bg_new"
                     android:hint="••••••••"
                     android:paddingHorizontal="16dp"
@@ -91,6 +93,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:layout_marginTop="24dp"
+                android:id="@+id/btnLogin"
                 android:text="@string/sign_in"
                 android:textAllCaps="false"
                 android:textSize="16sp"

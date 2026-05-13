@@ -22,21 +22,21 @@
             <FrameLayout
                 android:layout_width="80dp"
                 android:layout_height="80dp"
-                android:layout_marginTop="48dp"
+                android:layout_marginTop="32dp"
                 android:background="@drawable/circle_bg">
 
                 <ImageView
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:layout_gravity="center"
-                    android:src="@drawable/ic_book_open"
+                    android:src="@drawable/ic_book_add"
                     app:tint="@color/accent" />
             </FrameLayout>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/welcome_back"
+                android:text="@string/create_account"
                 android:textSize="32sp"
                 android:textColor="#2D2D2D"
                 android:fontFamily="serif"
@@ -45,7 +45,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/sign_in_continue"
+                android:text="@string/join_reading_journey"
                 android:textColor="#7A7A7A"
                 android:layout_marginTop="8dp" />
 
@@ -53,7 +53,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginTop="48dp">
+                android:layout_marginTop="32dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -68,7 +68,7 @@
                     android:layout_height="56dp"
                     android:id="@+id/inputUsername"
                     android:background="@drawable/edittext_bg_new"
-                    android:hint="@string/hint_username"
+                    android:hint="@string/hint_choose_username"
                     android:paddingHorizontal="16dp"
                     android:inputType="text"
                     android:textSize="16sp" />
@@ -87,7 +87,26 @@
                     android:layout_height="56dp"
                     android:id="@+id/inputPassword"
                     android:background="@drawable/edittext_bg_new"
-                    android:hint="••••••••"
+                    android:hint="@string/hint_create_password"
+                    android:paddingHorizontal="16dp"
+                    android:inputType="textPassword"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/confirm_password"
+                    android:textColor="#2D2D2D"
+                    android:textStyle="bold"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp" />
+
+                <EditText
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:id="@+id/inputConfirmPassword"
+                    android:background="@drawable/edittext_bg_new"
+                    android:hint="@string/confirm_password"
                     android:paddingHorizontal="16dp"
                     android:inputType="textPassword"
                     android:textSize="16sp" />
@@ -95,12 +114,11 @@
             </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_login"
                 android:layout_width="match_parent"
                 android:layout_height="64dp"
-                android:layout_marginTop="48dp"
-                android:id="@+id/btnLogin"
-                android:text="@string/sign_in"
+                android:layout_marginTop="32dp"
+                android:id="@+id/btnRegister"
+                android:text="@string/create_account"
                 android:textAllCaps="false"
                 android:textSize="18sp"
                 android:textColor="@android:color/white"
@@ -112,22 +130,24 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="32dp">
+                android:layout_marginTop="32dp"
+                android:layout_marginBottom="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/dont_have_account"
+                    android:text="@string/already_have_account"
                     android:textColor="#7A7A7A" />
 
                 <TextView
-                    android:id="@+id/tv_register"
+                    android:id="@+id/tv_sign_in"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/register"
+                    android:text="@string/sign_in_link"
                     android:textColor="@color/accent"
                     android:textStyle="bold"
-                    android:paddingStart="4dp" />
+                    android:paddingStart="4dp"
+                    android:paddingEnd="0dp" />
             </LinearLayout>
 
         </LinearLayout>
