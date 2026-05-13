@@ -117,7 +117,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="64dp"
                 android:layout_marginTop="32dp"
-                android:id="@+id/btnRegister"
+                android:id="@+id/btn_register"
                 android:text="@string/create_account"
                 android:textAllCaps="false"
                 android:textSize="18sp"

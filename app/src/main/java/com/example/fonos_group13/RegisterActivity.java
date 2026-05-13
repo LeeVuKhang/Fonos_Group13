@@ -4,7 +4,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -44,10 +43,10 @@ public class RegisterActivity extends AppCompatActivity {
         });
 
         // 3. Hardware Hooks
-        EditText inputUsername = findViewById(R.id.inputUsername);
-        EditText inputPassword = findViewById(R.id.inputPassword);
-        EditText inputConfirmPassword = findViewById(R.id.inputConfirmPassword);
-        MaterialButton btnRegister = findViewById(R.id.btnRegister);
+        EditText inputUsername = findViewById(R.id.et_username);
+        EditText inputPassword = findViewById(R.id.et_password);
+        EditText inputConfirmPassword = findViewById(R.id.et_confirm_password);
+        MaterialButton btnRegister = findViewById(R.id.btn_register);
 
         // 4. Validation Engine
         btnRegister.setOnClickListener(new View.OnClickListener() {
@@ -75,17 +74,7 @@ public class RegisterActivity extends AppCompatActivity {
                 // If it passes all rules: Success!
                 Toast.makeText(RegisterActivity.this, "Account Created Successfully!", Toast.LENGTH_SHORT).show();
 
-                // Usually, you would send data to a database here, then send them to the Login screen
-                Intent intent = new Intent(RegisterActivity.this, LoginActivity.class);
-                startActivity(intent);
-                finish();
-            }
-        });
-
-        Button btnRegister = findViewById(R.id.btn_register);
-        btnRegister.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+                // Usually, you would send data to a database here, then send them to the Discover screen
                 Intent intent = new Intent(RegisterActivity.this, DiscoverActivity.class);
                 startActivity(intent);
                 finish();

@@ -99,7 +99,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="64dp"
                 android:layout_marginTop="48dp"
-                android:id="@+id/btnLogin"
                 android:text="@string/sign_in"
                 android:textAllCaps="false"
                 android:textSize="18sp"
