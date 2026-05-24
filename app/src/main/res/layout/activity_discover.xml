@@ -354,7 +354,7 @@
         app:layout_constraintBottom_toBottomOf="parent">
 
         <!-- Discover -->
-        <LinearLayout
+        <LinearLayout android:id="@+id/nav_discover"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -375,7 +375,7 @@
         </LinearLayout>
 
         <!-- Search -->
-        <LinearLayout
+        <LinearLayout android:id="@+id/nav_search"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -396,7 +396,7 @@
         </LinearLayout>
 
         <!-- Library -->
-        <LinearLayout
+        <LinearLayout android:id="@+id/nav_library"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -417,7 +417,7 @@
         </LinearLayout>
 
         <!-- Profile -->
-        <LinearLayout
+        <LinearLayout android:id="@+id/nav_profile"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"

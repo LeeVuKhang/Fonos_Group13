@@ -10,13 +10,13 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-public class DiscoverActivity extends AppCompatActivity {
+public class ProfileActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-        setContentView(R.layout.activity_discover);
+        setContentView(R.layout.activity_profile);
 
         View mainView = findViewById(R.id.main);
         if (mainView != null) {
@@ -31,10 +31,17 @@ public class DiscoverActivity extends AppCompatActivity {
     }
 
     private void setupBottomNavigation() {
+        View navDiscover = findViewById(R.id.nav_discover);
         View navSearch = findViewById(R.id.nav_search);
         View navLibrary = findViewById(R.id.nav_library);
-        View navProfile = findViewById(R.id.nav_profile);
 
+        if (navDiscover != null) {
+            navDiscover.setOnClickListener(v -> {
+                startActivity(new Intent(this, DiscoverActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
+                overridePendingTransition(0, 0);
+                finish();
+            });
+        }
         if (navSearch != null) {
             navSearch.setOnClickListener(v -> {
                 startActivity(new Intent(this, SearchActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
@@ -45,13 +52,6 @@ public class DiscoverActivity extends AppCompatActivity {
         if (navLibrary != null) {
             navLibrary.setOnClickListener(v -> {
                 startActivity(new Intent(this, LibraryActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
-                overridePendingTransition(0, 0);
-                finish();
-            });
-        }
-        if (navProfile != null) {
-            navProfile.setOnClickListener(v -> {
-                startActivity(new Intent(this, ProfileActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
                 overridePendingTransition(0, 0);
                 finish();
             });
