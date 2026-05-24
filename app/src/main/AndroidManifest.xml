@@ -24,6 +24,9 @@
         <activity android:name=".LoginActivity" />
         <activity android:name=".RegisterActivity" />
         <activity android:name=".DiscoverActivity" />
+        <activity android:name=".SearchActivity" />
+        <activity android:name=".LibraryActivity" />
+        <activity android:name=".ProfileActivity" />
         <activity
             android:name=".ActivityReader"
             android:exported="false" />
