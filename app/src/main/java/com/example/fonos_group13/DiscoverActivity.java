@@ -28,6 +28,26 @@ public class DiscoverActivity extends AppCompatActivity {
         }
         
         setupBottomNavigation();
+        setupBookClicks();
+    }
+
+    private void setupBookClicks() {
+        int[] bookIds = {
+            R.id.book_pride_prejudice,
+            R.id.book_dragon_keep,
+            R.id.book_design_system,
+            R.id.featured_silent_echo,
+            R.id.featured_midnight_garden
+        };
+
+        for (int id : bookIds) {
+            View book = findViewById(id);
+            if (book != null) {
+                book.setOnClickListener(v -> {
+                    startActivity(new Intent(this, ActivityReader.class));
+                });
+            }
+        }
     }
 
     private void setupBottomNavigation() {
