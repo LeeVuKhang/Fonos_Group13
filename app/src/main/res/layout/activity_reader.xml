@@ -44,6 +44,7 @@
                 app:tint="@color/text_main" />
 
             <ImageView
+                android:id="@+id/ivExit"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_logout"
@@ -103,11 +104,10 @@
         app:cardBackgroundColor="@color/player_bg"
         app:cardCornerRadius="32dp"
         app:cardElevation="12dp"
-        android:layout_marginBottom="-20dp"
         app:layout_constraintBottom_toBottomOf="parent">
-        <!-- Đặt marginBottom âm để giấu phần bo góc dưới nếu muốn giống ảnh -->
 
         <LinearLayout
+            android:id="@+id/playerControlsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"

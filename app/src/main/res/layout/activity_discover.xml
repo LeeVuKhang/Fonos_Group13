@@ -72,11 +72,15 @@
 
                     <!-- Featured Card 1 -->
                     <androidx.cardview.widget.CardView
+                        android:id="@+id/featured_silent_echo"
                         android:layout_width="240dp"
                         android:layout_height="320dp"
                         android:layout_marginEnd="16dp"
                         app:cardCornerRadius="12dp"
-                        app:cardElevation="8dp">
+                        app:cardElevation="8dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
 
                         <ImageView
                             android:layout_width="match_parent"
@@ -134,12 +138,16 @@
 
                     <!-- Featured Card 2 (Slightly smaller to mimic scaling) -->
                     <androidx.cardview.widget.CardView
+                        android:id="@+id/featured_midnight_garden"
                         android:layout_width="220dp"
                         android:layout_height="300dp"
                         android:layout_gravity="center_vertical"
                         android:layout_marginEnd="16dp"
                         app:cardCornerRadius="12dp"
-                        app:cardElevation="4dp">
+                        app:cardElevation="4dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
 
                         <ImageView
                             android:layout_width="match_parent"
@@ -226,10 +234,14 @@
 
                     <!-- Book Card 1 -->
                     <LinearLayout
+                        android:id="@+id/book_pride_prejudice"
                         android:layout_width="140dp"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:layout_marginEnd="16dp">
+                        android:layout_marginEnd="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground">
 
                         <androidx.cardview.widget.CardView
                             android:layout_width="140dp"
@@ -264,10 +276,14 @@
 
                     <!-- Book Card 2 -->
                     <LinearLayout
+                        android:id="@+id/book_dragon_keep"
                         android:layout_width="140dp"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:layout_marginEnd="16dp">
+                        android:layout_marginEnd="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground">
 
                         <androidx.cardview.widget.CardView
                             android:layout_width="140dp"
@@ -302,10 +318,14 @@
 
                     <!-- Book Card 3 -->
                     <LinearLayout
+                        android:id="@+id/book_design_system"
                         android:layout_width="140dp"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:layout_marginEnd="16dp">
+                        android:layout_marginEnd="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground">
 
                         <androidx.cardview.widget.CardView
                             android:layout_width="140dp"
