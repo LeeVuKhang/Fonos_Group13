@@ -73,6 +73,7 @@
                     android:layout_marginStart="20dp">
                     
                     <TextView
+                        android:id="@+id/tv_profile_name"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Sarah Walker"
@@ -81,6 +82,7 @@
                         android:fontFamily="serif" />
                         
                     <TextView
+                        android:id="@+id/tv_profile_email"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Member since Oct 2023"
@@ -263,6 +265,7 @@
 
             <!-- Logout -->
             <LinearLayout
+                android:id="@+id/btn_logout"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
