@@ -5,13 +5,18 @@ import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.fonos_group13.data.AuthRepository;
+
 public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Start LoginActivity and finish this one
-        Intent intent = new Intent(this, LoginActivity.class);
+        AuthRepository authRepository = new AuthRepository(this);
+        Intent intent = new Intent(
+                this,
+                authRepository.getCurrentUser() == null ? LoginActivity.class : DiscoverActivity.class
+        );
         startActivity(intent);
         finish();
     }
