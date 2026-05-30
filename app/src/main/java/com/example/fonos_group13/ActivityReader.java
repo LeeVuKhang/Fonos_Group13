@@ -5,13 +5,13 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
-import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
@@ -105,9 +105,16 @@ public class ActivityReader extends AppCompatActivity {
         View topBar = findViewById(R.id.topBar);
         if (topBar != null) {
             int initialPaddingTop = topBar.getPaddingTop();
+            int initialMinHeight = topBar.getMinimumHeight();
             ViewCompat.setOnApplyWindowInsetsListener(topBar, (v, insets) -> {
                 Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
                 v.setPadding(v.getPaddingLeft(), initialPaddingTop + systemBars.top, v.getPaddingRight(), v.getPaddingBottom());
+                v.setMinimumHeight(initialMinHeight + systemBars.top);
+                ViewGroup.LayoutParams layoutParams = v.getLayoutParams();
+                if (layoutParams != null && layoutParams.height > 0) {
+                    layoutParams.height += systemBars.top;
+                    v.setLayoutParams(layoutParams);
+                }
                 return insets;
             });
         }
@@ -390,7 +397,6 @@ public class ActivityReader extends AppCompatActivity {
         super.onStop();
         if (player != null) {
             saveProgress();
-            player.pause();
         }
     }
 
