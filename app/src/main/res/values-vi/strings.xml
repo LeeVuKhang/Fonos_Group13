@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">Trình đọc sách</string>
     <string name="welcome_back">Chào mừng trở lại</string>
-    <string name="sign_in_continue">Đăng nhập để tiếp tục đọc.</string>
-    <string name="username">Tên người dùng</string>
+    <string name="sign_in_continue">Đăng nhập bằng email để tiếp tục nghe.</string>
+    <string name="username">Email</string>
     <string name="password">Mật khẩu</string>
     <string name="confirm_password">Xác nhận mật khẩu</string>
     <string name="sign_in">Đăng nhập</string>
@@ -12,8 +12,8 @@
     <string name="join_reading_journey">Tham gia để bắt đầu hành trình đọc sách của bạn.</string>
     <string name="already_have_account">Đã có tài khoản? </string>
     <string name="sign_in_link">Đăng nhập</string>
-    <string name="hint_username">Nhập tên người dùng</string>
-    <string name="hint_choose_username">Chọn tên người dùng</string>
+    <string name="hint_username">Nhập email của bạn</string>
+    <string name="hint_choose_username">Nhập email của bạn</string>
     <string name="hint_create_password">Tạo mật khẩu</string>
 
     <string name="app_lumina">Lumina</string>

@@ -64,7 +64,7 @@
                     android:background="@drawable/edittext_bg_new"
                     android:hint="@string/hint_username"
                     android:paddingHorizontal="16dp"
-                    android:inputType="text"
+                    android:inputType="textEmailAddress"
                     android:textSize="14sp" />
 
                 <TextView
