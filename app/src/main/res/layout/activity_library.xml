@@ -89,6 +89,7 @@
 
             <!-- Book Item 1 -->
             <LinearLayout
+                android:id="@+id/library_book_1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_card_white"
@@ -188,6 +189,7 @@
 
             <!-- Book Item 2 -->
             <LinearLayout
+                android:id="@+id/library_book_2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_card_white"
@@ -287,6 +289,7 @@
             
             <!-- Book Item 3 -->
             <LinearLayout
+                android:id="@+id/library_book_3"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_card_white"
