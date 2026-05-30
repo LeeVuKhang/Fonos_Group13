@@ -75,7 +75,7 @@
                     android:background="@drawable/edittext_bg_new"
                     android:hint="@string/hint_choose_username"
                     android:paddingHorizontal="16dp"
-                    android:inputType="text"
+                    android:inputType="textEmailAddress"
                     android:autofillHints="username"
                     android:textSize="16sp" />
 
