@@ -154,6 +154,38 @@ public class Book {
                 true,
                 5
         ));
+        books.add(new Book(
+                "scandal_bohemia",
+                "A Scandal in Bohemia",
+                "Arthur Conan Doyle",
+                "Chapter 1",
+                "Sherlock Holmes remembers one woman above all others, and her wit turns the case in a new direction.",
+                "scandal_bohemia_ch1",
+                null,
+                null,
+                2100,
+                "en-US",
+                "female",
+                false,
+                true,
+                6
+        ));
+        books.add(new Book(
+                "time_machine",
+                "The Time Machine",
+                "H.G. Wells",
+                "Chapter 1",
+                "The inventor gathers his friends and asks them to imagine time as another direction of travel.",
+                "time_machine_ch1",
+                null,
+                null,
+                2520,
+                "en-US",
+                "female",
+                false,
+                true,
+                7
+        ));
         return books;
     }
 

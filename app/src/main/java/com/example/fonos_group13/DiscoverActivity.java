@@ -74,7 +74,9 @@ public class DiscoverActivity extends AppCompatActivity {
         int[] regularCardIds = {
                 R.id.book_pride_prejudice,
                 R.id.book_dragon_keep,
-                R.id.book_design_system
+                R.id.book_design_system,
+                R.id.book_scandal_bohemia,
+                R.id.book_time_machine
         };
         for (int i = 0; i < regularCardIds.length; i++) {
             bindBookCard(findViewById(regularCardIds[i]), getBookAt(regularBooks, i));
