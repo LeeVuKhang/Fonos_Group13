@@ -3,6 +3,7 @@ package com.example.fonos_group13;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -10,13 +11,18 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.example.fonos_group13.data.AuthRepository;
+import com.google.firebase.auth.FirebaseUser;
+
 public class ProfileActivity extends AppCompatActivity {
+    private AuthRepository authRepository;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_profile);
+        authRepository = new AuthRepository(this);
 
         View mainView = findViewById(R.id.main);
         if (mainView != null) {
@@ -27,7 +33,29 @@ public class ProfileActivity extends AppCompatActivity {
             });
         }
         
+        bindProfile();
         setupBottomNavigation();
+    }
+
+    private void bindProfile() {
+        FirebaseUser user = authRepository.getCurrentUser();
+        TextView name = findViewById(R.id.tv_profile_name);
+        TextView email = findViewById(R.id.tv_profile_email);
+
+        if (user != null) {
+            name.setText(user.getDisplayName() == null || user.getDisplayName().isEmpty() ? "Reader" : user.getDisplayName());
+            email.setText(user.getEmail());
+        }
+
+        View logout = findViewById(R.id.btn_logout);
+        if (logout != null) {
+            logout.setOnClickListener(v -> {
+                authRepository.signOut();
+                Intent intent = new Intent(this, LoginActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+            });
+        }
     }
 
     private void setupBottomNavigation() {
