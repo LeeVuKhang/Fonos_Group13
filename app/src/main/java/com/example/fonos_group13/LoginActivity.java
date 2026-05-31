@@ -1,6 +1,7 @@
 package com.example.fonos_group13;
 
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.os.Bundle;
 import android.util.Patterns;
 import android.view.View;
@@ -20,6 +21,9 @@ import com.example.fonos_group13.data.RepositoryCallback;
 import com.google.firebase.auth.FirebaseUser;
 
 public class LoginActivity extends AppCompatActivity {
+    private static final String DEMO_EMAIL = "admin@gmail.com";
+    private static final String DEMO_PASSWORD = "123456";
+
     private AuthRepository authRepository;
     private EditText inputEmail;
     private EditText inputPassword;
@@ -57,6 +61,7 @@ public class LoginActivity extends AppCompatActivity {
 
         inputEmail = findViewById(R.id.inputUsername);
         inputPassword = findViewById(R.id.inputPassword);
+        prefillDemoCredentials();
         btnLogin = findViewById(R.id.btn_login);
         btnLogin.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -64,6 +69,14 @@ public class LoginActivity extends AppCompatActivity {
                 signIn();
             }
         });
+    }
+
+    private void prefillDemoCredentials() {
+        if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) == 0) {
+            return;
+        }
+        inputEmail.setText(DEMO_EMAIL);
+        inputPassword.setText(DEMO_PASSWORD);
     }
 
     private void signIn() {
