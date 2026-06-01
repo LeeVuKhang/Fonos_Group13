@@ -17,11 +17,12 @@ public class AudioSourceResolver {
         if (book == null) {
             return null;
         }
-        if (!TextUtils.isEmpty(book.getAudioUrl())) {
-            return Uri.parse(book.getAudioUrl());
+        String audioUrl = trimToNull(book.getAudioUrl());
+        if (audioUrl != null) {
+            return Uri.parse(audioUrl);
         }
 
-        int rawId = getRawResourceId(book.getAudioLocalResName());
+        int rawId = getRawResourceId(trimToNull(book.getAudioLocalResName()));
         if (rawId == 0) {
             return null;
         }
@@ -33,5 +34,13 @@ public class AudioSourceResolver {
             return 0;
         }
         return context.getResources().getIdentifier(rawName, "raw", context.getPackageName());
+    }
+
+    private String trimToNull(String value) {
+        if (TextUtils.isEmpty(value)) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

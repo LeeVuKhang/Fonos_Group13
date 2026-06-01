@@ -220,7 +220,7 @@ public class ActivityReader extends AppCompatActivity {
         Uri audioUri = audioSourceResolver.resolve(book);
         if (audioUri == null) {
             setPlayerEnabled(false);
-            Toast.makeText(this, "Missing audio: add res/raw/" + book.getAudioLocalResName() + ".mp3", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, missingAudioMessage(book), Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -247,6 +247,14 @@ public class ActivityReader extends AppCompatActivity {
         player.prepare();
         restoreProgress(book.getId());
         progressHandler.post(progressRunnable);
+    }
+
+    private String missingAudioMessage(Book book) {
+        String localName = book == null ? null : book.getAudioLocalResName();
+        String localHint = localName == null || localName.trim().isEmpty()
+                ? "a matching res/raw MP3"
+                : "res/raw/" + localName.trim() + ".mp3";
+        return "Missing audio: add Firestore audioUrl with an S3 MP3 URL or add " + localHint;
     }
 
     private void restoreProgress(String bookId) {
