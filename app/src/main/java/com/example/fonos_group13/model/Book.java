@@ -60,9 +60,9 @@ public class Book {
                 valueOrDefault(document.getString("author"), "Unknown author"),
                 valueOrDefault(document.getString("chapterTitle"), "Chapter 1"),
                 valueOrDefault(document.getString("contentSample"), ""),
-                document.getString("audioLocalResName"),
-                document.getString("audioUrl"),
-                document.getString("audioStoragePath"),
+                optionalString(document.getString("audioLocalResName")),
+                firstNonBlank(document.getString("audioUrl"), document.getString("url")),
+                optionalString(document.getString("audioStoragePath")),
                 longValue(document.getLong("durationSec")),
                 valueOrDefault(document.getString("languageCode"), "en-US"),
                 valueOrDefault(document.getString("voiceGender"), "female"),
@@ -200,6 +200,24 @@ public class Book {
 
     private static String valueOrDefault(String value, String fallback) {
         return value == null || value.trim().isEmpty() ? fallback : value;
+    }
+
+    private static String optionalString(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            String trimmed = optionalString(value);
+            if (trimmed != null) {
+                return trimmed;
+            }
+        }
+        return null;
     }
 
     private static long longValue(Long value) {
