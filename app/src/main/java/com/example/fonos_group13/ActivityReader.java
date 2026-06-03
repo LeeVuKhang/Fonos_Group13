@@ -26,12 +26,14 @@ import androidx.media3.exoplayer.ExoPlayer;
 
 import com.example.fonos_group13.audio.AudioSourceResolver;
 import com.example.fonos_group13.data.BookRepository;
+import com.example.fonos_group13.data.DownloadedAudioRepository;
 import com.example.fonos_group13.data.ProgressRepository;
 import com.example.fonos_group13.data.RepositoryCallback;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.UserProgress;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import java.io.File;
 import java.util.Locale;
 
 @OptIn(markerClass = UnstableApi.class)
@@ -51,10 +53,12 @@ public class ActivityReader extends AppCompatActivity {
 
     private BookRepository bookRepository;
     private ProgressRepository progressRepository;
+    private DownloadedAudioRepository downloadedAudioRepository;
     private AudioSourceResolver audioSourceResolver;
     private ExoPlayer player;
     private Book currentBook;
     private boolean userSeeking;
+    private boolean downloadingAudio;
     private int speedIndex;
 
     private TextView tvChapter;
@@ -67,6 +71,7 @@ public class ActivityReader extends AppCompatActivity {
     private FloatingActionButton btnPlayPause;
     private ImageView btnSkipBack;
     private ImageView btnSkipForward;
+    private ImageView btnDownloadAudio;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,6 +80,7 @@ public class ActivityReader extends AppCompatActivity {
         setContentView(R.layout.activity_reader);
         bookRepository = new BookRepository(this);
         progressRepository = new ProgressRepository(this);
+        downloadedAudioRepository = new DownloadedAudioRepository(this);
         audioSourceResolver = new AudioSourceResolver(this);
 
         bindViews();
@@ -99,6 +105,7 @@ public class ActivityReader extends AppCompatActivity {
         btnPlayPause = findViewById(R.id.btnPlayPause);
         btnSkipBack = findViewById(R.id.btnSkipBack);
         btnSkipForward = findViewById(R.id.btnSkipForward);
+        btnDownloadAudio = findViewById(R.id.ivDownloadAudio);
     }
 
     private void setupInsets() {
@@ -148,6 +155,9 @@ public class ActivityReader extends AppCompatActivity {
         if (tvPlaybackSpeed != null) {
             tvPlaybackSpeed.setText(formatSpeed());
             tvPlaybackSpeed.setOnClickListener(v -> cyclePlaybackSpeed());
+        }
+        if (btnDownloadAudio != null) {
+            btnDownloadAudio.setOnClickListener(v -> downloadCurrentBook());
         }
         if (seekBar != null) {
             seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -213,6 +223,7 @@ public class ActivityReader extends AppCompatActivity {
             seekBar.setProgress(0);
             seekBar.setMax(safeDuration(book.getDurationSec() * 1000L));
         }
+        updateDownloadButton();
     }
 
     private void prepareAudio(Book book) {
@@ -247,6 +258,66 @@ public class ActivityReader extends AppCompatActivity {
         player.prepare();
         restoreProgress(book.getId());
         progressHandler.post(progressRunnable);
+    }
+
+    private void downloadCurrentBook() {
+        if (currentBook == null || downloadingAudio) {
+            return;
+        }
+        if (downloadedAudioRepository.isDownloaded(currentBook.getId())) {
+            Toast.makeText(this, "Audio is already downloaded.", Toast.LENGTH_SHORT).show();
+            updateDownloadButton();
+            return;
+        }
+        if (currentBook.getAudioUrl() == null || currentBook.getAudioUrl().trim().isEmpty()) {
+            Toast.makeText(this, "This book does not have an audioUrl to download.", Toast.LENGTH_LONG).show();
+            updateDownloadButton();
+            return;
+        }
+
+        downloadingAudio = true;
+        updateDownloadButton();
+        Toast.makeText(this, "Downloading audio...", Toast.LENGTH_SHORT).show();
+        String downloadingBookId = currentBook.getId();
+        downloadedAudioRepository.download(currentBook, new RepositoryCallback<File>() {
+            @Override
+            public void onSuccess(File data) {
+                runOnUiThread(() -> {
+                    downloadingAudio = false;
+                    updateDownloadButton();
+                    Toast.makeText(ActivityReader.this, "Audio downloaded.", Toast.LENGTH_SHORT).show();
+                    if (currentBook != null && currentBook.getId().equals(downloadingBookId)) {
+                        prepareAudio(currentBook);
+                    }
+                });
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                runOnUiThread(() -> {
+                    downloadingAudio = false;
+                    updateDownloadButton();
+                    String message = exception == null || exception.getMessage() == null
+                            ? "Could not download audio."
+                            : exception.getMessage();
+                    Toast.makeText(ActivityReader.this, message, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    private void updateDownloadButton() {
+        if (btnDownloadAudio == null) {
+            return;
+        }
+        boolean downloaded = currentBook != null && downloadedAudioRepository.isDownloaded(currentBook.getId());
+        boolean hasRemoteAudio = currentBook != null
+                && currentBook.getAudioUrl() != null
+                && !currentBook.getAudioUrl().trim().isEmpty();
+
+        btnDownloadAudio.setImageResource(downloaded ? R.drawable.ic_download_done : R.drawable.ic_download);
+        btnDownloadAudio.setEnabled(!downloadingAudio && !downloaded && hasRemoteAudio);
+        btnDownloadAudio.setAlpha(btnDownloadAudio.isEnabled() || downloaded ? 1f : 0.35f);
     }
 
     private String missingAudioMessage(Book book) {
@@ -406,6 +477,12 @@ public class ActivityReader extends AppCompatActivity {
         if (player != null) {
             saveProgress();
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updateDownloadButton();
     }
 
     @Override
