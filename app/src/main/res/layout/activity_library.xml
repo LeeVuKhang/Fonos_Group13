@@ -56,6 +56,7 @@
                     android:orientation="horizontal">
                     
                     <TextView
+                        android:id="@+id/chip_listening"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Listening"
@@ -67,6 +68,7 @@
                         android:layout_marginEnd="12dp" />
                         
                     <TextView
+                        android:id="@+id/chip_downloaded"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Downloaded"
@@ -77,6 +79,7 @@
                         android:layout_marginEnd="12dp" />
                         
                     <TextView
+                        android:id="@+id/chip_finished"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Finished"

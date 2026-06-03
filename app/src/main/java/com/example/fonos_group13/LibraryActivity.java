@@ -15,17 +15,33 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.example.fonos_group13.data.BookRepository;
+import com.example.fonos_group13.data.DownloadedAudioRepository;
 import com.example.fonos_group13.data.ProgressRepository;
 import com.example.fonos_group13.data.RepositoryCallback;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.UserProgress;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class LibraryActivity extends AppCompatActivity {
+    private enum LibraryFilter {
+        LISTENING,
+        DOWNLOADED,
+        FINISHED
+    }
+
     private BookRepository bookRepository;
     private ProgressRepository progressRepository;
+    private DownloadedAudioRepository downloadedAudioRepository;
+    private final List<Book> allBooks = new ArrayList<>();
+    private final Map<String, UserProgress> progressByBookId = new HashMap<>();
+    private LibraryFilter currentFilter = LibraryFilter.LISTENING;
+    private TextView chipListening;
+    private TextView chipDownloaded;
+    private TextView chipFinished;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,6 +50,7 @@ public class LibraryActivity extends AppCompatActivity {
         setContentView(R.layout.activity_library);
         bookRepository = new BookRepository(this);
         progressRepository = new ProgressRepository(this);
+        downloadedAudioRepository = new DownloadedAudioRepository(this);
 
         View mainView = findViewById(R.id.main);
         if (mainView != null) {
@@ -43,17 +60,62 @@ public class LibraryActivity extends AppCompatActivity {
                 return insets;
             });
         }
-        
+
+        setupFilterChips();
         setupBottomNavigation();
-        bindBooks(Book.fallbackBooks());
+        setBooks(Book.fallbackBooks());
         loadBooks();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        refreshLibraryRows();
+    }
+
+    private void setupFilterChips() {
+        chipListening = findViewById(R.id.chip_listening);
+        chipDownloaded = findViewById(R.id.chip_downloaded);
+        chipFinished = findViewById(R.id.chip_finished);
+
+        if (chipListening != null) {
+            chipListening.setOnClickListener(v -> selectFilter(LibraryFilter.LISTENING));
+        }
+        if (chipDownloaded != null) {
+            chipDownloaded.setOnClickListener(v -> selectFilter(LibraryFilter.DOWNLOADED));
+        }
+        if (chipFinished != null) {
+            chipFinished.setOnClickListener(v -> selectFilter(LibraryFilter.FINISHED));
+        }
+        updateFilterChips();
+    }
+
+    private void selectFilter(LibraryFilter filter) {
+        currentFilter = filter;
+        updateFilterChips();
+        refreshLibraryRows();
+    }
+
+    private void updateFilterChips() {
+        bindFilterChip(chipListening, currentFilter == LibraryFilter.LISTENING);
+        bindFilterChip(chipDownloaded, currentFilter == LibraryFilter.DOWNLOADED);
+        bindFilterChip(chipFinished, currentFilter == LibraryFilter.FINISHED);
+    }
+
+    private void bindFilterChip(TextView chip, boolean active) {
+        if (chip == null) {
+            return;
+        }
+        chip.setBackgroundResource(active ? R.drawable.bg_chip_active : R.drawable.bg_chip_white);
+        chip.setTextColor(getColor(active ? R.color.white : R.color.text_muted));
+        chip.setTypeface(null, active ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
     }
 
     private void loadBooks() {
         bookRepository.getPublishedBooks(new RepositoryCallback<List<Book>>() {
             @Override
             public void onSuccess(List<Book> books) {
-                bindBooks(books);
+                setBooks(books);
             }
 
             @Override
@@ -63,18 +125,77 @@ public class LibraryActivity extends AppCompatActivity {
         });
     }
 
-    private void bindBooks(List<Book> books) {
+    private void setBooks(List<Book> books) {
+        allBooks.clear();
+        progressByBookId.clear();
+        if (books != null) {
+            allBooks.addAll(books);
+        }
+
+        for (Book book : allBooks) {
+            progressByBookId.put(book.getId(), UserProgress.empty(book.getId()));
+            loadProgress(book);
+        }
+        refreshLibraryRows();
+    }
+
+    private void loadProgress(Book book) {
+        progressRepository.getProgress(book.getId(), new RepositoryCallback<UserProgress>() {
+            @Override
+            public void onSuccess(UserProgress progress) {
+                if (containsBook(book.getId())) {
+                    progressByBookId.put(book.getId(), progress);
+                    refreshLibraryRows();
+                }
+            }
+
+            @Override
+            public void onError(Exception exception) {
+            }
+        });
+    }
+
+    private boolean containsBook(String bookId) {
+        for (Book book : allBooks) {
+            if (book.getId().equals(bookId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void refreshLibraryRows() {
         int[] rowIds = {
                 R.id.library_book_1,
                 R.id.library_book_2,
                 R.id.library_book_3
         };
+        List<Book> visibleBooks = filterBooks();
 
         for (int i = 0; i < rowIds.length; i++) {
             View row = findViewById(rowIds[i]);
-            Book book = i < books.size() ? books.get(i) : null;
+            Book book = i < visibleBooks.size() ? visibleBooks.get(i) : null;
             bindLibraryRow(row, book);
         }
+    }
+
+    private List<Book> filterBooks() {
+        List<Book> books = new ArrayList<>();
+        for (Book book : allBooks) {
+            UserProgress progress = progressByBookId.getOrDefault(book.getId(), UserProgress.empty(book.getId()));
+            if (currentFilter == LibraryFilter.DOWNLOADED) {
+                if (downloadedAudioRepository.isDownloaded(book.getId())) {
+                    books.add(book);
+                }
+            } else if (currentFilter == LibraryFilter.FINISHED) {
+                if (progress.isCompleted()) {
+                    books.add(book);
+                }
+            } else if (!progress.isCompleted()) {
+                books.add(book);
+            }
+        }
+        return books;
     }
 
     private void bindLibraryRow(View row, Book book) {
@@ -83,6 +204,7 @@ public class LibraryActivity extends AppCompatActivity {
         }
         if (book == null) {
             row.setVisibility(View.GONE);
+            row.setOnClickListener(null);
             return;
         }
         row.setVisibility(View.VISIBLE);
@@ -94,30 +216,21 @@ public class LibraryActivity extends AppCompatActivity {
             textViews.get(0).setText(book.getTitle());
             textViews.get(1).setText(book.getAuthor());
         }
-        bindProgress(row, book, UserProgress.empty(book.getId()));
-
-        progressRepository.getProgress(book.getId(), new RepositoryCallback<UserProgress>() {
-            @Override
-            public void onSuccess(UserProgress progress) {
-                bindProgress(row, book, progress);
-            }
-
-            @Override
-            public void onError(Exception exception) {
-            }
-        });
+        UserProgress progress = progressByBookId.getOrDefault(book.getId(), UserProgress.empty(book.getId()));
+        bindProgress(row, book, progress);
     }
 
     private void bindProgress(View row, Book book, UserProgress progress) {
         long durationMs = progress.getDurationMs() > 0 ? progress.getDurationMs() : book.getDurationSec() * 1000L;
         long positionMs = Math.max(progress.getPositionMs(), 0);
-        int percent = durationMs <= 0 ? 0 : Math.min(100, Math.round(positionMs * 100f / durationMs));
+        boolean completed = progress.isCompleted();
+        int percent = completed ? 100 : durationMs <= 0 ? 0 : Math.min(100, Math.round(positionMs * 100f / durationMs));
 
         List<TextView> textViews = new ArrayList<>();
         collectTextViews(row, textViews);
         if (textViews.size() >= 4) {
             textViews.get(2).setText(percent + "% COMPLETED");
-            textViews.get(3).setText(formatRemaining(durationMs - positionMs) + " LEFT");
+            textViews.get(3).setText(completed ? "FINISHED" : formatRemaining(durationMs - positionMs) + " LEFT");
         }
 
         ProgressBar progressBar = findProgressBar(row);
