@@ -40,7 +40,7 @@ public class DiscoverActivity extends AppCompatActivity {
         }
         
         setupBottomNavigation();
-        bindBooks(Book.fallbackBooks());
+        bindBooks(new ArrayList<>());
         loadBooks();
     }
 
@@ -53,7 +53,7 @@ public class DiscoverActivity extends AppCompatActivity {
 
             @Override
             public void onError(Exception exception) {
-                Toast.makeText(DiscoverActivity.this, "Could not load Firestore books. Showing local demo data.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(DiscoverActivity.this, "Could not load Firestore books.", Toast.LENGTH_SHORT).show();
             }
         });
     }

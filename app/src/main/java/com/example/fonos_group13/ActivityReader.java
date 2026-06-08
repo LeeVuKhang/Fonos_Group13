@@ -89,7 +89,9 @@ public class ActivityReader extends AppCompatActivity {
 
         String bookId = getIntent().getStringExtra(EXTRA_BOOK_ID);
         if (bookId == null || bookId.trim().isEmpty()) {
-            bookId = Book.fallbackBooks().get(0).getId();
+            Toast.makeText(this, "Missing book id.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
         }
         loadBook(bookId);
     }
@@ -194,10 +196,8 @@ public class ActivityReader extends AppCompatActivity {
 
             @Override
             public void onError(Exception exception) {
-                Book fallback = Book.fallbackById(bookId);
-                bindBook(fallback);
-                prepareAudio(fallback);
-                Toast.makeText(ActivityReader.this, "Could not load Firestore book. Showing local demo data.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(ActivityReader.this, "Could not load this book from Firestore.", Toast.LENGTH_LONG).show();
+                finish();
             }
         });
     }
@@ -231,7 +231,7 @@ public class ActivityReader extends AppCompatActivity {
         Uri audioUri = audioSourceResolver.resolve(book);
         if (audioUri == null) {
             setPlayerEnabled(false);
-            Toast.makeText(this, missingAudioMessage(book), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, missingAudioMessage(), Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -320,12 +320,8 @@ public class ActivityReader extends AppCompatActivity {
         btnDownloadAudio.setAlpha(btnDownloadAudio.isEnabled() || downloaded ? 1f : 0.35f);
     }
 
-    private String missingAudioMessage(Book book) {
-        String localName = book == null ? null : book.getAudioLocalResName();
-        String localHint = localName == null || localName.trim().isEmpty()
-                ? "a matching res/raw MP3"
-                : "res/raw/" + localName.trim() + ".mp3";
-        return "Missing audio: add Firestore audioUrl with an S3 MP3 URL or add " + localHint;
+    private String missingAudioMessage() {
+        return "Missing audio: add a Firestore audioUrl for this book.";
     }
 
     private void restoreProgress(String bookId) {

@@ -22,7 +22,7 @@ public class BookRepository {
 
     public void getPublishedBooks(RepositoryCallback<List<Book>> callback) {
         if (!configured || firestore == null) {
-            callback.onSuccess(Book.fallbackBooks());
+            callback.onError(FirebaseConfig.missingConfigException());
             return;
         }
 
@@ -33,14 +33,14 @@ public class BookRepository {
                     List<Book> books = new ArrayList<>();
                     querySnapshot.getDocuments().forEach(document -> books.add(Book.fromDocument(document)));
                     Collections.sort(books, (left, right) -> Integer.compare(left.getOrder(), right.getOrder()));
-                    callback.onSuccess(books.isEmpty() ? Book.fallbackBooks() : books);
+                    callback.onSuccess(books);
                 })
                 .addOnFailureListener(callback::onError);
     }
 
     public void getBook(String bookId, RepositoryCallback<Book> callback) {
         if (!configured || firestore == null) {
-            callback.onSuccess(Book.fallbackById(bookId));
+            callback.onError(FirebaseConfig.missingConfigException());
             return;
         }
 
@@ -51,7 +51,7 @@ public class BookRepository {
                     if (document.exists()) {
                         callback.onSuccess(Book.fromDocument(document));
                     } else {
-                        callback.onSuccess(Book.fallbackById(bookId));
+                        callback.onError(new IllegalArgumentException("Book not found: " + bookId));
                     }
                 })
                 .addOnFailureListener(callback::onError);

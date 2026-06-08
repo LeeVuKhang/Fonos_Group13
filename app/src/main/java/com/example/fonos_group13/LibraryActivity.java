@@ -63,7 +63,7 @@ public class LibraryActivity extends AppCompatActivity {
 
         setupFilterChips();
         setupBottomNavigation();
-        setBooks(Book.fallbackBooks());
+        setBooks(new ArrayList<>());
         loadBooks();
     }
 
@@ -120,7 +120,7 @@ public class LibraryActivity extends AppCompatActivity {
 
             @Override
             public void onError(Exception exception) {
-                Toast.makeText(LibraryActivity.this, "Could not load Firestore library. Showing local demo data.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(LibraryActivity.this, "Could not load Firestore library.", Toast.LENGTH_SHORT).show();
             }
         });
     }
