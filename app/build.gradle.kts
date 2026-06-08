@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.material)
     implementation(libs.media3.exoplayer)
+    implementation(libs.glide)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)

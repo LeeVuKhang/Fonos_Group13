@@ -83,10 +83,11 @@
                         android:foreground="?attr/selectableItemBackground">
 
                         <ImageView
+                            android:id="@+id/featured_cover_1"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:scaleType="centerCrop"
-                            android:background="#2D2D2D" />
+                            android:background="@drawable/bg_cover_placeholder" />
 
                         <View
                             android:layout_width="match_parent"
@@ -115,7 +116,7 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="The Silent Echo"
+                                android:text=""
                                 android:textColor="@color/white"
                                 android:textSize="18sp"
                                 android:textStyle="bold" />
@@ -123,7 +124,7 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Elena Rostova"
+                                android:text=""
                                 android:textColor="#CCCCCC"
                                 android:textSize="12sp" />
                         </LinearLayout>
@@ -150,10 +151,11 @@
                         android:foreground="?attr/selectableItemBackground">
 
                         <ImageView
+                            android:id="@+id/featured_cover_2"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:scaleType="centerCrop"
-                            android:background="#4A4A4A" />
+                            android:background="@drawable/bg_cover_placeholder" />
 
                         <View
                             android:layout_width="match_parent"
@@ -170,7 +172,7 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Midnight in the Garden"
+                                android:text=""
                                 android:textColor="@color/white"
                                 android:textSize="16sp"
                                 android:textStyle="bold" />
@@ -178,7 +180,7 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Thomas Black"
+                                android:text=""
                                 android:textColor="#CCCCCC"
                                 android:textSize="12sp" />
                         </LinearLayout>
@@ -216,6 +218,19 @@
                     android:text="@string/subtitle_handpicked"
                     android:textColor="@color/text_muted"
                     android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/discover_empty_state"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_empty_state"
+                    android:gravity="center"
+                    android:padding="20dp"
+                    android:text=""
+                    android:textColor="@color/text_muted"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <!-- Themed List Carousel -->
@@ -249,17 +264,18 @@
                             app:cardCornerRadius="12dp"
                             app:cardElevation="2dp">
                             <ImageView
+                                android:id="@+id/book_cover_1"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
                                 android:scaleType="centerCrop"
-                                android:background="#6E6E6E" />
+                                android:background="@drawable/bg_cover_placeholder" />
                         </androidx.cardview.widget.CardView>
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="Pride and Prejudice"
+                            android:text=""
                             android:textColor="@color/text_dark"
                             android:textSize="14sp"
                             android:textStyle="bold"
@@ -269,7 +285,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Jane Austen"
+                            android:text=""
                             android:textColor="@color/text_muted"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -291,17 +307,18 @@
                             app:cardCornerRadius="12dp"
                             app:cardElevation="2dp">
                             <ImageView
+                                android:id="@+id/book_cover_2"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
                                 android:scaleType="centerCrop"
-                                android:background="#8A8A8A" />
+                                android:background="@drawable/bg_cover_placeholder" />
                         </androidx.cardview.widget.CardView>
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="The Dragon\'s Keep"
+                            android:text=""
                             android:textColor="@color/text_dark"
                             android:textSize="14sp"
                             android:textStyle="bold"
@@ -311,7 +328,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="R.R. Martin"
+                            android:text=""
                             android:textColor="@color/text_muted"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -333,17 +350,18 @@
                             app:cardCornerRadius="12dp"
                             app:cardElevation="2dp">
                             <ImageView
+                                android:id="@+id/book_cover_3"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
                                 android:scaleType="centerCrop"
-                                android:background="#AAAAAA" />
+                                android:background="@drawable/bg_cover_placeholder" />
                         </androidx.cardview.widget.CardView>
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="Design System"
+                            android:text=""
                             android:textColor="@color/text_dark"
                             android:textSize="14sp"
                             android:textStyle="bold"
@@ -353,7 +371,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Alla Kholmatova"
+                            android:text=""
                             android:textColor="@color/text_muted"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -375,17 +393,18 @@
                             app:cardCornerRadius="12dp"
                             app:cardElevation="2dp">
                             <ImageView
+                                android:id="@+id/book_cover_4"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
                                 android:scaleType="centerCrop"
-                                android:background="#5D6D7E" />
+                                android:background="@drawable/bg_cover_placeholder" />
                         </androidx.cardview.widget.CardView>
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="A Scandal in Bohemia"
+                            android:text=""
                             android:textColor="@color/text_dark"
                             android:textSize="14sp"
                             android:textStyle="bold"
@@ -395,7 +414,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Arthur Conan Doyle"
+                            android:text=""
                             android:textColor="@color/text_muted"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -417,17 +436,18 @@
                             app:cardCornerRadius="12dp"
                             app:cardElevation="2dp">
                             <ImageView
+                                android:id="@+id/book_cover_5"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
                                 android:scaleType="centerCrop"
-                                android:background="#566573" />
+                                android:background="@drawable/bg_cover_placeholder" />
                         </androidx.cardview.widget.CardView>
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="The Time Machine"
+                            android:text=""
                             android:textColor="@color/text_dark"
                             android:textSize="14sp"
                             android:textStyle="bold"
@@ -437,7 +457,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="H.G. Wells"
+                            android:text=""
                             android:textColor="@color/text_muted"
                             android:textSize="12sp" />
                     </LinearLayout>

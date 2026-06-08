@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -20,6 +21,7 @@ import com.example.fonos_group13.data.ProgressRepository;
 import com.example.fonos_group13.data.RepositoryCallback;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.UserProgress;
+import com.example.fonos_group13.ui.BookCoverLoader;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -63,7 +65,8 @@ public class LibraryActivity extends AppCompatActivity {
 
         setupFilterChips();
         setupBottomNavigation();
-        setBooks(Book.fallbackBooks());
+        setBooks(new ArrayList<>());
+        showLibraryMessage("Loading your library...");
         loadBooks();
     }
 
@@ -120,7 +123,9 @@ public class LibraryActivity extends AppCompatActivity {
 
             @Override
             public void onError(Exception exception) {
-                Toast.makeText(LibraryActivity.this, "Could not load Firestore library. Showing local demo data.", Toast.LENGTH_SHORT).show();
+                setBooks(new ArrayList<>());
+                showLibraryMessage("Could not load Firestore library.");
+                Toast.makeText(LibraryActivity.this, "Could not load Firestore library.", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -170,12 +175,18 @@ public class LibraryActivity extends AppCompatActivity {
                 R.id.library_book_2,
                 R.id.library_book_3
         };
+        int[] coverIds = {
+                R.id.library_cover_1,
+                R.id.library_cover_2,
+                R.id.library_cover_3
+        };
         List<Book> visibleBooks = filterBooks();
+        updateEmptyState(visibleBooks.isEmpty());
 
         for (int i = 0; i < rowIds.length; i++) {
             View row = findViewById(rowIds[i]);
             Book book = i < visibleBooks.size() ? visibleBooks.get(i) : null;
-            bindLibraryRow(row, book);
+            bindLibraryRow(row, book, coverIds[i]);
         }
     }
 
@@ -198,7 +209,7 @@ public class LibraryActivity extends AppCompatActivity {
         return books;
     }
 
-    private void bindLibraryRow(View row, Book book) {
+    private void bindLibraryRow(View row, Book book, int coverId) {
         if (row == null) {
             return;
         }
@@ -209,6 +220,8 @@ public class LibraryActivity extends AppCompatActivity {
         }
         row.setVisibility(View.VISIBLE);
         row.setOnClickListener(v -> openReader(book));
+        ImageView cover = BookCoverLoader.findCoverView(row, coverId);
+        BookCoverLoader.load(cover, book);
 
         List<TextView> textViews = new ArrayList<>();
         collectTextViews(row, textViews);
@@ -237,6 +250,37 @@ public class LibraryActivity extends AppCompatActivity {
         if (progressBar != null) {
             progressBar.setProgress(percent);
         }
+    }
+
+    private void updateEmptyState(boolean empty) {
+        TextView emptyState = findViewById(R.id.library_empty_state);
+        if (emptyState == null) {
+            return;
+        }
+        if (!empty) {
+            emptyState.setVisibility(View.GONE);
+            return;
+        }
+
+        if (allBooks.isEmpty()) {
+            emptyState.setText("No audiobooks in your library yet.");
+        } else if (currentFilter == LibraryFilter.DOWNLOADED) {
+            emptyState.setText("No downloaded audiobooks yet.");
+        } else if (currentFilter == LibraryFilter.FINISHED) {
+            emptyState.setText("No finished audiobooks yet.");
+        } else {
+            emptyState.setText("No active audiobooks yet.");
+        }
+        emptyState.setVisibility(View.VISIBLE);
+    }
+
+    private void showLibraryMessage(String message) {
+        TextView emptyState = findViewById(R.id.library_empty_state);
+        if (emptyState == null) {
+            return;
+        }
+        emptyState.setText(message);
+        emptyState.setVisibility(View.VISIBLE);
     }
 
     private String formatRemaining(long remainingMs) {

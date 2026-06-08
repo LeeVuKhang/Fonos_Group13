@@ -8,12 +8,10 @@ import com.example.fonos_group13.data.DownloadedAudioRepository;
 import com.example.fonos_group13.model.Book;
 
 public class AudioSourceResolver {
-    private final Context context;
     private final DownloadedAudioRepository downloadedAudioRepository;
 
     public AudioSourceResolver(Context context) {
-        this.context = context.getApplicationContext();
-        downloadedAudioRepository = new DownloadedAudioRepository(this.context);
+        downloadedAudioRepository = new DownloadedAudioRepository(context.getApplicationContext());
     }
 
     public Uri resolve(Book book) {
@@ -30,18 +28,7 @@ public class AudioSourceResolver {
             return Uri.parse(audioUrl);
         }
 
-        int rawId = getRawResourceId(trimToNull(book.getAudioLocalResName()));
-        if (rawId == 0) {
-            return null;
-        }
-        return Uri.parse("android.resource://" + context.getPackageName() + "/" + rawId);
-    }
-
-    public int getRawResourceId(String rawName) {
-        if (TextUtils.isEmpty(rawName)) {
-            return 0;
-        }
-        return context.getResources().getIdentifier(rawName, "raw", context.getPackageName());
+        return null;
     }
 
     private String trimToNull(String value) {
