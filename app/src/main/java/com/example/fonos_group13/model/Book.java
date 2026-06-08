@@ -8,6 +8,8 @@ public class Book {
     private final String author;
     private final String chapterTitle;
     private final String contentSample;
+    private final String coverUrl;
+    private final String isbn;
     private final String audioUrl;
     private final String audioStoragePath;
     private final long durationSec;
@@ -23,6 +25,8 @@ public class Book {
             String author,
             String chapterTitle,
             String contentSample,
+            String coverUrl,
+            String isbn,
             String audioUrl,
             String audioStoragePath,
             long durationSec,
@@ -37,6 +41,8 @@ public class Book {
         this.author = author;
         this.chapterTitle = chapterTitle;
         this.contentSample = contentSample;
+        this.coverUrl = firstNonBlank(coverUrl, coverUrlFromIsbn(isbn));
+        this.isbn = optionalString(isbn);
         this.audioUrl = audioUrl;
         this.audioStoragePath = audioStoragePath;
         this.durationSec = durationSec;
@@ -54,6 +60,13 @@ public class Book {
                 valueOrDefault(document.getString("author"), "Unknown author"),
                 valueOrDefault(document.getString("chapterTitle"), "Chapter 1"),
                 valueOrDefault(document.getString("contentSample"), ""),
+                firstNonBlank(
+                        document.getString("coverUrl"),
+                        document.getString("coverImageUrl"),
+                        document.getString("imageUrl"),
+                        document.getString("thumbnailUrl")
+                ),
+                optionalString(document.getString("isbn")),
                 firstNonBlank(document.getString("audioUrl"), document.getString("url")),
                 optionalString(document.getString("audioStoragePath")),
                 longValue(document.getLong("durationSec")),
@@ -95,6 +108,23 @@ public class Book {
         return value != null && value;
     }
 
+    private static String coverUrlFromIsbn(String isbn) {
+        String normalizedIsbn = normalizeIsbn(isbn);
+        if (normalizedIsbn == null) {
+            return null;
+        }
+        return "https://covers.openlibrary.org/b/isbn/" + normalizedIsbn + "-L.jpg?default=false";
+    }
+
+    private static String normalizeIsbn(String isbn) {
+        String trimmed = optionalString(isbn);
+        if (trimmed == null) {
+            return null;
+        }
+        String normalized = trimmed.replaceAll("[^0-9Xx]", "").toUpperCase();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
     public String getId() {
         return id;
     }
@@ -113,6 +143,14 @@ public class Book {
 
     public String getContentSample() {
         return contentSample;
+    }
+
+    public String getCoverUrl() {
+        return coverUrl;
+    }
+
+    public String getIsbn() {
+        return isbn;
     }
 
     public String getAudioUrl() {
