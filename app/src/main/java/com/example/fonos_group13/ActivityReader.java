@@ -438,15 +438,19 @@ public class ActivityReader extends AppCompatActivity {
     private void setPlayerEnabled(boolean enabled) {
         if (btnPlayPause != null) {
             btnPlayPause.setEnabled(enabled);
+            btnPlayPause.setAlpha(enabled ? 1f : 0.45f);
         }
         if (btnSkipBack != null) {
             btnSkipBack.setEnabled(enabled);
+            btnSkipBack.setAlpha(enabled ? 1f : 0.45f);
         }
         if (btnSkipForward != null) {
             btnSkipForward.setEnabled(enabled);
+            btnSkipForward.setAlpha(enabled ? 1f : 0.45f);
         }
         if (seekBar != null) {
             seekBar.setEnabled(enabled);
+            seekBar.setAlpha(enabled ? 1f : 0.45f);
         }
         updatePlayButton();
     }

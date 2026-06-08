@@ -71,6 +71,8 @@
                     android:hint="@string/hint_choose_username"
                     android:paddingHorizontal="16dp"
                     android:inputType="textEmailAddress"
+                    android:autofillHints="emailAddress"
+                    android:textColor="@color/text_main"
                     android:textSize="16sp" />
 
                 <TextView
@@ -90,6 +92,8 @@
                     android:hint="@string/hint_create_password"
                     android:paddingHorizontal="16dp"
                     android:inputType="textPassword"
+                    android:autofillHints="password"
+                    android:textColor="@color/text_main"
                     android:textSize="16sp" />
 
                 <TextView
@@ -109,6 +113,8 @@
                     android:hint="@string/confirm_password"
                     android:paddingHorizontal="16dp"
                     android:inputType="textPassword"
+                    android:autofillHints="password"
+                    android:textColor="@color/text_main"
                     android:textSize="16sp" />
 
             </LinearLayout>
