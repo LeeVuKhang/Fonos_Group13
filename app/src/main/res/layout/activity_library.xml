@@ -56,6 +56,7 @@
                     android:orientation="horizontal">
                     
                     <TextView
+                        android:id="@+id/chip_listening"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Listening"
@@ -67,6 +68,7 @@
                         android:layout_marginEnd="12dp" />
                         
                     <TextView
+                        android:id="@+id/chip_downloaded"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Downloaded"
@@ -77,6 +79,7 @@
                         android:layout_marginEnd="12dp" />
                         
                     <TextView
+                        android:id="@+id/chip_finished"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Finished"
@@ -87,8 +90,22 @@
                 </LinearLayout>
             </HorizontalScrollView>
 
+            <TextView
+                android:id="@+id/library_empty_state"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:background="@drawable/bg_empty_state"
+                android:gravity="center"
+                android:padding="20dp"
+                android:text=""
+                android:textColor="@color/text_muted"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
             <!-- Book Item 1 -->
             <LinearLayout
+                android:id="@+id/library_book_1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_card_white"
@@ -102,10 +119,11 @@
                     app:cardCornerRadius="12dp"
                     app:cardElevation="0dp">
                     <ImageView
+                        android:id="@+id/library_cover_1"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:scaleType="centerCrop"
-                        android:background="#4A4A4A" /> <!-- Placeholder for cover -->
+                        android:background="@drawable/bg_cover_placeholder" />
                 </androidx.cardview.widget.CardView>
                 
                 <LinearLayout
@@ -129,14 +147,14 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Pride and Prejudice"
+                                android:text=""
                                 android:textColor="@color/text_dark"
                                 android:textSize="18sp"
                                 android:fontFamily="serif" />
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Jane Austen"
+                                android:text=""
                                 android:textColor="@color/text_muted"
                                 android:textSize="14sp"
                                 android:layout_marginTop="4dp" />
@@ -163,14 +181,14 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="35% COMPLETED"
+                            android:text=""
                             android:textSize="10sp"
                             android:textColor="@color/text_muted"
                             android:textStyle="bold" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="6H 24M LEFT"
+                            android:text=""
                             android:textSize="10sp"
                             android:textColor="@color/text_muted"
                             android:textStyle="bold" />
@@ -188,6 +206,7 @@
 
             <!-- Book Item 2 -->
             <LinearLayout
+                android:id="@+id/library_book_2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_card_white"
@@ -201,10 +220,11 @@
                     app:cardCornerRadius="12dp"
                     app:cardElevation="0dp">
                     <ImageView
+                        android:id="@+id/library_cover_2"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:scaleType="centerCrop"
-                        android:background="#A43A3A" /> <!-- Placeholder for cover -->
+                        android:background="@drawable/bg_cover_placeholder" />
                 </androidx.cardview.widget.CardView>
                 
                 <LinearLayout
@@ -228,14 +248,14 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="The Silent Echo"
+                                android:text=""
                                 android:textColor="@color/text_dark"
                                 android:textSize="18sp"
                                 android:fontFamily="serif" />
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Elena Rostova"
+                                android:text=""
                                 android:textColor="@color/text_muted"
                                 android:textSize="14sp"
                                 android:layout_marginTop="4dp" />
@@ -262,14 +282,14 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="12% COMPLETED"
+                            android:text=""
                             android:textSize="10sp"
                             android:textColor="@color/text_muted"
                             android:textStyle="bold" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="11H 05M LEFT"
+                            android:text=""
                             android:textSize="10sp"
                             android:textColor="@color/text_muted"
                             android:textStyle="bold" />
@@ -287,6 +307,7 @@
             
             <!-- Book Item 3 -->
             <LinearLayout
+                android:id="@+id/library_book_3"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_card_white"
@@ -300,10 +321,11 @@
                     app:cardCornerRadius="12dp"
                     app:cardElevation="0dp">
                     <ImageView
+                        android:id="@+id/library_cover_3"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:scaleType="centerCrop"
-                        android:background="#2E4A2E" /> <!-- Placeholder for cover -->
+                        android:background="@drawable/bg_cover_placeholder" />
                 </androidx.cardview.widget.CardView>
                 
                 <LinearLayout
@@ -327,14 +349,14 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Midnight in the Garden"
+                                android:text=""
                                 android:textColor="@color/text_dark"
                                 android:textSize="18sp"
                                 android:fontFamily="serif" />
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Thomas Black"
+                                android:text=""
                                 android:textColor="@color/text_muted"
                                 android:textSize="14sp"
                                 android:layout_marginTop="4dp" />
@@ -361,14 +383,14 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="0% COMPLETED"
+                            android:text=""
                             android:textSize="10sp"
                             android:textColor="@color/text_muted"
                             android:textStyle="bold" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="8H 15M LEFT"
+                            android:text=""
                             android:textSize="10sp"
                             android:textColor="@color/text_muted"
                             android:textStyle="bold" />

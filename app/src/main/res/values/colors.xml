@@ -2,15 +2,19 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="background">#F4ECD8</color>
-    <color name="accent">#8BA888</color>
+    <color name="background">#F7F8F4</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_soft">#EEF3EA</color>
+    <color name="accent">#5E7C66</color>
+    <color name="accent_soft">#DCE8DD</color>
+    <color name="stroke_soft">#D8E0D5</color>
 
     <!-- Reader Colors -->
-    <color name="reader_bg">#F4ECD8</color>
-    <color name="player_bg">#EFE6CF</color>
-    <color name="accent_green">#8BA888</color>
-    <color name="text_main">#2D2D2D</color>
-    <color name="text_secondary">#7A7A7A</color>
-    <color name="text_muted">#7A7A7A</color>
-    <color name="text_dark">#2D2D2D</color>
+    <color name="reader_bg">#F7F8F4</color>
+    <color name="player_bg">#EEF3EA</color>
+    <color name="accent_green">#5E7C66</color>
+    <color name="text_main">#26312A</color>
+    <color name="text_secondary">#69756D</color>
+    <color name="text_muted">#69756D</color>
+    <color name="text_dark">#26312A</color>
 </resources>

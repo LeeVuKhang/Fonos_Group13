@@ -21,7 +21,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Profile"
+            android:text="@string/profile"
             android:textSize="28sp"
             android:textColor="@color/text_dark"
             android:fontFamily="serif"
@@ -73,17 +73,19 @@
                     android:layout_marginStart="20dp">
                     
                     <TextView
+                        android:id="@+id/tv_profile_name"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Sarah Walker"
+                        android:text="Reader"
                         android:textColor="@color/text_dark"
                         android:textSize="22sp"
                         android:fontFamily="serif" />
                         
                     <TextView
+                        android:id="@+id/tv_profile_email"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Member since Oct 2023"
+                        android:text=""
                         android:textColor="@color/text_muted"
                         android:textSize="14sp"
                         android:layout_marginTop="4dp" />
@@ -118,9 +120,10 @@
                             android:src="@android:drawable/ic_menu_agenda"
                             app:tint="#8BA888" />
                         <TextView
+                            android:id="@+id/tv_books_read"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="42"
+                            android:text="0"
                             android:textColor="#8BA888"
                             android:textSize="22sp"
                             android:textStyle="bold"
@@ -158,9 +161,10 @@
                             android:src="@android:drawable/ic_menu_recent_history"
                             app:tint="#8BA888" />
                         <TextView
+                            android:id="@+id/tv_hours_listened"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="128h"
+                            android:text="0h"
                             android:textColor="#8BA888"
                             android:textSize="22sp"
                             android:textStyle="bold"
@@ -263,6 +267,7 @@
 
             <!-- Logout -->
             <LinearLayout
+                android:id="@+id/btn_logout"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
