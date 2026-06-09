@@ -1,4 +1,4 @@
-# Android Technical Documentation - Fonos_Group13
+# Fonos Group 13 - Android Audiobook Reader Documentation
 
 ## 1. Project Overview
 
@@ -384,7 +384,8 @@ flowchart TD
 
 ## 9. Sequence Diagram
 
-The most important sequence is opening a book and preparing playback.
+The main sequence covers opening a book, preparing playback, optionally
+downloading audio for local playback, and saving progress.
 
 ```mermaid
 sequenceDiagram
@@ -395,6 +396,8 @@ sequenceDiagram
     participant Firestore as Cloud Firestore
     participant Resolver as AudioSourceResolver
     participant DownloadRepo as DownloadedAudioRepository
+    participant RemoteAudio as Remote MP3 audioUrl
+    participant InternalFiles as Internal files/audiobooks
     participant Player as ExoPlayer
     participant ProgressRepo as ProgressRepository
 
@@ -413,6 +416,24 @@ sequenceDiagram
     Reader->>ProgressRepo: getProgress(book.id)
     ProgressRepo-->>Reader: UserProgress
     Reader->>Player: seekTo(positionMs)
+    opt Download audio for local playback
+        User->>Reader: Tap download icon
+        Reader->>DownloadRepo: isDownloaded(book.id)
+        DownloadRepo-->>Reader: false
+        Reader->>DownloadRepo: download(book, callback)
+        DownloadRepo->>RemoteAudio: GET book.audioUrl
+        RemoteAudio-->>DownloadRepo: MP3 response stream
+        DownloadRepo->>InternalFiles: Write temp MP3 file
+        DownloadRepo->>InternalFiles: Rename temp file to bookId.mp3
+        DownloadRepo-->>Reader: onSuccess(File)
+        Reader->>Reader: updateDownloadButton()
+        Reader->>Resolver: resolve(book)
+        Resolver->>DownloadRepo: getDownloadedUri(book.id)
+        DownloadRepo-->>Resolver: Local Uri
+        Resolver-->>Reader: Local Uri
+        Reader->>Player: setMediaItem(localUri)
+        Reader->>Player: prepare()
+    end
     User->>Reader: Tap play/pause/seek/speed
     Reader->>Player: Control playback
     Reader->>ProgressRepo: saveProgress(book.id, positionMs, durationMs)
@@ -427,7 +448,13 @@ Step explanation:
 5. If no local MP3 exists, the resolver falls back to the remote `audioUrl`.
 6. ExoPlayer prepares the media item.
 7. The app loads prior progress and seeks to the saved position.
-8. User playback actions update the player and later persist progress.
+8. If the reader taps download, `ActivityReader` checks the current downloaded
+   state before starting `DownloadedAudioRepository.download`.
+9. The repository streams the remote MP3 into a temporary file and renames it
+   into `files/audiobooks` after a successful download.
+10. After download success, the reader updates the button state and prepares
+    playback again so `AudioSourceResolver` can choose the local MP3.
+11. User playback actions update the player and later persist progress.
 
 ## 10. Class Diagram
 
