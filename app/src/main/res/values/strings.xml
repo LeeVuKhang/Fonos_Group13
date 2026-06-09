@@ -24,4 +24,5 @@
     <string name="profile">Profile</string>
     <string name="subtitle_handpicked">Handpicked selections based on your taste</string>
     <string name="book_content_sample">Sample content</string>
+    <string name="playback_notification_channel_name">Audiobook playback</string>
 </resources>

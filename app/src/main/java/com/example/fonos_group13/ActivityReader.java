@@ -1,5 +1,6 @@
 package com.example.fonos_group13;
 
+import android.content.ComponentName;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -14,17 +15,21 @@ import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
+import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.PlaybackParameters;
 import androidx.media3.common.Player;
 import androidx.media3.common.util.UnstableApi;
-import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.session.MediaController;
+import androidx.media3.session.SessionToken;
 
 import com.example.fonos_group13.audio.AudioSourceResolver;
+import com.example.fonos_group13.audio.PlaybackService;
 import com.example.fonos_group13.data.BookRepository;
 import com.example.fonos_group13.data.DownloadedAudioRepository;
 import com.example.fonos_group13.data.ProgressRepository;
@@ -32,9 +37,12 @@ import com.example.fonos_group13.data.RepositoryCallback;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.UserProgress;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
 import java.util.Locale;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
 
 @OptIn(markerClass = UnstableApi.class)
 public class ActivityReader extends AppCompatActivity {
@@ -50,12 +58,38 @@ public class ActivityReader extends AppCompatActivity {
             progressHandler.postDelayed(this, 500);
         }
     };
+    private final Player.Listener playerListener = new Player.Listener() {
+        @Override
+        public void onPlaybackStateChanged(int playbackState) {
+            if (playbackState == Player.STATE_READY) {
+                updateProgressUi();
+            } else if (playbackState == Player.STATE_ENDED) {
+                saveProgress();
+            }
+            updatePlayButton();
+        }
+
+        @Override
+        public void onIsPlayingChanged(boolean isPlaying) {
+            if (!isPlaying) {
+                saveProgress();
+            }
+            updatePlayButton();
+        }
+
+        @Override
+        public void onMediaItemTransition(MediaItem mediaItem, int reason) {
+            updateProgressUi();
+            updatePlayButton();
+        }
+    };
 
     private BookRepository bookRepository;
     private ProgressRepository progressRepository;
     private DownloadedAudioRepository downloadedAudioRepository;
     private AudioSourceResolver audioSourceResolver;
-    private ExoPlayer player;
+    private ListenableFuture<MediaController> controllerFuture;
+    private MediaController mediaController;
     private Book currentBook;
     private boolean userSeeking;
     private boolean downloadingAudio;
@@ -86,6 +120,7 @@ public class ActivityReader extends AppCompatActivity {
         bindViews();
         setupInsets();
         setupControls();
+        setPlayerEnabled(false);
 
         String bookId = getIntent().getStringExtra(EXTRA_BOOK_ID);
         if (bookId == null || bookId.trim().isEmpty()) {
@@ -94,6 +129,12 @@ public class ActivityReader extends AppCompatActivity {
             return;
         }
         loadBook(bookId);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        connectController();
     }
 
     private void bindViews() {
@@ -178,12 +219,47 @@ public class ActivityReader extends AppCompatActivity {
                 @Override
                 public void onStopTrackingTouch(SeekBar seekBar) {
                     userSeeking = false;
-                    if (player != null) {
-                        player.seekTo(seekBar.getProgress());
+                    if (mediaController != null) {
+                        mediaController.seekTo(seekBar.getProgress());
                     }
                 }
             });
         }
+    }
+
+    private void connectController() {
+        if (controllerFuture != null || mediaController != null) {
+            return;
+        }
+
+        SessionToken sessionToken = new SessionToken(this, new ComponentName(this, PlaybackService.class));
+        controllerFuture = new MediaController.Builder(this, sessionToken).buildAsync();
+        ListenableFuture<MediaController> future = controllerFuture;
+        future.addListener(() -> {
+            if (controllerFuture != future) {
+                return;
+            }
+            try {
+                mediaController = future.get();
+                mediaController.addListener(playerListener);
+                mediaController.setPlaybackParameters(new PlaybackParameters(playbackSpeeds[speedIndex]));
+                setPlayerEnabled(currentBook != null && hasAudio(currentBook));
+                if (currentBook != null) {
+                    prepareAudio(currentBook);
+                } else {
+                    updateProgressUi();
+                    updatePlayButton();
+                }
+            } catch (CancellationException ignored) {
+            } catch (ExecutionException exception) {
+                Toast.makeText(this, "Could not connect to playback service.", Toast.LENGTH_LONG).show();
+                setPlayerEnabled(false);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                Toast.makeText(this, "Playback service connection was interrupted.", Toast.LENGTH_LONG).show();
+                setPlayerEnabled(false);
+            }
+        }, ContextCompat.getMainExecutor(this));
     }
 
     private void loadBook(String bookId) {
@@ -227,7 +303,18 @@ public class ActivityReader extends AppCompatActivity {
     }
 
     private void prepareAudio(Book book) {
-        releasePlayer();
+        prepareAudio(book, false, C.TIME_UNSET, false);
+    }
+
+    private void prepareAudio(Book book, boolean forceReload, long startPositionMs, boolean playWhenReady) {
+        if (book == null) {
+            return;
+        }
+        if (mediaController == null) {
+            setPlayerEnabled(false);
+            return;
+        }
+
         Uri audioUri = audioSourceResolver.resolve(book);
         if (audioUri == null) {
             setPlayerEnabled(false);
@@ -236,28 +323,60 @@ public class ActivityReader extends AppCompatActivity {
         }
 
         setPlayerEnabled(true);
-        player = new ExoPlayer.Builder(this).build();
-        player.setPlaybackParameters(new PlaybackParameters(playbackSpeeds[speedIndex]));
-        player.addListener(new Player.Listener() {
-            @Override
-            public void onPlaybackStateChanged(int playbackState) {
-                if (playbackState == Player.STATE_READY) {
-                    updateProgressUi();
-                } else if (playbackState == Player.STATE_ENDED) {
-                    saveProgress();
-                }
-                updatePlayButton();
-            }
+        mediaController.setPlaybackParameters(new PlaybackParameters(playbackSpeeds[speedIndex]));
 
-            @Override
-            public void onIsPlayingChanged(boolean isPlaying) {
-                updatePlayButton();
-            }
-        });
-        player.setMediaItem(MediaItem.fromUri(audioUri));
-        player.prepare();
-        restoreProgress(book.getId());
+        MediaItem currentItem = mediaController.getCurrentMediaItem();
+        boolean sameBook = currentItem != null && book.getId().equals(currentItem.mediaId);
+        boolean sameSource = sameBook && isSameResolvedSource(currentItem, audioUri);
+        if (sameBook && !sameSource && startPositionMs == C.TIME_UNSET) {
+            startPositionMs = mediaController.getCurrentPosition();
+            playWhenReady = mediaController.isPlaying();
+        }
+        if (sameBook && sameSource && !forceReload) {
+            updateProgressUi();
+            updatePlayButton();
+            progressHandler.removeCallbacks(progressRunnable);
+            progressHandler.post(progressRunnable);
+            return;
+        }
+
+        progressHandler.removeCallbacks(progressRunnable);
+        MediaItem mediaItem = buildMediaItem(book, audioUri);
+        if (startPositionMs != C.TIME_UNSET && startPositionMs > 0) {
+            mediaController.setMediaItem(mediaItem, startPositionMs);
+        } else {
+            mediaController.setMediaItem(mediaItem);
+        }
+        mediaController.prepare();
+        if (startPositionMs == C.TIME_UNSET) {
+            restoreProgress(book.getId());
+        }
+        if (playWhenReady) {
+            mediaController.play();
+        }
+        updateProgressUi();
+        updatePlayButton();
         progressHandler.post(progressRunnable);
+    }
+
+    private MediaItem buildMediaItem(Book book, Uri audioUri) {
+        MediaMetadata.Builder metadataBuilder = new MediaMetadata.Builder()
+                .setTitle(book.getTitle())
+                .setArtist(book.getAuthor())
+                .setSubtitle(book.getChapterTitle());
+        if (book.getDurationSec() > 0) {
+            metadataBuilder.setDurationMs(book.getDurationSec() * 1000L);
+        }
+        String coverUrl = trimToNull(book.getCoverUrl());
+        if (coverUrl != null) {
+            metadataBuilder.setArtworkUri(Uri.parse(coverUrl));
+        }
+
+        return new MediaItem.Builder()
+                .setMediaId(book.getId())
+                .setUri(audioUri)
+                .setMediaMetadata(metadataBuilder.build())
+                .build();
     }
 
     private void downloadCurrentBook() {
@@ -275,6 +394,8 @@ public class ActivityReader extends AppCompatActivity {
             return;
         }
 
+        boolean wasPlaying = mediaController != null && mediaController.isPlaying();
+        long currentPositionMs = mediaController == null ? 0 : mediaController.getCurrentPosition();
         downloadingAudio = true;
         updateDownloadButton();
         Toast.makeText(this, "Downloading audio...", Toast.LENGTH_SHORT).show();
@@ -287,7 +408,7 @@ public class ActivityReader extends AppCompatActivity {
                     updateDownloadButton();
                     Toast.makeText(ActivityReader.this, "Audio downloaded.", Toast.LENGTH_SHORT).show();
                     if (currentBook != null && currentBook.getId().equals(downloadingBookId)) {
-                        prepareAudio(currentBook);
+                        prepareAudio(currentBook, true, currentPositionMs, wasPlaying);
                     }
                 });
             }
@@ -328,8 +449,10 @@ public class ActivityReader extends AppCompatActivity {
         progressRepository.getProgress(bookId, new RepositoryCallback<UserProgress>() {
             @Override
             public void onSuccess(UserProgress progress) {
-                if (player != null && progress.getPositionMs() > 0) {
-                    player.seekTo(progress.getPositionMs());
+                if (mediaController != null
+                        && isControllerOnBook(bookId)
+                        && progress.getPositionMs() > 0) {
+                    mediaController.seekTo(progress.getPositionMs());
                     updateProgressUi();
                 }
             }
@@ -341,28 +464,27 @@ public class ActivityReader extends AppCompatActivity {
     }
 
     private void togglePlayback() {
-        if (player == null) {
+        if (mediaController == null) {
             return;
         }
-        if (player.isPlaying()) {
-            player.pause();
+        if (mediaController.isPlaying()) {
+            mediaController.pause();
             saveProgress();
         } else {
-            player.play();
+            mediaController.play();
         }
         updatePlayButton();
     }
 
     private void seekBy(long deltaMs) {
-        if (player == null) {
+        if (mediaController == null) {
             return;
         }
-        long durationMs = getDurationMs();
-        long nextPosition = player.getCurrentPosition() + deltaMs;
-        if (durationMs > 0) {
-            nextPosition = Math.min(nextPosition, durationMs);
+        if (deltaMs < 0) {
+            mediaController.seekBack();
+        } else {
+            mediaController.seekForward();
         }
-        player.seekTo(Math.max(0, nextPosition));
         updateProgressUi();
     }
 
@@ -371,8 +493,8 @@ public class ActivityReader extends AppCompatActivity {
         if (tvPlaybackSpeed != null) {
             tvPlaybackSpeed.setText(formatSpeed());
         }
-        if (player != null) {
-            player.setPlaybackParameters(new PlaybackParameters(playbackSpeeds[speedIndex]));
+        if (mediaController != null) {
+            mediaController.setPlaybackParameters(new PlaybackParameters(playbackSpeeds[speedIndex]));
         }
     }
 
@@ -386,7 +508,7 @@ public class ActivityReader extends AppCompatActivity {
         }
 
         long durationMs = getDurationMs();
-        long positionMs = player == null ? 0 : player.getCurrentPosition();
+        long positionMs = mediaController == null ? 0 : mediaController.getCurrentPosition();
 
         if (tvCurrentTime != null) {
             tvCurrentTime.setText(formatTime(positionMs));
@@ -403,9 +525,12 @@ public class ActivityReader extends AppCompatActivity {
     }
 
     private long getDurationMs() {
-        long playerDuration = player == null ? C.TIME_UNSET : player.getDuration();
-        if (playerDuration != C.TIME_UNSET && playerDuration > 0) {
-            return playerDuration;
+        long controllerDuration = mediaController == null ? C.TIME_UNSET : mediaController.getDuration();
+        if (controllerDuration != C.TIME_UNSET && controllerDuration > 0) {
+            return controllerDuration;
+        }
+        if (mediaController != null && mediaController.getMediaMetadata().durationMs != null) {
+            return mediaController.getMediaMetadata().durationMs;
         }
         return currentBook == null ? 0 : currentBook.getDurationSec() * 1000L;
     }
@@ -432,7 +557,7 @@ public class ActivityReader extends AppCompatActivity {
         if (btnPlayPause == null) {
             return;
         }
-        btnPlayPause.setImageResource(player != null && player.isPlaying() ? R.drawable.ic_pause : R.drawable.ic_play);
+        btnPlayPause.setImageResource(mediaController != null && mediaController.isPlaying() ? R.drawable.ic_pause : R.drawable.ic_play);
     }
 
     private void setPlayerEnabled(boolean enabled) {
@@ -456,27 +581,65 @@ public class ActivityReader extends AppCompatActivity {
     }
 
     private void saveProgress() {
-        if (currentBook == null || player == null) {
+        if (mediaController == null) {
             return;
         }
-        progressRepository.saveProgress(currentBook.getId(), player.getCurrentPosition(), getDurationMs());
+        String bookId = currentBook == null ? null : currentBook.getId();
+        MediaItem currentItem = mediaController.getCurrentMediaItem();
+        if (currentItem != null && currentItem.mediaId != null && !currentItem.mediaId.trim().isEmpty()) {
+            bookId = currentItem.mediaId;
+        }
+        if (bookId == null || bookId.trim().isEmpty()) {
+            return;
+        }
+        progressRepository.saveProgress(bookId, mediaController.getCurrentPosition(), getDurationMs());
     }
 
-    private void releasePlayer() {
-        progressHandler.removeCallbacks(progressRunnable);
-        if (player != null) {
-            saveProgress();
-            player.release();
-            player = null;
+    private boolean isControllerOnBook(String bookId) {
+        if (mediaController == null || bookId == null) {
+            return false;
         }
+        MediaItem currentItem = mediaController.getCurrentMediaItem();
+        return currentItem != null && bookId.equals(currentItem.mediaId);
+    }
+
+    private boolean isSameResolvedSource(MediaItem currentItem, Uri resolvedUri) {
+        return currentItem != null
+                && currentItem.localConfiguration != null
+                && currentItem.localConfiguration.uri != null
+                && currentItem.localConfiguration.uri.equals(resolvedUri);
+    }
+
+    private boolean hasAudio(Book book) {
+        return audioSourceResolver.resolve(book) != null;
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private void releaseController() {
+        progressHandler.removeCallbacks(progressRunnable);
+        if (mediaController != null) {
+            saveProgress();
+            mediaController.removeListener(playerListener);
+            mediaController = null;
+        }
+        if (controllerFuture != null) {
+            MediaController.releaseFuture(controllerFuture);
+            controllerFuture = null;
+        }
+        updatePlayButton();
     }
 
     @Override
     protected void onStop() {
+        releaseController();
         super.onStop();
-        if (player != null) {
-            saveProgress();
-        }
     }
 
     @Override
@@ -487,7 +650,7 @@ public class ActivityReader extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        releasePlayer();
+        progressHandler.removeCallbacks(progressRunnable);
         super.onDestroy();
     }
 }
