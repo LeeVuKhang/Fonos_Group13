@@ -26,7 +26,8 @@ experience:
 
 - Firebase Authentication provides account access.
 - Cloud Firestore stores published books and user listening progress.
-- Media3 ExoPlayer supports audio playback controls.
+- Media3 `MediaSessionService` owns ExoPlayer for background playback,
+  notification media controls, and lock-screen controls.
 - Internal app storage supports downloaded MP3 files.
 - XML layouts provide a familiar Android interface for discovery, search,
   library, profile, login, registration, and reader screens.
@@ -44,6 +45,10 @@ experience:
 - Reader screen with content sample, chapter title, duration, seek bar, skip
   back, skip forward, play/pause, and playback speed controls.
 - Audio playback from a remote `audioUrl` or a downloaded local MP3 file.
+- Background audiobook playback through `PlaybackService`, a Media3
+  `MediaSessionService` declared as a foreground media playback service.
+- Media notification and lock-screen controls for play/pause, skip back 15s,
+  and skip forward 15s.
 - Downloading remote MP3 audio into app-private internal storage.
 - Saving and restoring user listening progress.
 - Profile display with email, display name fallback, completed book count, and
@@ -53,9 +58,8 @@ experience:
 
 - Payment, subscription, or premium content access.
 - Social sharing, reviews, playlists, and recommendations.
-- Push notifications or scheduled reminders.
-- Foreground audio service, media notification controls, and lock-screen media
-  session integration.
+- Push notifications or scheduled reminders outside the media playback
+  notification.
 - Room, SQLite, or SharedPreferences persistence for structured data.
 - Admin tools for creating or editing books inside the mobile app.
 - Multi-language UI management beyond the currently present string resources.
@@ -83,8 +87,8 @@ experience:
 - Gradle Android plugin: 9.2.0.
 - Java compatibility: Java 11.
 - Network dependency: Firebase and remote MP3 URLs require internet access.
-- Current playback limitation: audio is managed directly by `ActivityReader`,
-  not by a foreground service.
+- Playback lifecycle: `PlaybackService` owns ExoPlayer and the `MediaSession`;
+  `ActivityReader` controls it through a Media3 `MediaController`.
 
 ## 3. Functional Requirements
 
@@ -98,21 +102,22 @@ experience:
 | FR-06 | Open reader | The app shall open the reader for a selected book using the `book_id` intent extra. | High | Discover, Search, Library, `ActivityReader` |
 | FR-07 | Search catalog | The app shall filter loaded books by title or author as the user types. | Medium | `SearchActivity` |
 | FR-08 | Filter library | The app shall filter library rows by listening, downloaded, and finished status. | Medium | `LibraryActivity`, `ProgressRepository`, `DownloadedAudioRepository` |
-| FR-09 | Play audiobook | The app shall resolve an audio source and play it through Media3 ExoPlayer. | High | `ActivityReader`, `AudioSourceResolver` |
-| FR-10 | Control playback | The app shall support play/pause, seek bar control, 15-second skip back/forward, and speed cycling. | High | `ActivityReader` |
+| FR-09 | Play audiobook | The app shall resolve an audio source and play it through Media3 ExoPlayer owned by `PlaybackService`. | High | `ActivityReader`, `PlaybackService`, `AudioSourceResolver` |
+| FR-10 | Control playback | The app shall support play/pause, seek bar control, 15-second skip back/forward, speed cycling, and notification media controls. | High | `ActivityReader`, `PlaybackService`, `MediaController` |
 | FR-11 | Save progress | The app shall save current playback position, duration, completion state, and update timestamp. | High | `ProgressRepository`, Firestore |
-| FR-12 | Restore progress | The app shall seek to the last saved position when a book is reopened. | High | `ActivityReader`, `ProgressRepository` |
+| FR-12 | Restore progress | The app shall seek to the last saved position when a book is reopened. | High | `ActivityReader`, `PlaybackService`, `ProgressRepository` |
 | FR-13 | Download audio | The app shall download a book MP3 from `audioUrl` and store it in `files/audiobooks`. | Medium | `DownloadedAudioRepository` |
 | FR-14 | Prefer local audio | The app shall prefer a downloaded local MP3 over the remote URL when both are available. | Medium | `AudioSourceResolver` |
 | FR-15 | Display profile stats | The app shall display completed books and approximate listened hours for the current user. | Medium | `ProfileActivity`, `ProgressRepository` |
 | FR-16 | Show empty/error states | The app shall show clear messages when books, search results, library rows, or audio sources are unavailable. | Medium | Discover, Search, Library, Reader |
+| FR-17 | Continue playback in background | The app shall keep audio playing when the user leaves `ActivityReader` and expose media controls from the system notification. | High | `PlaybackService`, Android Manifest |
 
 ## 4. Non-Functional Requirements
 
 | Category | Requirement |
 |---|---|
 | Usability | The app should provide direct bottom navigation between Discover, Search, Library, and Profile. Form errors should appear close to the relevant input field. |
-| Performance | Firestore reads should load a small MVP catalog quickly, and audio playback should avoid blocking the main thread. MP3 downloads already run on a background thread. |
+| Performance | Firestore reads should load a small MVP catalog quickly. Audio playback runs in `PlaybackService`, while MP3 downloads already run on a background thread. |
 | Reliability | Missing Firebase configuration, missing book IDs, missing Firestore documents, empty search results, and missing audio URLs should produce controlled UI feedback instead of crashes. |
 | Security | Authentication should be handled by Firebase Auth. User progress should be stored under the authenticated user's `users/{uid}` document. Downloaded files should remain in app-private internal storage. |
 | Maintainability | Models, repositories, and UI resources should remain separated. Activities currently coordinate controller logic and should avoid growing unrelated responsibilities. |
@@ -141,9 +146,11 @@ without introducing ViewModel, UseCase, or dependency-injection layers.
 
 The main tradeoff is that Activities can become large because they handle both
 controller logic and Android lifecycle work. `ActivityReader` is the clearest
-example because it manages UI controls, ExoPlayer, progress persistence, and
-download actions. For the MVP this is acceptable, but a larger version should
-consider moving playback and state management into dedicated components.
+example because it coordinates UI controls, MediaController connection,
+progress persistence, and download actions. Playback ownership has been moved
+into `PlaybackService`, which keeps ExoPlayer outside the Activity lifecycle.
+For the MVP this is acceptable, but a larger version should consider moving
+reader UI state into a ViewModel or dedicated controller.
 
 ```mermaid
 flowchart TB
@@ -175,7 +182,9 @@ flowchart TB
         Firestore["Cloud Firestore"]
         RemoteAudio["Remote MP3 audioUrl"]
         InternalFiles["Internal files/audiobooks/*.mp3"]
+        PlaybackService["PlaybackService MediaSessionService"]
         ExoPlayer["Media3 ExoPlayer"]
+        MediaNotification["Media notification and lock-screen controls"]
         Glide["Glide image loading"]
     end
 
@@ -194,13 +203,16 @@ flowchart TB
     Reader --> ProgressRepo
     Reader --> DownloadRepo
     Reader --> Resolver
-    Reader --> ExoPlayer
+    Reader --> PlaybackService
 
     AuthRepo --> FirebaseAuth
     AuthRepo --> Firestore
     BookRepo --> Firestore
     ProgressRepo --> FirebaseAuth
     ProgressRepo --> Firestore
+    PlaybackService --> ExoPlayer
+    PlaybackService --> ProgressRepo
+    PlaybackService --> MediaNotification
     DownloadRepo --> RemoteAudio
     DownloadRepo --> InternalFiles
     Resolver --> DownloadRepo
@@ -218,9 +230,12 @@ Main playback flow:
 3. `ActivityReader` requests the book from `BookRepository`.
 4. `AudioSourceResolver` checks whether a local MP3 exists before using
    `audioUrl`.
-5. ExoPlayer prepares and plays the resolved source.
-6. `ProgressRepository` restores previous progress and saves new progress when
-   playback pauses, stops, ends, or the Activity is destroyed.
+5. `ActivityReader` connects to `PlaybackService` with a Media3
+   `MediaController` and sends a `MediaItem` with title, author, artwork, and
+   source URI.
+6. `PlaybackService` prepares and plays ExoPlayer through a `MediaSession`.
+7. `ProgressRepository` restores previous progress and saves new progress when
+   playback pauses, ends, the controller stops, or the service is destroyed.
 
 ## 6. Project Folder Structure
 
@@ -241,6 +256,7 @@ app/
       ActivityReader.java
       audio/
         AudioSourceResolver.java
+        PlaybackService.java
       data/
         AuthRepository.java
         BookRepository.java
@@ -269,11 +285,11 @@ app/
 | `java/com/example/fonos_group13/*.java` | Controller | Activity classes handle screen lifecycle, event handling, navigation, validation, and repository calls. |
 | `model/` | Model | `Book` and `UserProgress` represent application data. |
 | `data/` | Model/Data access | Repository classes communicate with Firebase and local files. |
-| `audio/` | Model helper | Resolves the correct playback URI from local downloads or remote URLs. |
+| `audio/` | Playback/helper | Resolves the correct playback URI from local downloads or remote URLs, and hosts the Media3 playback service. |
 | `ui/` | View helper | `BookCoverLoader` centralizes cover image loading logic. |
 | `res/layout*` | View | XML screen definitions for portrait, landscape, and localized variants. |
 | `res/drawable` | View | Icons, cards, progress backgrounds, buttons, and placeholders. |
-| `AndroidManifest.xml` | Platform configuration | Declares Activities and the internet permission. |
+| `AndroidManifest.xml` | Platform configuration | Declares Activities, `PlaybackService`, internet permission, and foreground media playback permissions. |
 
 If the project grows, a more explicit MVC package layout could move Activities
 into `controller/` or `view/`, but the current structure should not be renamed
@@ -354,11 +370,13 @@ flowchart TD
     K --> L{Audio source available?}
     L -- No --> M[Disable player controls and show missing audio message]
     L -- Yes --> N[Resolve local MP3 or remote audioUrl]
-    N --> O[Prepare ExoPlayer]
-    O --> P[Restore saved progress]
-    P --> Q[User plays audio]
-    Q --> R[Save progress on pause, stop, end, or destroy]
-    R --> S([End])
+    N --> O[Connect MediaController to PlaybackService]
+    O --> P[PlaybackService prepares ExoPlayer and MediaSession]
+    P --> Q[Restore saved progress]
+    Q --> R[User plays audio]
+    R --> S[Audio continues when app goes background]
+    S --> T[Save progress on pause, end, stop, or service destroy]
+    T --> U([End])
 ```
 
 ### User Flow 2: Download Audio for Local Playback
@@ -378,8 +396,9 @@ flowchart TD
     J -- Yes --> L[Write temp MP3 file]
     L --> M[Rename temp file to files/audiobooks/bookId.mp3]
     M --> N[Update download button]
-    N --> O[Re-prepare player with local audio source]
-    O --> P([End])
+    N --> O[Rebuild MediaItem with local audio source]
+    O --> P[PlaybackService prepares local file]
+    P --> Q([End])
 ```
 
 ## 9. Sequence Diagram
@@ -398,7 +417,10 @@ sequenceDiagram
     participant DownloadRepo as DownloadedAudioRepository
     participant RemoteAudio as Remote MP3 audioUrl
     participant InternalFiles as Internal files/audiobooks
+    participant Controller as MediaController
+    participant Service as PlaybackService
     participant Player as ExoPlayer
+    participant Notification as Media notification
     participant ProgressRepo as ProgressRepository
 
     User->>Discover: Select audiobook
@@ -411,11 +433,15 @@ sequenceDiagram
     Resolver->>DownloadRepo: getDownloadedUri(book.id)
     DownloadRepo-->>Resolver: Local Uri or null
     Resolver-->>Reader: Local Uri or remote audioUrl Uri
-    Reader->>Player: setMediaItem(uri)
-    Reader->>Player: prepare()
+    Reader->>Controller: setMediaItem(book metadata, uri)
+    Controller->>Service: Send media command
+    Service->>Player: setMediaItem(uri)
+    Service->>Player: prepare()
+    Service->>Notification: Publish media controls
     Reader->>ProgressRepo: getProgress(book.id)
     ProgressRepo-->>Reader: UserProgress
-    Reader->>Player: seekTo(positionMs)
+    Reader->>Controller: seekTo(positionMs)
+    Controller->>Service: seekTo(positionMs)
     opt Download audio for local playback
         User->>Reader: Tap download icon
         Reader->>DownloadRepo: isDownloaded(book.id)
@@ -431,12 +457,18 @@ sequenceDiagram
         Resolver->>DownloadRepo: getDownloadedUri(book.id)
         DownloadRepo-->>Resolver: Local Uri
         Resolver-->>Reader: Local Uri
-        Reader->>Player: setMediaItem(localUri)
-        Reader->>Player: prepare()
+        Reader->>Controller: setMediaItem(localUri, currentPosition)
+        Controller->>Service: Prepare local source
+        Service->>Player: setMediaItem(localUri)
+        Service->>Player: prepare()
     end
     User->>Reader: Tap play/pause/seek/speed
-    Reader->>Player: Control playback
+    Reader->>Controller: Control playback
+    Controller->>Service: Dispatch player command
+    User->>Notification: Tap play/pause/skip
+    Notification->>Service: Dispatch media session command
     Reader->>ProgressRepo: saveProgress(book.id, positionMs, durationMs)
+    Service->>ProgressRepo: saveProgress(book.id, positionMs, durationMs)
 ```
 
 Step explanation:
@@ -446,15 +478,18 @@ Step explanation:
 3. The repository maps the Firestore document into a `Book` model.
 4. The resolver checks downloaded internal storage first.
 5. If no local MP3 exists, the resolver falls back to the remote `audioUrl`.
-6. ExoPlayer prepares the media item.
-7. The app loads prior progress and seeks to the saved position.
-8. If the reader taps download, `ActivityReader` checks the current downloaded
+6. `ActivityReader` controls playback through `MediaController`.
+7. `PlaybackService` owns ExoPlayer, prepares the media item, and exposes the
+   media session notification.
+8. The app loads prior progress and seeks to the saved position.
+9. If the reader taps download, `ActivityReader` checks the current downloaded
    state before starting `DownloadedAudioRepository.download`.
-9. The repository streams the remote MP3 into a temporary file and renames it
+10. The repository streams the remote MP3 into a temporary file and renames it
    into `files/audiobooks` after a successful download.
-10. After download success, the reader updates the button state and prepares
-    playback again so `AudioSourceResolver` can choose the local MP3.
-11. User playback actions update the player and later persist progress.
+11. After download success, the reader updates the button state and rebuilds
+    the media item so `AudioSourceResolver` can choose the local MP3.
+12. User playback actions from the Activity or notification update the service
+    player and later persist progress.
 
 ## 10. Class Diagram
 
@@ -520,17 +555,29 @@ classDiagram
     class ActivityReader {
         +EXTRA_BOOK_ID String
         -Book currentBook
-        -ExoPlayer player
+        -MediaController mediaController
+        -ListenableFuture controllerFuture
         -BookRepository bookRepository
         -ProgressRepository progressRepository
         -DownloadedAudioRepository downloadedAudioRepository
         -AudioSourceResolver audioSourceResolver
+        -connectController()
         -loadBook(String)
         -prepareAudio(Book)
         -togglePlayback()
         -downloadCurrentBook()
         -saveProgress()
-        -releasePlayer()
+        -releaseController()
+    }
+
+    class PlaybackService {
+        -ExoPlayer player
+        -MediaSession mediaSession
+        -ProgressRepository progressRepository
+        +onCreate()
+        +onGetSession(ControllerInfo)
+        +onDestroy()
+        -saveCurrentProgress()
     }
 
     class Book {
@@ -625,6 +672,8 @@ classDiagram
     ActivityReader --> ProgressRepository
     ActivityReader --> DownloadedAudioRepository
     ActivityReader --> AudioSourceResolver
+    ActivityReader --> PlaybackService
+    PlaybackService --> ProgressRepository
     BookRepository --> Book
     ProgressRepository --> UserProgress
     AudioSourceResolver --> DownloadedAudioRepository
@@ -635,6 +684,8 @@ classDiagram
 Class roles:
 
 - Activities are MVC controllers and screen lifecycle owners.
+- `PlaybackService` owns ExoPlayer and the Media3 `MediaSession` for
+  background playback.
 - `Book` and `UserProgress` are model objects.
 - Repositories provide Firebase and local storage access.
 - `AudioSourceResolver` selects the best playback source.
@@ -850,16 +901,17 @@ flowchart TD
 
 - Description: Users listen to an audiobook and resume from the saved position.
 - Related screens: Reader, Library, Profile.
-- Related classes: `ActivityReader`, `AudioSourceResolver`,
-  `ProgressRepository`, `UserProgress`, ExoPlayer.
+- Related classes: `ActivityReader`, `PlaybackService`, `AudioSourceResolver`,
+  `ProgressRepository`, `UserProgress`, ExoPlayer, `MediaController`,
+  `MediaSession`.
 - Input: selected book ID, book document, audio source, saved progress.
 - Output: audio playback, seek bar updates, saved Firestore progress.
 - Validation: the reader checks for missing book ID, missing book document, and
   missing audio source.
 - Error handling: player controls are disabled if no playable source exists.
 - Expected behavior: progress is saved on pause, stop, playback end, and
-  destruction; the book is finished when position reaches 95 percent of
-  duration.
+  service destruction; audio continues when the user leaves `ActivityReader`;
+  the book is finished when position reaches 95 percent of duration.
 
 ### Feature 4: Audio Download and Local Playback
 
@@ -897,11 +949,11 @@ flowchart TD
 |---|---|---|
 | Activity | Yes | `MainActivity`, `LoginActivity`, `RegisterActivity`, `DiscoverActivity`, `SearchActivity`, `LibraryActivity`, `ProfileActivity`, `ActivityReader`. |
 | Fragment | No | The app currently uses Activity-based screens only. |
-| Service | No | No `<service>` is declared. Audio runs inside `ActivityReader`. |
-| Foreground Service | No | There is no persistent foreground playback service. |
+| Service | Yes | `.audio.PlaybackService` extends Media3 `MediaSessionService` and is declared in `AndroidManifest.xml`. |
+| Foreground Service | Yes | `PlaybackService` uses `android:foregroundServiceType="mediaPlayback"` for ongoing audiobook playback. |
 | BroadcastReceiver | No | No receiver is declared or registered. |
 | AlarmManager / WorkManager | No | The app does not schedule background work. |
-| NotificationManager | No | The app does not create playback or reminder notifications. |
+| Media notification | Yes | Media3 `DefaultMediaNotificationProvider` creates playback notification controls for the active `MediaSession`. The app does not use `NotificationManager` directly. |
 | ContentProvider | No | No provider is declared. |
 
 ### Permissions
@@ -909,9 +961,13 @@ flowchart TD
 | Permission | Purpose | Requested When | Privacy Consideration |
 |---|---|---|---|
 | `android.permission.INTERNET` | Required for Firebase Authentication, Firestore reads/writes, cover image loading, and remote MP3 download/playback. | Declared in `AndroidManifest.xml`; granted at install time as a normal permission. | The app transmits authentication data through Firebase SDKs and downloads remote media from configured URLs. |
+| `android.permission.FOREGROUND_SERVICE` | Allows the app to run a foreground service. | Declared in `AndroidManifest.xml`. | Used only for playback service lifecycle. |
+| `android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK` | Required on modern Android for foreground services with media playback type. | Declared in `AndroidManifest.xml`. | Applies to ongoing audiobook playback and media controls. |
 
 No storage permission is required because downloaded MP3 files are saved inside
-the app-private internal files directory.
+the app-private internal files directory. The app does not request
+`POST_NOTIFICATIONS`; the current notification is a media session playback
+notification.
 
 ## 15. Error Handling and Validation
 
@@ -929,7 +985,7 @@ the app-private internal files directory.
 | Missing audio URL | Player controls are disabled and a missing-audio message is shown. | Prevent player errors. |
 | Download HTTP failure | Repository reports an IOException and deletes temporary file. | Do not leave partial MP3 files as valid downloads. |
 | Internet unavailable | Firebase or HTTP callbacks fail and display messages. | Future work should add clearer offline-specific states. |
-| Unexpected lifecycle interruption | `onStop` and `onDestroy` save progress before releasing player. | Preserve progress during common app exits. |
+| Unexpected lifecycle interruption | `ActivityReader.onStop()` saves progress and releases only the `MediaController`; `PlaybackService` keeps ExoPlayer alive for background playback and saves progress on pause/end/destroy. | Preserve progress while allowing background audio. |
 
 ## 16. Testing Plan
 
@@ -942,7 +998,8 @@ the app-private internal files directory.
 - UI testing: validate login/register form errors, navigation, search results,
   library filters, and reader control states with Espresso.
 - Manual testing: validate actual audio playback, download behavior, lifecycle
-  progress saving, and behavior with/without Firebase configuration.
+  progress saving, background playback, media notification controls, and
+  behavior with/without Firebase configuration.
 
 ### Test Cases
 
@@ -957,7 +1014,7 @@ the app-private internal files directory.
 | TC-07 | Search by title | Catalog is loaded. | Type part of a known title. | Matching book rows remain visible. | Proposed |
 | TC-08 | Search no result | Catalog is loaded. | Type a query that matches no title or author. | "No books match your search" appears. | Proposed |
 | TC-09 | Reader open | A visible book exists. | Tap the book. | Reader opens with title, chapter, content sample, and duration. | Proposed |
-| TC-10 | Playback controls | Book has valid audio URL. | Tap play, pause, skip, seek, and speed. | ExoPlayer responds and UI state updates. | Proposed |
+| TC-10 | Playback controls | Book has valid audio URL. | Tap play, pause, skip, seek, and speed. | `ActivityReader` controls `PlaybackService` through `MediaController`, and UI state updates. | Proposed |
 | TC-11 | Progress save/restore | User plays a book and exits. | Reopen the same book. | Playback seeks to saved position. | Proposed |
 | TC-12 | Download success | Book has valid MP3 `audioUrl`. | Tap download. | MP3 is saved and download icon changes to completed state. | Proposed |
 | TC-13 | Download failure | Book has invalid `audioUrl`. | Tap download. | Error message appears and no empty MP3 is treated as downloaded. | Proposed |
@@ -965,6 +1022,8 @@ the app-private internal files directory.
 | TC-15 | Library finished filter | A book has completed progress. | Open Library and choose Finished. | Completed book appears with 100 percent progress. | Proposed |
 | TC-16 | Profile stats | User has progress records. | Open Profile. | Completed count and listened hours are displayed. | Proposed |
 | TC-17 | Logout | User is on Profile. | Tap logout. | Login opens with a cleared task stack. | Proposed |
+| TC-18 | Background playback | Book has valid audio URL. | Tap play, press Home, and listen. | Audio continues and a media playback notification appears. | Proposed |
+| TC-19 | Notification controls | Playback notification is visible. | Tap play/pause, skip back 15s, and skip forward 15s from notification or lock screen. | Playback state changes and the reader UI reflects the new state when reopened. | Proposed |
 
 The repository currently contains only default sample unit and instrumented
 tests. The table above defines the app-specific tests needed for stronger
@@ -1009,7 +1068,7 @@ Major dependencies:
 - AndroidX AppCompat, Core KTX, Activity KTX, ConstraintLayout.
 - Material Components.
 - Firebase BoM, Firebase Auth, Firebase Firestore.
-- Media3 ExoPlayer and Media3 Common.
+- Media3 ExoPlayer, Media3 Common, and Media3 Session.
 - Glide.
 - JUnit, AndroidX JUnit, Espresso.
 
@@ -1050,10 +1109,12 @@ security rules.
 
 ### Current Limitations
 
-- Playback is tied to `ActivityReader`; audio does not continue as a managed
-  foreground media session with notification controls.
 - Firestore is required for catalog and progress data; only downloaded audio
   files are locally available.
+- Notification tap currently opens the app through `MainActivity`; it does not
+  deep link directly back to the exact reader book.
+- The media service exposes playback controls, but it does not implement a full
+  `MediaLibraryService` browse tree.
 - The app does not include an admin interface for managing books.
 - Search is local over the currently loaded book list, not a server-side or
   indexed search.
@@ -1065,8 +1126,9 @@ security rules.
 
 ### Future Improvements
 
-- Add a foreground `MediaSessionService` with notification and lock-screen
-  playback controls.
+- Add a notification deep link that opens the current `ActivityReader` book.
+- Add a richer media browse tree if Android Auto, assistant, or external media
+  browser clients become a requirement.
 - Add Room caching for catalog metadata and progress fallback.
 - Add delete/download management for offline audio.
 - Add Firebase Storage integration if `audioStoragePath` becomes the primary
