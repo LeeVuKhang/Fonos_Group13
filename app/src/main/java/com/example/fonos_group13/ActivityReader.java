@@ -1,6 +1,7 @@
 package com.example.fonos_group13;
 
 import android.content.ComponentName;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -91,6 +92,7 @@ public class ActivityReader extends AppCompatActivity {
     private ListenableFuture<MediaController> controllerFuture;
     private MediaController mediaController;
     private Book currentBook;
+    private String requestedBookId;
     private boolean userSeeking;
     private boolean downloadingAudio;
     private int speedIndex;
@@ -122,19 +124,20 @@ public class ActivityReader extends AppCompatActivity {
         setupControls();
         setPlayerEnabled(false);
 
-        String bookId = getIntent().getStringExtra(EXTRA_BOOK_ID);
-        if (bookId == null || bookId.trim().isEmpty()) {
-            Toast.makeText(this, "Missing book id.", Toast.LENGTH_LONG).show();
-            finish();
-            return;
-        }
-        loadBook(bookId);
+        handleBookIntent(getIntent());
     }
 
     @Override
     protected void onStart() {
         super.onStart();
         connectController();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleBookIntent(intent);
     }
 
     private void bindViews() {
@@ -262,16 +265,54 @@ public class ActivityReader extends AppCompatActivity {
         }, ContextCompat.getMainExecutor(this));
     }
 
+    private void handleBookIntent(Intent intent) {
+        String bookId = intent == null ? null : trimToNull(intent.getStringExtra(EXTRA_BOOK_ID));
+        if (bookId == null) {
+            Toast.makeText(this, "Missing book id.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
+        if (currentBook != null && bookId.equals(currentBook.getId())) {
+            requestedBookId = bookId;
+            refreshCurrentBook();
+            return;
+        }
+
+        if (currentBook == null && bookId.equals(requestedBookId)) {
+            return;
+        }
+
+        requestedBookId = bookId;
+        loadBook(bookId);
+    }
+
+    private void refreshCurrentBook() {
+        updateDownloadButton();
+        if (mediaController == null) {
+            connectController();
+            return;
+        }
+        prepareAudio(currentBook);
+    }
+
     private void loadBook(String bookId) {
+        String loadingBookId = bookId;
         bookRepository.getBook(bookId, new RepositoryCallback<Book>() {
             @Override
             public void onSuccess(Book book) {
+                if (!loadingBookId.equals(requestedBookId)) {
+                    return;
+                }
                 bindBook(book);
                 prepareAudio(book);
             }
 
             @Override
             public void onError(Exception exception) {
+                if (!loadingBookId.equals(requestedBookId)) {
+                    return;
+                }
                 Toast.makeText(ActivityReader.this, "Could not load this book from Firestore.", Toast.LENGTH_LONG).show();
                 finish();
             }

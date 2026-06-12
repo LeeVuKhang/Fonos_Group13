@@ -17,6 +17,7 @@ import androidx.media3.session.DefaultMediaNotificationProvider;
 import androidx.media3.session.MediaSession;
 import androidx.media3.session.MediaSessionService;
 
+import com.example.fonos_group13.ActivityReader;
 import com.example.fonos_group13.MainActivity;
 import com.example.fonos_group13.R;
 import com.example.fonos_group13.data.ProgressRepository;
@@ -63,6 +64,11 @@ public class PlaybackService extends MediaSessionService {
                     saveCurrentProgress();
                 }
             }
+
+            @Override
+            public void onMediaItemTransition(@Nullable MediaItem mediaItem, int reason) {
+                updateSessionActivity();
+            }
         });
 
         DefaultMediaNotificationProvider notificationProvider =
@@ -89,6 +95,7 @@ public class PlaybackService extends MediaSessionService {
                                 .build()
                 ))
                 .build();
+        updateSessionActivity();
     }
 
     @Nullable
@@ -112,14 +119,41 @@ public class PlaybackService extends MediaSessionService {
     }
 
     private PendingIntent createSessionActivity() {
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        String bookId = getCurrentBookId();
+        Intent intent;
+        if (bookId == null) {
+            intent = new Intent(this, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        } else {
+            intent = new Intent(this, ActivityReader.class);
+            intent.putExtra(ActivityReader.EXTRA_BOOK_ID, bookId);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        }
         return PendingIntent.getActivity(
                 this,
                 0,
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
+    }
+
+    private void updateSessionActivity() {
+        if (mediaSession != null) {
+            mediaSession.setSessionActivity(createSessionActivity());
+        }
+    }
+
+    @Nullable
+    private String getCurrentBookId() {
+        if (player == null) {
+            return null;
+        }
+        MediaItem currentItem = player.getCurrentMediaItem();
+        if (currentItem == null || currentItem.mediaId == null) {
+            return null;
+        }
+        String bookId = currentItem.mediaId.trim();
+        return bookId.isEmpty() ? null : bookId;
     }
 
     private void saveCurrentProgress() {
