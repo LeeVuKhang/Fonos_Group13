@@ -77,6 +77,11 @@ public class ProfileActivity extends AppCompatActivity {
             accountSettings.setOnClickListener(v -> showDisplayNameDialog());
         }
 
+        View audioPreferences = findViewById(R.id.btn_audio_preferences);
+        if (audioPreferences != null) {
+            audioPreferences.setOnClickListener(v -> startActivity(new Intent(this, AudioPreferencesActivity.class)));
+        }
+
         View logout = findViewById(R.id.btn_logout);
         if (logout != null) {
             logout.setOnClickListener(v -> {
