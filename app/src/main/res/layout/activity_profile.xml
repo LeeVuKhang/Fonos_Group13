@@ -193,6 +193,7 @@
                 
                 <!-- Account Settings -->
                 <LinearLayout
+                    android:id="@+id/btn_account_settings"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:orientation="horizontal"
@@ -233,6 +234,7 @@
                     
                 <!-- Audio Preferences -->
                 <LinearLayout
+                    android:id="@+id/btn_audio_preferences"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:orientation="horizontal"

@@ -29,6 +29,7 @@ import androidx.media3.common.util.UnstableApi;
 import androidx.media3.session.MediaController;
 import androidx.media3.session.SessionToken;
 
+import com.example.fonos_group13.audio.AudioPreferences;
 import com.example.fonos_group13.audio.AudioSourceResolver;
 import com.example.fonos_group13.audio.PlaybackService;
 import com.example.fonos_group13.data.BookRepository;
@@ -50,7 +51,6 @@ public class ActivityReader extends AppCompatActivity {
     public static final String EXTRA_BOOK_ID = "book_id";
 
     private static final long SKIP_MS = 15000L;
-    private final float[] playbackSpeeds = {1.0f, 1.2f, 1.5f, 2.0f};
     private final Handler progressHandler = new Handler(Looper.getMainLooper());
     private final Runnable progressRunnable = new Runnable() {
         @Override
@@ -118,6 +118,7 @@ public class ActivityReader extends AppCompatActivity {
         progressRepository = new ProgressRepository(this);
         downloadedAudioRepository = new DownloadedAudioRepository(this);
         audioSourceResolver = new AudioSourceResolver(this);
+        speedIndex = AudioPreferences.getDefaultSpeedIndex(this);
 
         bindViews();
         setupInsets();
@@ -245,7 +246,7 @@ public class ActivityReader extends AppCompatActivity {
             try {
                 mediaController = future.get();
                 mediaController.addListener(playerListener);
-                mediaController.setPlaybackParameters(new PlaybackParameters(playbackSpeeds[speedIndex]));
+                mediaController.setPlaybackParameters(new PlaybackParameters(AudioPreferences.getSpeedAt(speedIndex)));
                 setPlayerEnabled(currentBook != null && hasAudio(currentBook));
                 if (currentBook != null) {
                     prepareAudio(currentBook);
@@ -364,7 +365,7 @@ public class ActivityReader extends AppCompatActivity {
         }
 
         setPlayerEnabled(true);
-        mediaController.setPlaybackParameters(new PlaybackParameters(playbackSpeeds[speedIndex]));
+        mediaController.setPlaybackParameters(new PlaybackParameters(AudioPreferences.getSpeedAt(speedIndex)));
 
         MediaItem currentItem = mediaController.getCurrentMediaItem();
         boolean sameBook = currentItem != null && book.getId().equals(currentItem.mediaId);
@@ -530,17 +531,17 @@ public class ActivityReader extends AppCompatActivity {
     }
 
     private void cyclePlaybackSpeed() {
-        speedIndex = (speedIndex + 1) % playbackSpeeds.length;
+        speedIndex = (speedIndex + 1) % AudioPreferences.speedCount();
         if (tvPlaybackSpeed != null) {
             tvPlaybackSpeed.setText(formatSpeed());
         }
         if (mediaController != null) {
-            mediaController.setPlaybackParameters(new PlaybackParameters(playbackSpeeds[speedIndex]));
+            mediaController.setPlaybackParameters(new PlaybackParameters(AudioPreferences.getSpeedAt(speedIndex)));
         }
     }
 
     private String formatSpeed() {
-        return String.format(Locale.US, "%.1fx", playbackSpeeds[speedIndex]);
+        return AudioPreferences.formatSpeed(speedIndex);
     }
 
     private void updateProgressUi() {

@@ -36,6 +36,16 @@ public class DownloadedAudioRepository {
         return Uri.fromFile(getAudioFile(bookId));
     }
 
+    public long getDownloadedSizeBytes(String bookId) {
+        File audioFile = getAudioFile(bookId);
+        return audioFile.exists() ? Math.max(audioFile.length(), 0) : 0;
+    }
+
+    public boolean deleteDownloadedAudio(String bookId) {
+        File audioFile = getAudioFile(bookId);
+        return !audioFile.exists() || audioFile.delete();
+    }
+
     public void download(Book book, RepositoryCallback<File> callback) {
         new Thread(() -> {
             try {
