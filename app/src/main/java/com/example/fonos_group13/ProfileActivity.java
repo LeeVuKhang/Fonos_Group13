@@ -1,9 +1,16 @@
 package com.example.fonos_group13;
 
+import android.app.Dialog;
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
+import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -46,6 +53,7 @@ public class ProfileActivity extends AppCompatActivity {
         
         bindProfile();
         loadStats();
+        setupProfileActions();
         setupBottomNavigation();
     }
 
@@ -61,6 +69,13 @@ public class ProfileActivity extends AppCompatActivity {
             name.setText("Reader");
             email.setText("");
         }
+    }
+
+    private void setupProfileActions() {
+        View accountSettings = findViewById(R.id.btn_account_settings);
+        if (accountSettings != null) {
+            accountSettings.setOnClickListener(v -> showDisplayNameDialog());
+        }
 
         View logout = findViewById(R.id.btn_logout);
         if (logout != null) {
@@ -71,6 +86,89 @@ public class ProfileActivity extends AppCompatActivity {
                 startActivity(intent);
             });
         }
+    }
+
+    private void showDisplayNameDialog() {
+        FirebaseUser user = authRepository.getCurrentUser();
+        if (user == null) {
+            Toast.makeText(this, "Please sign in again to update your profile.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        String currentName = user.getDisplayName();
+        if (currentName == null || currentName.trim().isEmpty()) {
+            TextView profileName = findViewById(R.id.tv_profile_name);
+            currentName = profileName == null ? "" : profileName.getText().toString();
+        }
+
+        Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_edit_display_name);
+
+        EditText input = dialog.findViewById(R.id.dialog_display_name);
+        TextView cancel = dialog.findViewById(R.id.dialog_cancel);
+        TextView save = dialog.findViewById(R.id.dialog_save);
+        input.setText(currentName);
+
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        save.setOnClickListener(v -> {
+            String displayName = input.getText().toString().trim();
+            if (displayName.isEmpty()) {
+                input.setError("Display name cannot be empty");
+                input.requestFocus();
+                return;
+            }
+
+            input.setEnabled(false);
+            cancel.setEnabled(false);
+            save.setEnabled(false);
+            save.setAlpha(0.65f);
+            save.setText("Saving...");
+            authRepository.updateDisplayName(displayName, new RepositoryCallback<FirebaseUser>() {
+                @Override
+                public void onSuccess(FirebaseUser data) {
+                    runOnUiThread(() -> {
+                        updateProfileName(displayName);
+                        Toast.makeText(ProfileActivity.this, "Display name updated.", Toast.LENGTH_SHORT).show();
+                        dialog.dismiss();
+                    });
+                }
+
+                @Override
+                public void onError(Exception exception) {
+                    runOnUiThread(() -> {
+                        input.setEnabled(true);
+                        cancel.setEnabled(true);
+                        save.setEnabled(true);
+                        save.setAlpha(1f);
+                        save.setText("Save");
+                        Toast.makeText(ProfileActivity.this, AuthRepository.friendlyError(exception), Toast.LENGTH_LONG).show();
+                    });
+                }
+            });
+        });
+
+        dialog.show();
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            WindowManager.LayoutParams params = new WindowManager.LayoutParams();
+            params.copyFrom(window.getAttributes());
+            params.width = Math.min(getResources().getDisplayMetrics().widthPixels - dp(48), dp(360));
+            params.height = WindowManager.LayoutParams.WRAP_CONTENT;
+            window.setAttributes(params);
+        }
+    }
+
+    private void updateProfileName(String displayName) {
+        TextView name = findViewById(R.id.tv_profile_name);
+        if (name != null) {
+            name.setText(displayName);
+        }
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     private void loadStats() {

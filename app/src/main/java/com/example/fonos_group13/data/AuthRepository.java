@@ -78,6 +78,40 @@ public class AuthRepository {
                 .addOnFailureListener(callback::onError);
     }
 
+    public void updateDisplayName(String displayName, RepositoryCallback<FirebaseUser> callback) {
+        String cleanDisplayName = displayName == null ? "" : displayName.trim();
+        if (TextUtils.isEmpty(cleanDisplayName)) {
+            callback.onError(new IllegalArgumentException("Display name cannot be empty."));
+            return;
+        }
+        if (!configured || auth == null || firestore == null) {
+            callback.onError(FirebaseConfig.missingConfigException());
+            return;
+        }
+
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null) {
+            callback.onError(new IllegalStateException("Please sign in again to update your profile."));
+            return;
+        }
+
+        user.updateProfile(new UserProfileChangeRequest.Builder()
+                        .setDisplayName(cleanDisplayName)
+                        .build())
+                .addOnSuccessListener(unused -> {
+                    Map<String, Object> profile = new HashMap<>();
+                    profile.put("displayName", cleanDisplayName);
+                    profile.put("updatedAt", FieldValue.serverTimestamp());
+
+                    firestore.collection("users")
+                            .document(user.getUid())
+                            .set(profile, SetOptions.merge())
+                            .addOnSuccessListener(saved -> callback.onSuccess(user))
+                            .addOnFailureListener(callback::onError);
+                })
+                .addOnFailureListener(callback::onError);
+    }
+
     public void signOut() {
         if (auth != null) {
             auth.signOut();
