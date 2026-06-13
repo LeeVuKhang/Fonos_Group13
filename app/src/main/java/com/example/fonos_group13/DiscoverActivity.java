@@ -166,8 +166,8 @@ public class DiscoverActivity extends AppCompatActivity {
     }
 
     private void openReader(Book book) {
-        Intent intent = new Intent(this, ActivityReader.class);
-        intent.putExtra(ActivityReader.EXTRA_BOOK_ID, book.getId());
+        Intent intent = new Intent(this, BookDetailActivity.class);
+        intent.putExtra(BookDetailActivity.EXTRA_BOOK_ID, book.getId());
         startActivity(intent);
     }
 

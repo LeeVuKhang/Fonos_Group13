@@ -47,16 +47,6 @@
                 app:tint="@color/text_main" />
 
             <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginEnd="4dp"
-                android:alpha="0.45"
-                android:enabled="false"
-                android:padding="12dp"
-                android:src="@drawable/ic_bookmark"
-                app:tint="@color/text_main" />
-
-            <ImageView
                 android:id="@+id/ivDownloadAudio"
                 android:layout_width="48dp"
                 android:layout_height="48dp"

@@ -23,6 +23,7 @@ import com.example.fonos_group13.data.BookRepository;
 import com.example.fonos_group13.data.ProgressRepository;
 import com.example.fonos_group13.data.RepositoryCallback;
 import com.example.fonos_group13.model.Book;
+import com.example.fonos_group13.model.BookChapter;
 import com.example.fonos_group13.model.UserProgress;
 import com.google.firebase.auth.FirebaseUser;
 
@@ -201,27 +202,107 @@ public class ProfileActivity extends AppCompatActivity {
         final long[] listenedMs = {0};
 
         for (Book book : books) {
-            progressRepository.getProgress(book.getId(), new RepositoryCallback<UserProgress>() {
+            loadBookStats(book, remaining, completedCount, listenedMs);
+        }
+    }
+
+    private void loadBookStats(Book book, int[] remaining, int[] completedCount, long[] listenedMs) {
+        bookRepository.getChapters(book.getId(), new RepositoryCallback<List<BookChapter>>() {
+            @Override
+            public void onSuccess(List<BookChapter> chapters) {
+                if (chapters == null || chapters.isEmpty()) {
+                    finishOneBookStatLoad(remaining, completedCount, listenedMs, false, 0);
+                    return;
+                }
+                loadChapterStats(chapters, remaining, completedCount, listenedMs);
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                finishOneBookStatLoad(remaining, completedCount, listenedMs, false, 0);
+            }
+        });
+    }
+
+    private void loadChapterStats(
+            List<BookChapter> chapters,
+            int[] remainingBooks,
+            int[] completedBooks,
+            long[] totalListenedMs
+    ) {
+        final int[] remainingChapters = {chapters.size()};
+        final boolean[] allCompleted = {true};
+        final long[] bookListenedMs = {0};
+
+        for (BookChapter chapter : chapters) {
+            progressRepository.getProgress(chapter.getBookId(), chapter.getId(), new RepositoryCallback<UserProgress>() {
                 @Override
                 public void onSuccess(UserProgress progress) {
                     if (progress != null) {
-                        if (progress.isCompleted()) {
-                            completedCount[0]++;
+                        if (!progress.isCompleted()) {
+                            allCompleted[0] = false;
                         }
-                        listenedMs[0] += Math.max(progress.getPositionMs(), 0);
+                        bookListenedMs[0] += Math.max(progress.getPositionMs(), 0);
+                    } else {
+                        allCompleted[0] = false;
                     }
-                    finishOneStatLoad(remaining, completedCount, listenedMs);
+                    finishOneChapterStatLoad(
+                            remainingChapters,
+                            remainingBooks,
+                            completedBooks,
+                            totalListenedMs,
+                            allCompleted,
+                            bookListenedMs
+                    );
                 }
 
                 @Override
                 public void onError(Exception exception) {
-                    finishOneStatLoad(remaining, completedCount, listenedMs);
+                    allCompleted[0] = false;
+                    finishOneChapterStatLoad(
+                            remainingChapters,
+                            remainingBooks,
+                            completedBooks,
+                            totalListenedMs,
+                            allCompleted,
+                            bookListenedMs
+                    );
                 }
             });
         }
     }
 
-    private void finishOneStatLoad(int[] remaining, int[] completedCount, long[] listenedMs) {
+    private void finishOneChapterStatLoad(
+            int[] remainingChapters,
+            int[] remainingBooks,
+            int[] completedBooks,
+            long[] totalListenedMs,
+            boolean[] allCompleted,
+            long[] bookListenedMs
+    ) {
+        remainingChapters[0]--;
+        if (remainingChapters[0] <= 0) {
+            finishOneBookStatLoad(
+                    remainingBooks,
+                    completedBooks,
+                    totalListenedMs,
+                    allCompleted[0],
+                    bookListenedMs[0]
+            );
+        }
+    }
+
+    private void finishOneBookStatLoad(
+            int[] remaining,
+            int[] completedCount,
+            long[] listenedMs,
+            boolean completed,
+            long bookListenedMs
+    ) {
+        if (completed) {
+            completedCount[0]++;
+        }
+        listenedMs[0] += Math.max(bookListenedMs, 0);
         remaining[0]--;
         if (remaining[0] <= 0) {
             updateStats(completedCount[0], listenedMs[0]);
