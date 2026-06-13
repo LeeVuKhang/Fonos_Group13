@@ -3,6 +3,7 @@ package com.example.fonos_group13.data;
 import android.content.Context;
 
 import com.example.fonos_group13.model.Book;
+import com.example.fonos_group13.model.BookChapter;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
@@ -52,6 +53,53 @@ public class BookRepository {
                         callback.onSuccess(Book.fromDocument(document));
                     } else {
                         callback.onError(new IllegalArgumentException("Book not found: " + bookId));
+                    }
+                })
+                .addOnFailureListener(callback::onError);
+    }
+
+    public void getChapters(String bookId, RepositoryCallback<List<BookChapter>> callback) {
+        if (!configured || firestore == null) {
+            callback.onError(FirebaseConfig.missingConfigException());
+            return;
+        }
+
+        firestore.collection("books")
+                .document(bookId)
+                .collection("chapters")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    List<BookChapter> chapters = new ArrayList<>();
+                    boolean hasChapterDocuments = !querySnapshot.isEmpty();
+                    querySnapshot.getDocuments().forEach(document -> {
+                        BookChapter chapter = BookChapter.fromDocument(bookId, document);
+                        if (chapter.isPublished()) {
+                            chapters.add(chapter);
+                        }
+                    });
+                    Collections.sort(chapters, (left, right) -> {
+                        int orderCompare = Integer.compare(left.getOrder(), right.getOrder());
+                        if (orderCompare != 0) {
+                            return orderCompare;
+                        }
+                        return left.getTitle().compareToIgnoreCase(right.getTitle());
+                    });
+                    if (!hasChapterDocuments) {
+                        getBook(bookId, new RepositoryCallback<Book>() {
+                            @Override
+                            public void onSuccess(Book book) {
+                                List<BookChapter> fallbackChapters = new ArrayList<>();
+                                fallbackChapters.add(BookChapter.fromLegacyBook(book));
+                                callback.onSuccess(fallbackChapters);
+                            }
+
+                            @Override
+                            public void onError(Exception exception) {
+                                callback.onError(exception);
+                            }
+                        });
+                    } else {
+                        callback.onSuccess(chapters);
                     }
                 })
                 .addOnFailureListener(callback::onError);

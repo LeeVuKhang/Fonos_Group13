@@ -22,11 +22,14 @@ import com.example.fonos_group13.data.BookRepository;
 import com.example.fonos_group13.data.DownloadedAudioRepository;
 import com.example.fonos_group13.data.RepositoryCallback;
 import com.example.fonos_group13.model.Book;
+import com.example.fonos_group13.model.BookChapter;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class AudioPreferencesActivity extends AppCompatActivity {
     private BookRepository bookRepository;
@@ -35,6 +38,7 @@ public class AudioPreferencesActivity extends AppCompatActivity {
     private TextView downloadsEmptyState;
     private TextView[] speedChips;
     private final List<Book> publishedBooks = new ArrayList<>();
+    private final Map<String, List<BookChapter>> chaptersByBookId = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -114,20 +118,20 @@ public class AudioPreferencesActivity extends AppCompatActivity {
         if (downloadsContainer != null) {
             downloadsContainer.removeAllViews();
         }
+        publishedBooks.clear();
+        chaptersByBookId.clear();
         showDownloadsMessage("Loading downloaded audio...");
         bookRepository.getPublishedBooks(new RepositoryCallback<List<Book>>() {
             @Override
             public void onSuccess(List<Book> books) {
-                publishedBooks.clear();
                 if (books != null) {
                     publishedBooks.addAll(books);
                 }
-                bindDownloadedBooks();
+                loadChaptersForDownloads();
             }
 
             @Override
             public void onError(Exception exception) {
-                publishedBooks.clear();
                 if (downloadsContainer != null) {
                     downloadsContainer.removeAllViews();
                 }
@@ -137,7 +141,37 @@ public class AudioPreferencesActivity extends AppCompatActivity {
         });
     }
 
-    private void bindDownloadedBooks() {
+    private void loadChaptersForDownloads() {
+        if (publishedBooks.isEmpty()) {
+            bindDownloadedChapters();
+            return;
+        }
+        final int[] remaining = {publishedBooks.size()};
+        for (Book book : publishedBooks) {
+            bookRepository.getChapters(book.getId(), new RepositoryCallback<List<BookChapter>>() {
+                @Override
+                public void onSuccess(List<BookChapter> chapters) {
+                    chaptersByBookId.put(book.getId(), chapters == null ? new ArrayList<>() : new ArrayList<>(chapters));
+                    finishOneChapterLoad(remaining);
+                }
+
+                @Override
+                public void onError(Exception exception) {
+                    chaptersByBookId.put(book.getId(), new ArrayList<>());
+                    finishOneChapterLoad(remaining);
+                }
+            });
+        }
+    }
+
+    private void finishOneChapterLoad(int[] remaining) {
+        remaining[0]--;
+        if (remaining[0] <= 0) {
+            bindDownloadedChapters();
+        }
+    }
+
+    private void bindDownloadedChapters() {
         if (downloadsContainer == null) {
             return;
         }
@@ -145,9 +179,10 @@ public class AudioPreferencesActivity extends AppCompatActivity {
         downloadsContainer.removeAllViews();
         int visibleCount = 0;
         for (Book book : publishedBooks) {
-            if (downloadedAudioRepository.isDownloaded(book.getId())) {
-                addDownloadRow(book);
-                visibleCount++;
+            List<BookChapter> downloadedChapters = downloadedChaptersForBook(book);
+            if (!downloadedChapters.isEmpty()) {
+                addBookGroup(book, downloadedChapters);
+                visibleCount += downloadedChapters.size();
             }
         }
 
@@ -158,7 +193,40 @@ public class AudioPreferencesActivity extends AppCompatActivity {
         }
     }
 
-    private void addDownloadRow(Book book) {
+    private List<BookChapter> downloadedChaptersForBook(Book book) {
+        List<BookChapter> downloadedChapters = new ArrayList<>();
+        List<BookChapter> chapters = chaptersByBookId.get(book.getId());
+        if (chapters == null || chapters.isEmpty()) {
+            chapters = new ArrayList<>();
+            chapters.add(BookChapter.fromLegacyBook(book));
+        }
+        for (BookChapter chapter : chapters) {
+            if (downloadedAudioRepository.isDownloaded(book.getId(), chapter.getId())) {
+                downloadedChapters.add(chapter);
+            }
+        }
+        return downloadedChapters;
+    }
+
+    private void addBookGroup(Book book, List<BookChapter> chapters) {
+        TextView groupTitle = new TextView(this);
+        groupTitle.setText(book.getTitle());
+        groupTitle.setTextColor(getColor(R.color.text_dark));
+        groupTitle.setTextSize(16);
+        groupTitle.setTypeface(null, Typeface.BOLD);
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        titleParams.setMargins(0, dp(12), 0, dp(6));
+        downloadsContainer.addView(groupTitle, titleParams);
+
+        for (BookChapter chapter : chapters) {
+            addDownloadRow(book, chapter);
+        }
+    }
+
+    private void addDownloadRow(Book book, BookChapter chapter) {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -181,13 +249,13 @@ public class AudioPreferencesActivity extends AppCompatActivity {
         textContainer.setLayoutParams(textParams);
 
         TextView title = new TextView(this);
-        title.setText(book.getTitle());
+        title.setText(chapter.getTitle());
         title.setTextColor(getColor(R.color.text_dark));
-        title.setTextSize(16);
+        title.setTextSize(15);
         title.setTypeface(null, Typeface.BOLD);
 
         TextView subtitle = new TextView(this);
-        long sizeBytes = downloadedAudioRepository.getDownloadedSizeBytes(book.getId());
+        long sizeBytes = downloadedAudioRepository.getDownloadedSizeBytes(book.getId(), chapter.getId());
         subtitle.setText(book.getAuthor() + " - " + formatSize(sizeBytes));
         subtitle.setTextColor(getColor(R.color.text_muted));
         subtitle.setTextSize(13);
@@ -201,28 +269,28 @@ public class AudioPreferencesActivity extends AppCompatActivity {
         deleteButton.setTextSize(13);
         deleteButton.setTextColor(getColor(R.color.white));
         deleteButton.setBackgroundTintList(ColorStateList.valueOf(getColor(android.R.color.holo_red_dark)));
-        deleteButton.setOnClickListener(v -> confirmDelete(book));
+        deleteButton.setOnClickListener(v -> confirmDelete(book, chapter));
 
         row.addView(textContainer);
         row.addView(deleteButton);
         downloadsContainer.addView(row);
     }
 
-    private void confirmDelete(Book book) {
+    private void confirmDelete(Book book, BookChapter chapter) {
         new AlertDialog.Builder(this)
                 .setTitle("Delete Download")
-                .setMessage("Remove downloaded audio for \"" + book.getTitle() + "\"? Streaming will still work if audioUrl is available.")
+                .setMessage("Remove downloaded audio for \"" + chapter.getTitle() + "\"? Streaming will still work if audioUrl is available.")
                 .setNegativeButton("Cancel", null)
-                .setPositiveButton("Delete", (dialog, which) -> deleteDownload(book))
+                .setPositiveButton("Delete", (dialog, which) -> deleteDownload(book, chapter))
                 .show();
     }
 
-    private void deleteDownload(Book book) {
-        if (downloadedAudioRepository.deleteDownloadedAudio(book.getId())) {
-            Toast.makeText(this, "Downloaded audio deleted.", Toast.LENGTH_SHORT).show();
-            bindDownloadedBooks();
+    private void deleteDownload(Book book, BookChapter chapter) {
+        if (downloadedAudioRepository.deleteDownloadedAudio(book.getId(), chapter.getId())) {
+            Toast.makeText(this, "Downloaded chapter deleted.", Toast.LENGTH_SHORT).show();
+            bindDownloadedChapters();
         } else {
-            Toast.makeText(this, "Could not delete downloaded audio.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Could not delete downloaded chapter.", Toast.LENGTH_LONG).show();
         }
     }
 

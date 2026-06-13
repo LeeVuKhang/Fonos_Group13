@@ -2,6 +2,7 @@ package com.example.fonos_group13.audio;
 
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.os.Bundle;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
@@ -120,6 +121,7 @@ public class PlaybackService extends MediaSessionService {
 
     private PendingIntent createSessionActivity() {
         String bookId = getCurrentBookId();
+        String chapterId = getCurrentChapterId();
         Intent intent;
         if (bookId == null) {
             intent = new Intent(this, MainActivity.class);
@@ -127,6 +129,9 @@ public class PlaybackService extends MediaSessionService {
         } else {
             intent = new Intent(this, ActivityReader.class);
             intent.putExtra(ActivityReader.EXTRA_BOOK_ID, bookId);
+            if (chapterId != null) {
+                intent.putExtra(ActivityReader.EXTRA_CHAPTER_ID, chapterId);
+            }
             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         }
         return PendingIntent.getActivity(
@@ -149,11 +154,38 @@ public class PlaybackService extends MediaSessionService {
             return null;
         }
         MediaItem currentItem = player.getCurrentMediaItem();
-        if (currentItem == null || currentItem.mediaId == null) {
+        if (currentItem == null) {
+            return null;
+        }
+        Bundle extras = currentItem.mediaMetadata.extras;
+        if (extras != null) {
+            String bookId = extras.getString(ActivityReader.METADATA_BOOK_ID);
+            if (bookId != null && !bookId.trim().isEmpty()) {
+                return bookId.trim();
+            }
+        }
+        if (currentItem.mediaId == null) {
             return null;
         }
         String bookId = currentItem.mediaId.trim();
         return bookId.isEmpty() ? null : bookId;
+    }
+
+    @Nullable
+    private String getCurrentChapterId() {
+        if (player == null) {
+            return null;
+        }
+        MediaItem currentItem = player.getCurrentMediaItem();
+        if (currentItem == null || currentItem.mediaMetadata.extras == null) {
+            return null;
+        }
+        String chapterId = currentItem.mediaMetadata.extras.getString(ActivityReader.METADATA_CHAPTER_ID);
+        if (chapterId == null) {
+            return null;
+        }
+        String trimmed = chapterId.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private void saveCurrentProgress() {
@@ -161,7 +193,20 @@ public class PlaybackService extends MediaSessionService {
             return;
         }
         MediaItem currentItem = player.getCurrentMediaItem();
-        if (currentItem == null || currentItem.mediaId == null || currentItem.mediaId.trim().isEmpty()) {
+        if (currentItem == null) {
+            return;
+        }
+        Bundle extras = currentItem.mediaMetadata.extras;
+        if (extras != null) {
+            String bookId = extras.getString(ActivityReader.METADATA_BOOK_ID);
+            String chapterId = extras.getString(ActivityReader.METADATA_CHAPTER_ID);
+            if (bookId != null && !bookId.trim().isEmpty()
+                    && chapterId != null && !chapterId.trim().isEmpty()) {
+                progressRepository.saveProgress(bookId, chapterId, player.getCurrentPosition(), getDurationMs());
+                return;
+            }
+        }
+        if (currentItem.mediaId == null || currentItem.mediaId.trim().isEmpty()) {
             return;
         }
         progressRepository.saveProgress(currentItem.mediaId, player.getCurrentPosition(), getDurationMs());
