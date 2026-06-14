@@ -145,8 +145,9 @@
                     android:layout_height="52dp"
                     android:layout_marginStart="18dp"
                     android:alpha="0.45"
+                    android:clickable="true"
                     android:contentDescription="Save audiobook"
-                    android:enabled="false"
+                    android:focusable="true"
                     android:padding="13dp"
                     android:src="@drawable/ic_bookmark"
                     app:tint="@color/accent" />

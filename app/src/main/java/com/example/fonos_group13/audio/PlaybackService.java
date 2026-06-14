@@ -29,7 +29,6 @@ public class PlaybackService extends MediaSessionService {
     public static final String NOTIFICATION_CHANNEL_ID = "audiobook_playback";
 
     private static final int NOTIFICATION_ID = 1001;
-    private static final long SKIP_MS = 15000L;
 
     private ExoPlayer player;
     private MediaSession mediaSession;
@@ -41,8 +40,6 @@ public class PlaybackService extends MediaSessionService {
         progressRepository = new ProgressRepository(this);
 
         player = new ExoPlayer.Builder(this)
-                .setSeekBackIncrementMs(SKIP_MS)
-                .setSeekForwardIncrementMs(SKIP_MS)
                 .build();
         player.setAudioAttributes(
                 new AudioAttributes.Builder()
@@ -70,6 +67,17 @@ public class PlaybackService extends MediaSessionService {
             public void onMediaItemTransition(@Nullable MediaItem mediaItem, int reason) {
                 updateSessionActivity();
             }
+
+            @Override
+            public void onPositionDiscontinuity(
+                    Player.PositionInfo oldPosition,
+                    Player.PositionInfo newPosition,
+                    int reason
+            ) {
+                if (oldPosition.mediaItemIndex != newPosition.mediaItemIndex) {
+                    saveProgress(oldPosition.mediaItem, oldPosition.positionMs, getDurationMs(oldPosition.mediaItem));
+                }
+            }
         });
 
         DefaultMediaNotificationProvider notificationProvider =
@@ -84,14 +92,14 @@ public class PlaybackService extends MediaSessionService {
         mediaSession = new MediaSession.Builder(this, player)
                 .setSessionActivity(createSessionActivity())
                 .setMediaButtonPreferences(ImmutableList.of(
-                        new CommandButton.Builder(CommandButton.ICON_SKIP_BACK_15)
-                                .setDisplayName("Skip back 15 seconds")
-                                .setPlayerCommand(Player.COMMAND_SEEK_BACK)
+                        new CommandButton.Builder(CommandButton.ICON_PREVIOUS)
+                                .setDisplayName("Previous chapter")
+                                .setPlayerCommand(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
                                 .setSlots(CommandButton.SLOT_BACK)
                                 .build(),
-                        new CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_15)
-                                .setDisplayName("Skip forward 15 seconds")
-                                .setPlayerCommand(Player.COMMAND_SEEK_FORWARD)
+                        new CommandButton.Builder(CommandButton.ICON_NEXT)
+                                .setDisplayName("Next chapter")
+                                .setPlayerCommand(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
                                 .setSlots(CommandButton.SLOT_FORWARD)
                                 .build()
                 ))
@@ -192,8 +200,11 @@ public class PlaybackService extends MediaSessionService {
         if (player == null || progressRepository == null) {
             return;
         }
-        MediaItem currentItem = player.getCurrentMediaItem();
-        if (currentItem == null) {
+        saveProgress(player.getCurrentMediaItem(), player.getCurrentPosition(), getDurationMs());
+    }
+
+    private void saveProgress(@Nullable MediaItem currentItem, long positionMs, long durationMs) {
+        if (currentItem == null || progressRepository == null) {
             return;
         }
         Bundle extras = currentItem.mediaMetadata.extras;
@@ -202,14 +213,14 @@ public class PlaybackService extends MediaSessionService {
             String chapterId = extras.getString(ActivityReader.METADATA_CHAPTER_ID);
             if (bookId != null && !bookId.trim().isEmpty()
                     && chapterId != null && !chapterId.trim().isEmpty()) {
-                progressRepository.saveProgress(bookId, chapterId, player.getCurrentPosition(), getDurationMs());
+                progressRepository.saveProgress(bookId, chapterId, positionMs, durationMs);
                 return;
             }
         }
         if (currentItem.mediaId == null || currentItem.mediaId.trim().isEmpty()) {
             return;
         }
-        progressRepository.saveProgress(currentItem.mediaId, player.getCurrentPosition(), getDurationMs());
+        progressRepository.saveProgress(currentItem.mediaId, positionMs, durationMs);
     }
 
     private long getDurationMs() {
@@ -222,5 +233,12 @@ public class PlaybackService extends MediaSessionService {
         }
         MediaMetadata metadata = player.getMediaMetadata();
         return metadata.durationMs == null ? 0 : metadata.durationMs;
+    }
+
+    private long getDurationMs(@Nullable MediaItem mediaItem) {
+        if (mediaItem != null && mediaItem.mediaMetadata.durationMs != null) {
+            return mediaItem.mediaMetadata.durationMs;
+        }
+        return getDurationMs();
     }
 }

@@ -50,15 +50,16 @@ experience:
 - Library filtering by Listening, Downloaded, and Finished using chapter
   progress and downloaded chapter state.
 - Profile display-name editing.
-- Reader screen with selected chapter content, duration, seek bar, skip back,
-  skip forward, play/pause, playback speed, and chapter download controls.
+- Reader screen with selected chapter content, duration, seek bar,
+  previous/next chapter navigation, play/pause, playback speed, and chapter
+  download controls.
 - Audio preferences for the default playback speed.
 - Audio playback from a chapter remote `audioUrl` or a downloaded local MP3
   file.
 - Background audiobook playback through `PlaybackService`, a Media3
   `MediaSessionService` declared as a foreground media playback service.
-- Media notification and lock-screen controls for play/pause, skip back 15s,
-  skip forward 15s, and returning to the active reader chapter.
+- Media notification and lock-screen controls for play/pause, previous/next
+  chapter navigation, and returning to the active reader chapter.
 - Downloading remote chapter MP3 audio into app-private internal storage.
 - Viewing downloaded chapter audio size and deleting downloaded chapter MP3
   files.
@@ -68,14 +69,26 @@ experience:
 
 ### Out of Scope
 
+For the current reader MVP, the following areas are intentionally outside the
+shipped feature set:
+
 - Payment, subscription, or premium content access.
-- Social sharing, reviews, playlists, and recommendations.
+- Social sharing, playlists, and recommendations.
 - Push notifications or scheduled reminders outside the media playback
   notification.
 - Room, SQLite, or other structured catalog/progress caching.
-- Admin tools for creating or editing books inside the mobile app.
+- Full admin/moderation tools for creating, editing, or approving books inside
+  the mobile app.
 - Multi-language UI management beyond the currently present string resources.
 - Full offline catalog browsing when Firestore is unavailable.
+
+### Planned Future Capabilities
+
+- User-generated audiobooks from text, with AWS Polly text-to-speech handled by
+  a backend service and generated MP3 files stored in S3.
+- Book-level ratings and short text reviews for published audiobooks.
+- A future moderation workflow for user-created books before they become
+  visible through `published=true`.
 
 ### Assumptions
 
@@ -118,8 +131,8 @@ experience:
 | FR-07 | Open book detail | The app shall open a book-detail playlist for a selected book using the `book_id` intent extra. | High | Discover, Search, Library, `BookDetailActivity` |
 | FR-08 | Search catalog | The app shall filter loaded books by title or author as the user types. | Medium | `SearchActivity` |
 | FR-09 | Filter library | The app shall filter library rows by listening, downloaded, and finished status using chapter-level progress and downloads. | Medium | `LibraryActivity`, `ProgressRepository`, `DownloadedAudioRepository` |
-| FR-10 | Play chapter audio | The app shall resolve a selected chapter audio source and play it through Media3 ExoPlayer owned by `PlaybackService`. | High | `ActivityReader`, `PlaybackService`, `AudioSourceResolver` |
-| FR-11 | Control playback | The app shall support play/pause, seek bar control, 15-second skip back/forward, speed cycling, default speed preference, and notification media controls. | High | `ActivityReader`, `AudioPreferencesActivity`, `PlaybackService` |
+| FR-10 | Play chapter audio | The app shall resolve playable chapter audio sources, build a Media3 chapter playlist, and play it through ExoPlayer owned by `PlaybackService`. | High | `ActivityReader`, `PlaybackService`, `AudioSourceResolver` |
+| FR-11 | Control playback | The app shall support play/pause, seek bar control, previous/next chapter navigation, speed cycling, default speed preference, and notification media controls. | High | `ActivityReader`, `AudioPreferencesActivity`, `PlaybackService` |
 | FR-12 | Save progress | The app shall save current chapter playback position, duration, completion state, and update timestamp. | High | `ProgressRepository`, Firestore |
 | FR-13 | Restore progress | The app shall seek to the last saved position when a chapter is reopened. | High | `ActivityReader`, `PlaybackService`, `ProgressRepository` |
 | FR-14 | Download audio | The app shall download a chapter MP3 from `audioUrl` and store it in `files/audiobooks`. | Medium | `DownloadedAudioRepository` |
@@ -128,6 +141,9 @@ experience:
 | FR-17 | Display profile stats | The app shall display completed books and approximate listened hours aggregated from chapter progress. | Medium | `ProfileActivity`, `ProgressRepository` |
 | FR-18 | Show empty/error states | The app shall show clear messages when books, search results, library rows, downloads, or audio sources are unavailable. | Medium | Discover, Search, Library, Reader, Audio Preferences |
 | FR-19 | Continue playback in background | The app shall keep audio playing when the user leaves `ActivityReader`, expose system media controls, and reopen the active reader chapter from the media notification when available. | High | `PlaybackService`, Android Manifest |
+
+Future requirements for user-created audiobooks, AWS Polly/S3 generation, and
+book-level reviews remain outside the current reader MVP.
 
 ## 4. Non-Functional Requirements
 
@@ -259,19 +275,20 @@ Main playback flow:
    documents from `BookRepository`.
 4. The user selects or resumes a chapter; `ActivityReader` opens with
    `EXTRA_BOOK_ID` and `EXTRA_CHAPTER_ID`.
-5. `AudioSourceResolver` checks whether a local chapter MP3 exists before using
-   the chapter `audioUrl`.
-6. `ActivityReader` connects to `PlaybackService` with a Media3
-   `MediaController` and sends a chapter `MediaItem` with book/chapter metadata,
-   artwork, and source URI.
-7. `ActivityReader` reads the default playback speed from `AudioPreferences`
+5. `AudioSourceResolver` checks whether each playable chapter has a local MP3
+   before using the chapter `audioUrl`.
+6. `ActivityReader` loads saved progress for the selected chapter before
+   replacing the player playlist.
+7. `ActivityReader` connects to `PlaybackService` with a Media3
+   `MediaController` and sends a chapter playlist of `MediaItem` objects with
+   book/chapter metadata, artwork, and source URIs.
+8. `ActivityReader` reads the default playback speed from `AudioPreferences`
    and applies it to the controller.
-8. `PlaybackService` prepares and plays ExoPlayer through a `MediaSession`.
-9. `ProgressRepository` restores and saves progress using the chapter progress
-   document ID.
-10. The media notification session activity points back to the active
-   `ActivityReader` chapter when the current media item has valid book and
-   chapter metadata.
+9. `PlaybackService` prepares and plays ExoPlayer through a `MediaSession`.
+10. `ProgressRepository` saves progress using the chapter progress document ID
+    on pause, end, stop, service destruction, and chapter transitions.
+11. The media notification exposes play/pause plus previous/next chapter
+    controls and points back to the active `ActivityReader` chapter.
 
 ## 6. Project Folder Structure
 
@@ -390,8 +407,8 @@ Use case explanations:
 - Search audiobook catalog: the reader filters loaded books by title or author.
 - Open book detail playlist: the reader opens `BookDetailActivity` for a
   selected book, then chooses or resumes a chapter.
-- Play and control audio: the reader plays, pauses, seeks, skips, and changes
-  speed.
+- Play and control audio: the reader plays, pauses, seeks within a chapter,
+  moves to the previous or next chapter, and changes speed.
 - Save listening progress: the app stores position, duration, completion, and
   timestamp.
 - Download chapter audio: the reader saves a selected chapter MP3 into
@@ -429,15 +446,16 @@ flowchart TD
     O --> P{Chapter audio source available?}
     P -- No --> U[Disable player controls and show missing audio message]
     U --> X
-    P -- Yes --> AA[Resolve local chapter MP3 or remote audioUrl]
-    AA --> AB[Apply default playback speed]
-    AB --> AC[Connect MediaController to PlaybackService]
-    AC --> Q[PlaybackService prepares ExoPlayer and MediaSession]
-    Q --> R[Restore chapter progress]
+    P -- Yes --> AA[Resolve playable chapter playlist from local MP3 or remote audioUrl]
+    AA --> AB[Load saved progress for selected chapter]
+    AB --> AC[Apply default playback speed]
+    AC --> AD[Connect MediaController to PlaybackService]
+    AD --> Q[Set Media3 playlist at selected chapter and saved position]
+    Q --> R[PlaybackService prepares ExoPlayer and MediaSession]
     R --> S[User plays audio]
-    S --> T[Notification can reopen current reader chapter]
+    S --> T[Reader and notification support previous/next chapter]
     T --> V[Audio continues when app goes background]
-    V --> W[Save progress on pause, end, stop, or service destroy]
+    V --> W[Save progress on pause, end, stop, transition, or service destroy]
     W --> X([End])
 ```
 
@@ -478,136 +496,170 @@ flowchart TD
     J -- Yes --> L[Write temp MP3 file]
     L --> M[Rename temp file to files/audiobooks/bookId__chapterId.mp3]
     M --> N[Update download button]
-    N --> O[Rebuild MediaItem with local audio source]
-    O --> P[PlaybackService prepares local file]
+    N --> O[Rebuild chapter playlist with local audio source]
+    O --> P[PlaybackService prepares local file in the playlist]
     P --> Q([End])
 ```
 
-## 9. Sequence Diagram
+## 9. Sequence Diagrams By User Flow
 
-The main sequence covers opening a book, preparing playback, optionally
-downloading audio for local playback, and saving progress.
+Each sequence below matches one user flow from the activity diagrams above.
+
+### Sequence 1: Open and Play an Audiobook
 
 ```mermaid
 sequenceDiagram
     actor User
-    participant Discover as Discover/Search/Library Activity
+    participant List as Discover/Search/Library
     participant Detail as BookDetailActivity
     participant Reader as ActivityReader
     participant BookRepo as BookRepository
-    participant Firestore as Cloud Firestore
     participant Resolver as AudioSourceResolver
     participant DownloadRepo as DownloadedAudioRepository
-    participant RemoteAudio as Remote chapter MP3 audioUrl
-    participant InternalFiles as Internal files/audiobooks
+    participant ProgressRepo as ProgressRepository
+    participant AudioPrefs as AudioPreferences
     participant Controller as MediaController
     participant Service as PlaybackService
     participant Player as ExoPlayer
     participant Notification as Media notification
-    participant AudioPrefs as AudioPreferences
-    participant ProgressRepo as ProgressRepository
 
-    User->>Discover: Select audiobook
-    Discover->>Detail: Start BookDetailActivity with book_id
-    Detail->>BookRepo: getBook(bookId, callback)
-    BookRepo->>Firestore: Read books/{bookId}
-    Firestore-->>BookRepo: DocumentSnapshot
+    User->>List: Select audiobook
+    List->>Detail: Start with book_id
+    Detail->>BookRepo: getBook(bookId)
     BookRepo-->>Detail: Book
-    Detail->>BookRepo: getChapters(bookId, callback)
-    BookRepo->>Firestore: Read books/{bookId}/chapters
-    Firestore-->>BookRepo: QuerySnapshot
-    BookRepo-->>Detail: List<BookChapter>
+    Detail->>BookRepo: getChapters(bookId)
+    BookRepo-->>Detail: Ordered List<BookChapter>
     User->>Detail: Select or resume chapter
-    Detail->>Reader: Start with EXTRA_BOOK_ID + EXTRA_CHAPTER_ID
-    Reader->>BookRepo: getBook(bookId, callback)
+    Detail->>Reader: Start with book_id and chapter_id
+    Reader->>BookRepo: getBook(bookId)
     BookRepo-->>Reader: Book
-    Reader->>BookRepo: getChapters(bookId, callback)
-    BookRepo-->>Reader: List<BookChapter>
-    Reader->>Resolver: resolve(book, chapter)
-    Resolver->>DownloadRepo: getDownloadedUri(book.id, chapter.id)
-    DownloadRepo-->>Resolver: Local Uri or null
-    Resolver-->>Reader: Local Uri or remote chapter audioUrl Uri
-    Reader->>AudioPrefs: getDefaultSpeedIndex(context)
-    AudioPrefs-->>Reader: speed index
-    Reader->>Controller: setMediaItem(book and chapter metadata, uri)
-    Reader->>Controller: setPlaybackParameters(default speed)
-    Controller->>Service: Send media command
-    Service->>Player: setMediaItem(uri)
-    Service->>Player: prepare()
-    Service->>Notification: Publish media controls
-    Service->>Notification: Set session activity to current book and chapter
-    Reader->>ProgressRepo: getProgress(book.id, chapter.id)
-    ProgressRepo-->>Reader: UserProgress
-    Reader->>Controller: seekTo(positionMs)
-    Controller->>Service: seekTo(positionMs)
-    opt Download audio for local playback
-        User->>Reader: Tap download icon for current chapter
-        Reader->>DownloadRepo: isDownloaded(book.id, chapter.id)
-        DownloadRepo-->>Reader: false
-        Reader->>DownloadRepo: download(book, chapter, callback)
-        DownloadRepo->>RemoteAudio: GET chapter.audioUrl
-        RemoteAudio-->>DownloadRepo: MP3 response stream
-        DownloadRepo->>InternalFiles: Write temp MP3 file
-        DownloadRepo->>InternalFiles: Rename temp file to bookId__chapterId.mp3
-        DownloadRepo-->>Reader: onSuccess(File)
-        Reader->>Reader: updateDownloadButton()
+    Reader->>BookRepo: getChapters(bookId)
+    BookRepo-->>Reader: Ordered List<BookChapter>
+    loop Playable published chapters
         Reader->>Resolver: resolve(book, chapter)
         Resolver->>DownloadRepo: getDownloadedUri(book.id, chapter.id)
-        DownloadRepo-->>Resolver: Local Uri
-        Resolver-->>Reader: Local Uri
-        Reader->>Controller: setMediaItem(localUri, currentPosition)
-        Controller->>Service: Prepare local source
-        Service->>Player: setMediaItem(localUri)
-        Service->>Player: prepare()
+        DownloadRepo-->>Resolver: Local Uri or null
+        Resolver-->>Reader: Local Uri, remote audioUrl, or no source
     end
-    User->>Reader: Tap play/pause/seek/speed
-    Reader->>Controller: Control playback
-    Controller->>Service: Dispatch player command
-    User->>Notification: Tap play/pause/skip
-    Notification->>Service: Dispatch media session command
+    Reader->>ProgressRepo: getProgress(selected bookId, selected chapterId)
+    ProgressRepo-->>Reader: Saved positionMs and durationMs
+    Reader->>AudioPrefs: getDefaultSpeedIndex(context)
+    AudioPrefs-->>Reader: speed index
+    Reader->>Controller: setMediaItems(playlist, selectedIndex, positionMs)
+    Reader->>Controller: setPlaybackParameters(speed)
+    Controller->>Service: Dispatch playlist command
+    Service->>Player: setMediaItems and prepare
+    Service->>Notification: Publish play/pause and previous/next controls
+    User->>Reader: Tap play
+    Reader->>Controller: play()
+    Controller->>Service: Dispatch play command
+    Service->>Player: play()
+    alt Reader previous/next chapter
+        User->>Reader: Tap previous or next chapter
+        Reader->>ProgressRepo: saveProgress(current chapter)
+        Reader->>Controller: seekToPreviousMediaItem or seekToNextMediaItem
+        Controller->>Service: Dispatch chapter navigation command
+        Service->>Player: Move to previous or next MediaItem
+        Service->>ProgressRepo: saveProgress(old chapter on transition)
+    else Notification previous/next chapter
+        User->>Notification: Tap previous or next
+        Notification->>Service: Dispatch media session command
+        Service->>Player: Move to previous or next MediaItem
+        Service->>ProgressRepo: saveProgress(old chapter on transition)
+    end
     User->>Notification: Tap notification content
-    Notification->>Reader: Reopen ActivityReader with current book_id and chapter_id
-    opt Manage downloaded audio
-        User->>AudioPrefs: Open from Profile
-        AudioPrefs->>AudioPrefs: setDefaultSpeedIndex(context, index)
-        AudioPrefs->>DownloadRepo: getDownloadedSizeBytes(book.id, chapter.id)
-        AudioPrefs->>DownloadRepo: deleteDownloadedAudio(book.id, chapter.id)
-        DownloadRepo->>InternalFiles: Delete bookId__chapterId.mp3
-    end
-    Reader->>ProgressRepo: saveProgress(book.id, chapter.id, positionMs, durationMs)
-    Service->>ProgressRepo: saveProgress(book.id, chapter.id, positionMs, durationMs)
+    Notification->>Reader: Reopen current book_id and chapter_id
 ```
 
-Step explanation:
+### Sequence 2: Manage Audio Preferences
 
-1. A list screen opens `BookDetailActivity` with the selected Firestore book ID.
-2. Book Detail requests the book document and its `chapters` subcollection from
-   `BookRepository`.
-3. The repository maps the book document into `Book` and chapter documents into
-   ordered `BookChapter` models, with a legacy Chapter 1 fallback when needed.
-4. Selecting or resuming a chapter opens `ActivityReader` with both `book_id`
-   and `chapter_id`.
-5. The resolver checks downloaded chapter storage first.
-6. If no local chapter MP3 exists, the resolver falls back to the selected
-   chapter `audioUrl`.
-7. `AudioPreferences` provides the default playback speed for new reader
-   sessions.
-8. `ActivityReader` controls playback through `MediaController`.
-9. `PlaybackService` owns ExoPlayer, prepares the media item, and exposes the
-   media session notification.
-10. The service updates notification session activity so tapping the playback
-    notification can reopen the current reader book and chapter.
-11. The app loads prior chapter progress and seeks to the saved position.
-12. If the reader taps download, `ActivityReader` checks the current chapter
-    download state before starting `DownloadedAudioRepository.download`.
-13. The repository streams the remote chapter MP3 into a temporary file and
-    renames it into `files/audiobooks` after a successful download.
-14. After download success, the reader updates the button state and rebuilds
-    the media item so `AudioSourceResolver` can choose the local chapter MP3.
-15. `AudioPreferencesActivity` can read chapter file sizes and delete local
-    chapter MP3 files.
-16. User playback actions from the Activity or notification update the service
-    player and later persist progress.
+```mermaid
+sequenceDiagram
+    actor User
+    participant Profile as ProfileActivity
+    participant AudioPrefsActivity as AudioPreferencesActivity
+    participant AudioPrefs as AudioPreferences
+    participant BookRepo as BookRepository
+    participant DownloadRepo as DownloadedAudioRepository
+    participant InternalFiles as Internal files/audiobooks
+
+    User->>Profile: Tap Audio Preferences
+    Profile->>AudioPrefsActivity: Start activity
+    AudioPrefsActivity->>AudioPrefs: getDefaultSpeedIndex(context)
+    AudioPrefs-->>AudioPrefsActivity: Current speed index
+    User->>AudioPrefsActivity: Choose default speed chip
+    AudioPrefsActivity->>AudioPrefs: setDefaultSpeedIndex(context, index)
+    AudioPrefsActivity->>BookRepo: getPublishedBooks()
+    BookRepo-->>AudioPrefsActivity: Published books
+    loop Published books
+        AudioPrefsActivity->>BookRepo: getChapters(book.id)
+        BookRepo-->>AudioPrefsActivity: Published chapters
+    end
+    loop Chapters
+        AudioPrefsActivity->>DownloadRepo: isDownloaded(book.id, chapter.id)
+        DownloadRepo->>InternalFiles: Check MP3 file
+        DownloadRepo-->>AudioPrefsActivity: Download state
+        AudioPrefsActivity->>DownloadRepo: getDownloadedSizeBytes(book.id, chapter.id)
+        DownloadRepo-->>AudioPrefsActivity: File size bytes
+    end
+    alt No downloaded chapters
+        AudioPrefsActivity->>AudioPrefsActivity: Show empty state
+    else Downloaded chapters available
+        AudioPrefsActivity->>AudioPrefsActivity: Render grouped downloaded rows
+        User->>AudioPrefsActivity: Delete downloaded chapter
+        AudioPrefsActivity->>DownloadRepo: deleteDownloadedAudio(book.id, chapter.id)
+        DownloadRepo->>InternalFiles: Delete local MP3
+        DownloadRepo-->>AudioPrefsActivity: Deleted or already absent
+        AudioPrefsActivity->>AudioPrefsActivity: Refresh downloaded rows
+    end
+```
+
+### Sequence 3: Download Audio for Local Playback
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Screen as BookDetailActivity or ActivityReader
+    participant DownloadRepo as DownloadedAudioRepository
+    participant RemoteAudio as chapter.audioUrl
+    participant InternalFiles as Internal files/audiobooks
+    participant Resolver as AudioSourceResolver
+    participant Controller as MediaController
+    participant Service as PlaybackService
+    participant Player as ExoPlayer
+
+    User->>Screen: Tap chapter download icon
+    Screen->>DownloadRepo: isDownloaded(book.id, chapter.id)
+    alt Already downloaded
+        DownloadRepo-->>Screen: true
+        Screen->>Screen: Show downloaded state
+    else Not downloaded
+        DownloadRepo-->>Screen: false
+        Screen->>DownloadRepo: download(book, chapter)
+        DownloadRepo->>RemoteAudio: GET audioUrl
+        alt HTTP failure or empty file
+            RemoteAudio-->>DownloadRepo: Error or invalid stream
+            DownloadRepo->>InternalFiles: Delete temp file
+            DownloadRepo-->>Screen: onError(message)
+            Screen->>Screen: Re-enable download UI and show error
+        else Valid MP3 stream
+            RemoteAudio-->>DownloadRepo: MP3 response stream
+            DownloadRepo->>InternalFiles: Write temp MP3
+            DownloadRepo->>InternalFiles: Rename to bookId__chapterId.mp3
+            DownloadRepo-->>Screen: onSuccess(File)
+            Screen->>Screen: Update download UI
+            opt Current screen is ActivityReader
+                Screen->>Resolver: resolve(book, chapter)
+                Resolver->>DownloadRepo: getDownloadedUri(book.id, chapter.id)
+                DownloadRepo-->>Resolver: Local Uri
+                Resolver-->>Screen: Local Uri
+                Screen->>Controller: setMediaItems(playlist, currentIndex, currentPosition)
+                Controller->>Service: Prepare playlist with local source
+                Service->>Player: setMediaItems and prepare
+            end
+        end
+    end
+```
 
 ## 10. Class Diagram
 
@@ -911,6 +963,11 @@ app storage for downloaded MP3 files.
 | `published` | Boolean | Whether the book is visible in the app. | Only `true` books are loaded |
 | `order` | Number | Sort order for display. | Defaults to `0` |
 
+Future user-generated audiobook fields are expected to include `creatorUid`,
+`sourceType`, `generationStatus`, `createdByUser`, `reviewStatus`,
+`ratingAverage`, and `ratingCount`. These fields are not required by the
+current reader MVP.
+
 ### Firestore Subcollection: `books/{bookId}/chapters`
 
 | Field | Data Type | Description | Constraints/Default |
@@ -925,6 +982,11 @@ app storage for downloaded MP3 files.
 | `durationSec` | Number | Expected chapter duration in seconds. | Defaults to `0` |
 | `order` | Number | Chapter sort order. | Must be a Firestore number, not a quoted string |
 | `published` | Boolean | Whether this chapter should appear in the playlist. | Missing value is treated as published by the app |
+
+Future generated chapters are expected to include `sourceText`, `pollyVoiceId`,
+`s3Key`, `generationStatus`, and `generationError`. After generation succeeds,
+the backend still writes `audioUrl` so the current playback and download flow can
+continue to work.
 
 If a book has no `chapters` documents, the app creates a temporary legacy
 `Chapter 1` from the book-level `chapterTitle`, `contentSample`, `audioUrl`,
@@ -982,6 +1044,24 @@ if one is available. The resolver also checks the old
 | Key | Data Type | Description | Default |
 |---|---|---|---|
 | `default_speed_index` | Integer | Index into `AudioPreferences.PLAYBACK_SPEEDS` for new reader sessions. | `0` (`1.0x`) |
+
+### Future Subcollection: `books/{bookId}/reviews`
+
+Book-level reviews are planned as a future capability. Each authenticated user
+will have at most one review document under a published book, using the user UID
+as the document ID.
+
+| Field | Data Type | Description | Constraints |
+|---|---|---|---|
+| Document ID | String | Firebase Auth UID of the reviewing user. | Required |
+| `rating` | Number | Star rating for the audiobook. | Expected range `1` to `5` |
+| `comment` | String | Short user-written review text. | Optional but supported in v1 |
+| `createdAt` | Timestamp | First review submission time. | Set by backend/server |
+| `updatedAt` | Timestamp | Last review edit time. | Set by backend/server |
+
+The denormalized `ratingAverage` and `ratingCount` summary fields should be
+updated on `books/{bookId}` by a trusted backend path, not by arbitrary client
+writes.
 
 ### Data Model Diagram
 
@@ -1059,7 +1139,7 @@ erDiagram
 | Search | Filter the catalog by query. | Search input, result rows, section label, bottom navigation, empty state. | Type query, select result, switch tabs. | Empty query shows all loaded books; no match shows an empty state. | Book Detail, Discover, Library, Profile. |
 | Library | Show progress-based and download-based collections. | Filter chips, library rows, progress bars, bottom navigation, empty state. | Switch filters, open book detail. | Empty states vary by selected filter. | Book Detail, Discover, Search, Profile. |
 | Book Detail | Show a playlist-style view for a selected audiobook. | Cover, title, author, chapter summary, play/resume, save/bookmark, disabled download-all icon, chapter rows, chapter progress/download state. | Resume a chapter, choose a chapter, download a chapter from its row, exit. | Missing book ID, book load failure, chapter load failure, and no-chapter states show messages. | Reader or previous screen. |
-| Reader | Read selected chapter text and control audio. | Exit icon, text-format placeholder, chapter download icon, title, chapter content, seek bar, time labels, play/pause, skip, speed. | Play, pause, seek, skip, change speed, download current chapter, exit. | Missing book ID, missing chapter, missing audio URL, and download failure show messages. | Back to previous screen. |
+| Reader | Read selected chapter text and control audio. | Exit icon, text-format placeholder, chapter download icon, title, chapter content, seek bar, time labels, play/pause, previous/next chapter buttons, speed. | Play, pause, seek within the chapter, move to the previous or next chapter, change speed, download current chapter, exit. | Missing book ID, missing chapter, missing audio URL, and download failure show messages. | Back to previous screen. |
 | Profile | Show account and reading statistics. | Name, email, completed count, listened hours, Account Settings, Audio Preferences, logout, bottom navigation. | Edit display name, open audio preferences, view stats, log out, switch tabs. | Unauthenticated fallback shows generic reader values; display name cannot be empty. | Login, Discover, Search, Library, Audio Preferences. |
 | Audio Preferences | Manage local audio settings. | Reader-style exit icon, default speed chips, grouped downloaded chapter list, file sizes, delete buttons, empty state. | Choose default playback speed, delete downloaded chapter MP3 files, return to Profile. | Invalid speed indexes fall back to `1.0x`; delete failures show a message. | Profile. |
 
@@ -1154,7 +1234,8 @@ flowchart TD
 ### Feature 3: Playback and Progress Tracking
 
 - Description: Users listen to a selected chapter, start new reader sessions at
-  their saved default speed, and resume from the saved chapter position.
+  their saved default speed, resume from the saved chapter position, and move
+  between playable chapters in the current audiobook.
 - Related screens: Book Detail, Reader, Library, Profile, Audio Preferences.
 - Related classes: `ActivityReader`, `PlaybackService`, `AudioSourceResolver`,
   `AudioPreferences`, `ProgressRepository`, `BookChapter`, `UserProgress`,
@@ -1165,10 +1246,11 @@ flowchart TD
 - Validation: the reader checks for missing book ID, missing chapter, missing
   book document, and missing audio source.
 - Error handling: player controls are disabled if no playable source exists.
-- Expected behavior: progress is saved on pause, stop, playback end, and
-  service destruction; audio continues when the user leaves `ActivityReader`;
-  the chapter is finished when position reaches 95 percent of duration; tapping
-  the media notification returns to the current reader chapter when available.
+- Expected behavior: progress is saved on pause, stop, playback end, chapter
+  transition, and service destruction; audio continues when the user leaves
+  `ActivityReader`; the chapter is finished when position reaches 95 percent of
+  duration; tapping the media notification returns to the current reader chapter
+  when available.
 
 ### Feature 4: Audio Download and Local Playback
 
@@ -1218,7 +1300,7 @@ flowchart TD
 | Foreground Service | Yes | `PlaybackService` uses `android:foregroundServiceType="mediaPlayback"` for ongoing audiobook playback. |
 | BroadcastReceiver | No | No receiver is declared or registered. |
 | AlarmManager / WorkManager | No | The app does not schedule background work. |
-| Media notification | Yes | Media3 `DefaultMediaNotificationProvider` creates playback notification controls for the active `MediaSession`; tapping the notification can reopen the active reader chapter when a media item has book and chapter metadata. The app does not use `NotificationManager` directly. |
+| Media notification | Yes | Media3 `DefaultMediaNotificationProvider` creates playback notification controls for the active `MediaSession`, including play/pause and previous/next chapter actions; tapping the notification can reopen the active reader chapter when a media item has book and chapter metadata. The app does not use `NotificationManager` directly. |
 | ContentProvider | No | No provider is declared. |
 
 ### Permissions
@@ -1254,7 +1336,7 @@ notification.
 | Download delete failure | Audio Preferences keeps the row visible and shows a Toast. | Avoid pretending offline audio was removed when file deletion fails. |
 | Invalid default speed index | `AudioPreferences` clamps the index back to `1.0x`. | Keep playback speed deterministic even if local preferences are corrupted. |
 | Internet unavailable | Firebase or HTTP callbacks fail and display messages. | Future work should add clearer offline-specific states. |
-| Unexpected lifecycle interruption | `ActivityReader.onStop()` saves progress and releases only the `MediaController`; `PlaybackService` keeps ExoPlayer alive for background playback and saves progress on pause/end/destroy. | Preserve progress while allowing background audio. |
+| Unexpected lifecycle interruption | `ActivityReader.onStop()` saves progress and releases only the `MediaController`; `PlaybackService` keeps ExoPlayer alive for background playback and saves progress on pause/end/chapter transition/destroy. | Preserve progress while allowing background audio. |
 
 ## 16. Deployment and Build Guide
 
@@ -1340,7 +1422,8 @@ security rules.
   files are locally available.
 - The media service exposes playback controls, but it does not implement a full
   `MediaLibraryService` browse tree.
-- The app does not include an admin interface for managing books.
+- The app does not yet include user-created audiobook drafts, AWS Polly/S3 audio
+  generation, reviews, or moderation/admin flows.
 - Search is local over the currently loaded book list, not a server-side or
   indexed search.
 - The Library screen binds a limited number of visible rows.
@@ -1353,6 +1436,13 @@ security rules.
 
 ### Future Improvements
 
+- Add user-generated audiobook creation from text using a backend service that
+  calls AWS Polly, stores MP3 output in S3, and writes `audioUrl` back to
+  Firestore.
+- Add My Uploads, generation status, retry states, and review/moderation
+  handling for user-created books.
+- Add book-level star ratings and short text reviews, with rating summaries on
+  book documents.
 - Add a richer media browse tree if Android Auto, assistant, or external media
   browser clients become a requirement.
 - Add Room caching for catalog metadata and progress fallback.

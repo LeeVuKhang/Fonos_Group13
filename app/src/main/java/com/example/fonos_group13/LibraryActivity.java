@@ -19,6 +19,7 @@ import com.example.fonos_group13.data.BookRepository;
 import com.example.fonos_group13.data.DownloadedAudioRepository;
 import com.example.fonos_group13.data.ProgressRepository;
 import com.example.fonos_group13.data.RepositoryCallback;
+import com.example.fonos_group13.data.SavedBookRepository;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
 import com.example.fonos_group13.model.UserProgress;
@@ -26,8 +27,10 @@ import com.example.fonos_group13.ui.BookCoverLoader;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class LibraryActivity extends AppCompatActivity {
     private enum LibraryFilter {
@@ -39,7 +42,9 @@ public class LibraryActivity extends AppCompatActivity {
     private BookRepository bookRepository;
     private ProgressRepository progressRepository;
     private DownloadedAudioRepository downloadedAudioRepository;
+    private SavedBookRepository savedBookRepository;
     private final List<Book> allBooks = new ArrayList<>();
+    private final Set<String> savedBookIds = new HashSet<>();
     private final Map<String, List<BookChapter>> chaptersByBookId = new HashMap<>();
     private final Map<String, UserProgress> progressByChapterKey = new HashMap<>();
     private LibraryFilter currentFilter = LibraryFilter.LISTENING;
@@ -55,6 +60,7 @@ public class LibraryActivity extends AppCompatActivity {
         bookRepository = new BookRepository(this);
         progressRepository = new ProgressRepository(this);
         downloadedAudioRepository = new DownloadedAudioRepository(this);
+        savedBookRepository = new SavedBookRepository(this);
 
         View mainView = findViewById(R.id.main);
         if (mainView != null) {
@@ -69,14 +75,12 @@ public class LibraryActivity extends AppCompatActivity {
         setupBottomNavigation();
         setBooks(new ArrayList<>());
         showLibraryMessage("Loading your library...");
-        loadBooks();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        refreshAllProgress();
-        refreshLibraryRows();
+        loadBooks();
     }
 
     private void setupFilterChips() {
@@ -118,10 +122,42 @@ public class LibraryActivity extends AppCompatActivity {
     }
 
     private void loadBooks() {
+        savedBookRepository.getSavedBookIds(new RepositoryCallback<List<String>>() {
+            @Override
+            public void onSuccess(List<String> bookIds) {
+                savedBookIds.clear();
+                if (bookIds != null) {
+                    savedBookIds.addAll(bookIds);
+                }
+                if (savedBookIds.isEmpty()) {
+                    setBooks(new ArrayList<>());
+                    return;
+                }
+                loadSavedBooks();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                setBooks(new ArrayList<>());
+                showLibraryMessage("Could not load your saved library.");
+                Toast.makeText(LibraryActivity.this, "Could not load your saved library.", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void loadSavedBooks() {
         bookRepository.getPublishedBooks(new RepositoryCallback<List<Book>>() {
             @Override
             public void onSuccess(List<Book> books) {
-                setBooks(books);
+                List<Book> savedBooks = new ArrayList<>();
+                if (books != null) {
+                    for (Book book : books) {
+                        if (savedBookIds.contains(book.getId())) {
+                            savedBooks.add(book);
+                        }
+                    }
+                }
+                setBooks(savedBooks);
             }
 
             @Override

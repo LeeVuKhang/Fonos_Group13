@@ -43,6 +43,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CancellationException;
@@ -56,7 +57,7 @@ public class ActivityReader extends AppCompatActivity {
     public static final String METADATA_BOOK_ID = "metadata_book_id";
     public static final String METADATA_CHAPTER_ID = "metadata_chapter_id";
 
-    private static final long SKIP_MS = 15000L;
+    private final List<BookChapter> currentChapters = new ArrayList<>();
     private final Handler progressHandler = new Handler(Looper.getMainLooper());
     private final Runnable progressRunnable = new Runnable() {
         @Override
@@ -74,6 +75,7 @@ public class ActivityReader extends AppCompatActivity {
                 saveProgress();
             }
             updatePlayButton();
+            updateChapterNavigationButtons();
         }
 
         @Override
@@ -82,12 +84,15 @@ public class ActivityReader extends AppCompatActivity {
                 saveProgress();
             }
             updatePlayButton();
+            updateChapterNavigationButtons();
         }
 
         @Override
         public void onMediaItemTransition(MediaItem mediaItem, int reason) {
+            syncCurrentChapter(mediaItem);
             updateProgressUi();
             updatePlayButton();
+            updateChapterNavigationButtons();
         }
     };
 
@@ -104,6 +109,7 @@ public class ActivityReader extends AppCompatActivity {
     private boolean requestedAutoPlay;
     private boolean userSeeking;
     private boolean downloadingAudio;
+    private boolean playerEnabled;
     private int speedIndex;
 
     private TextView tvChapter;
@@ -203,10 +209,10 @@ public class ActivityReader extends AppCompatActivity {
             btnPlayPause.setOnClickListener(v -> togglePlayback());
         }
         if (btnSkipBack != null) {
-            btnSkipBack.setOnClickListener(v -> seekBy(-SKIP_MS));
+            btnSkipBack.setOnClickListener(v -> skipToPreviousChapter());
         }
         if (btnSkipForward != null) {
-            btnSkipForward.setOnClickListener(v -> seekBy(SKIP_MS));
+            btnSkipForward.setOnClickListener(v -> skipToNextChapter());
         }
         if (tvPlaybackSpeed != null) {
             tvPlaybackSpeed.setText(formatSpeed());
@@ -349,7 +355,11 @@ public class ActivityReader extends AppCompatActivity {
                 if (!loadingBookId.equals(requestedBookId)) {
                     return;
                 }
-                BookChapter selectedChapter = selectChapter(chapters, chapterId);
+                currentChapters.clear();
+                if (chapters != null) {
+                    currentChapters.addAll(chapters);
+                }
+                BookChapter selectedChapter = selectChapter(currentChapters, chapterId);
                 if (selectedChapter == null) {
                     Toast.makeText(ActivityReader.this, "Could not load this chapter.", Toast.LENGTH_LONG).show();
                     finish();
@@ -365,6 +375,7 @@ public class ActivityReader extends AppCompatActivity {
                 if (!loadingBookId.equals(requestedBookId)) {
                     return;
                 }
+                currentChapters.clear();
                 Toast.makeText(ActivityReader.this, "Could not load chapters from Firestore.", Toast.LENGTH_LONG).show();
                 finish();
             }
@@ -433,42 +444,136 @@ public class ActivityReader extends AppCompatActivity {
 
         setPlayerEnabled(true);
         mediaController.setPlaybackParameters(new PlaybackParameters(AudioPreferences.getSpeedAt(speedIndex)));
+        List<MediaItem> playlist = buildMediaPlaylist(book, chapter, audioUri);
+        int selectedIndex = findMediaItemIndex(playlist, book.getId(), chapter.getId());
+        if (playlist.isEmpty() || selectedIndex == C.INDEX_UNSET) {
+            setPlayerEnabled(false);
+            Toast.makeText(this, missingAudioMessage(), Toast.LENGTH_LONG).show();
+            return;
+        }
 
         MediaItem currentItem = mediaController.getCurrentMediaItem();
         boolean sameChapter = isCurrentMediaItem(currentItem, book.getId(), chapter.getId());
         boolean sameSource = sameChapter && isSameResolvedSource(currentItem, audioUri);
-        if (sameChapter && !sameSource && startPositionMs == C.TIME_UNSET) {
+        boolean samePlaylist = isSamePlaylist(playlist);
+        if (sameChapter && (!sameSource || !samePlaylist) && startPositionMs == C.TIME_UNSET) {
             startPositionMs = mediaController.getCurrentPosition();
             playWhenReady = mediaController.isPlaying();
         }
-        if (sameChapter && sameSource && !forceReload) {
+        if (sameChapter && sameSource && samePlaylist && !forceReload) {
             if (playWhenReady) {
                 mediaController.play();
             }
             updateProgressUi();
             updatePlayButton();
+            updateChapterNavigationButtons();
             progressHandler.removeCallbacks(progressRunnable);
             progressHandler.post(progressRunnable);
             return;
         }
+        if (startPositionMs == C.TIME_UNSET) {
+            prepareAudioFromSavedProgress(book, chapter, forceReload, playWhenReady);
+            return;
+        }
 
         progressHandler.removeCallbacks(progressRunnable);
-        MediaItem mediaItem = buildMediaItem(book, chapter, audioUri);
-        if (startPositionMs != C.TIME_UNSET && startPositionMs > 0) {
-            mediaController.setMediaItem(mediaItem, startPositionMs);
-        } else {
-            mediaController.setMediaItem(mediaItem);
-        }
+        long startPosition = Math.max(startPositionMs, 0);
+        mediaController.setMediaItems(playlist, selectedIndex, startPosition);
         mediaController.prepare();
-        if (startPositionMs == C.TIME_UNSET) {
-            restoreProgress(book.getId(), chapter.getId());
-        }
         if (playWhenReady) {
             mediaController.play();
         }
         updateProgressUi();
         updatePlayButton();
+        updateChapterNavigationButtons();
         progressHandler.post(progressRunnable);
+    }
+
+    private void prepareAudioFromSavedProgress(
+            Book book,
+            BookChapter chapter,
+            boolean forceReload,
+            boolean playWhenReady
+    ) {
+        String bookId = book.getId();
+        String chapterId = chapter.getId();
+        progressRepository.getProgress(bookId, chapterId, new RepositoryCallback<UserProgress>() {
+            @Override
+            public void onSuccess(UserProgress progress) {
+                if (!isSelectedChapter(bookId, chapterId)) {
+                    return;
+                }
+                long positionMs = progress == null ? 0 : Math.max(progress.getPositionMs(), 0);
+                prepareAudio(book, chapter, forceReload, positionMs, playWhenReady);
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                if (!isSelectedChapter(bookId, chapterId)) {
+                    return;
+                }
+                prepareAudio(book, chapter, forceReload, 0, playWhenReady);
+            }
+        });
+    }
+
+    private List<MediaItem> buildMediaPlaylist(Book book, BookChapter selectedChapter, Uri selectedAudioUri) {
+        List<MediaItem> playlist = new ArrayList<>();
+        boolean selectedChapterAdded = false;
+        for (BookChapter chapter : currentChapters) {
+            Uri chapterUri = selectedChapter.getId().equals(chapter.getId())
+                    ? selectedAudioUri
+                    : audioSourceResolver.resolve(book, chapter);
+            if (chapterUri == null) {
+                continue;
+            }
+            if (selectedChapter.getId().equals(chapter.getId())) {
+                selectedChapterAdded = true;
+            }
+            playlist.add(buildMediaItem(book, chapter, chapterUri));
+        }
+        if (!selectedChapterAdded) {
+            playlist.add(buildMediaItem(book, selectedChapter, selectedAudioUri));
+        }
+        return playlist;
+    }
+
+    private int findMediaItemIndex(List<MediaItem> playlist, String bookId, String chapterId) {
+        for (int i = 0; i < playlist.size(); i++) {
+            if (isCurrentMediaItem(playlist.get(i), bookId, chapterId)) {
+                return i;
+            }
+        }
+        return C.INDEX_UNSET;
+    }
+
+    private boolean isSamePlaylist(List<MediaItem> playlist) {
+        if (mediaController == null || mediaController.getMediaItemCount() != playlist.size()) {
+            return false;
+        }
+        for (int i = 0; i < playlist.size(); i++) {
+            if (!isSameMediaItem(mediaController.getMediaItemAt(i), playlist.get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isSameMediaItem(MediaItem left, MediaItem right) {
+        if (left == null || right == null) {
+            return left == right;
+        }
+        String leftId = left.mediaId == null ? "" : left.mediaId;
+        String rightId = right.mediaId == null ? "" : right.mediaId;
+        if (!leftId.equals(rightId)) {
+            return false;
+        }
+        if (left.localConfiguration == null || right.localConfiguration == null) {
+            return left.localConfiguration == right.localConfiguration;
+        }
+        Uri leftUri = left.localConfiguration.uri;
+        Uri rightUri = right.localConfiguration.uri;
+        return leftUri == null ? rightUri == null : leftUri.equals(rightUri);
     }
 
     private MediaItem buildMediaItem(Book book, BookChapter chapter, Uri audioUri) {
@@ -566,22 +671,38 @@ public class ActivityReader extends AppCompatActivity {
         return "Missing audio: add a Firestore audioUrl for this chapter.";
     }
 
-    private void restoreProgress(String bookId, String chapterId) {
-        progressRepository.getProgress(bookId, chapterId, new RepositoryCallback<UserProgress>() {
-            @Override
-            public void onSuccess(UserProgress progress) {
-                if (mediaController != null
-                        && isControllerOnChapter(bookId, chapterId)
-                        && progress.getPositionMs() > 0) {
-                    mediaController.seekTo(progress.getPositionMs());
-                    updateProgressUi();
-                }
-            }
+    private void syncCurrentChapter(MediaItem mediaItem) {
+        if (mediaItem == null || mediaItem.mediaMetadata.extras == null || currentBook == null) {
+            return;
+        }
+        String bookId = trimToNull(mediaItem.mediaMetadata.extras.getString(METADATA_BOOK_ID));
+        String chapterId = trimToNull(mediaItem.mediaMetadata.extras.getString(METADATA_CHAPTER_ID));
+        if (bookId == null || chapterId == null || !bookId.equals(currentBook.getId())) {
+            return;
+        }
+        BookChapter chapter = findChapterById(chapterId);
+        if (chapter == null) {
+            return;
+        }
+        boolean changedChapter = currentChapter == null || !chapterId.equals(currentChapter.getId());
+        if (changedChapter) {
+            bindBook(currentBook, chapter);
+        } else {
+            requestedChapterId = chapter.getId();
+            updateDownloadButton();
+        }
+    }
 
-            @Override
-            public void onError(Exception exception) {
+    private BookChapter findChapterById(String chapterId) {
+        if (chapterId == null) {
+            return null;
+        }
+        for (BookChapter chapter : currentChapters) {
+            if (chapterId.equals(chapter.getId())) {
+                return chapter;
             }
-        });
+        }
+        return null;
     }
 
     private void togglePlayback() {
@@ -597,16 +718,24 @@ public class ActivityReader extends AppCompatActivity {
         updatePlayButton();
     }
 
-    private void seekBy(long deltaMs) {
-        if (mediaController == null) {
+    private void skipToPreviousChapter() {
+        if (mediaController == null || !mediaController.hasPreviousMediaItem()) {
             return;
         }
-        if (deltaMs < 0) {
-            mediaController.seekBack();
-        } else {
-            mediaController.seekForward();
-        }
+        saveProgress();
+        mediaController.seekToPreviousMediaItem();
         updateProgressUi();
+        updateChapterNavigationButtons();
+    }
+
+    private void skipToNextChapter() {
+        if (mediaController == null || !mediaController.hasNextMediaItem()) {
+            return;
+        }
+        saveProgress();
+        mediaController.seekToNextMediaItem();
+        updateProgressUi();
+        updateChapterNavigationButtons();
     }
 
     private void cyclePlaybackSpeed() {
@@ -682,23 +811,32 @@ public class ActivityReader extends AppCompatActivity {
     }
 
     private void setPlayerEnabled(boolean enabled) {
+        playerEnabled = enabled;
         if (btnPlayPause != null) {
             btnPlayPause.setEnabled(enabled);
             btnPlayPause.setAlpha(enabled ? 1f : 0.45f);
-        }
-        if (btnSkipBack != null) {
-            btnSkipBack.setEnabled(enabled);
-            btnSkipBack.setAlpha(enabled ? 1f : 0.45f);
-        }
-        if (btnSkipForward != null) {
-            btnSkipForward.setEnabled(enabled);
-            btnSkipForward.setAlpha(enabled ? 1f : 0.45f);
         }
         if (seekBar != null) {
             seekBar.setEnabled(enabled);
             seekBar.setAlpha(enabled ? 1f : 0.45f);
         }
         updatePlayButton();
+        updateChapterNavigationButtons();
+    }
+
+    private void updateChapterNavigationButtons() {
+        boolean canGoPrevious = playerEnabled && mediaController != null && mediaController.hasPreviousMediaItem();
+        boolean canGoNext = playerEnabled && mediaController != null && mediaController.hasNextMediaItem();
+        setNavigationButtonEnabled(btnSkipBack, canGoPrevious);
+        setNavigationButtonEnabled(btnSkipForward, canGoNext);
+    }
+
+    private void setNavigationButtonEnabled(ImageView button, boolean enabled) {
+        if (button == null) {
+            return;
+        }
+        button.setEnabled(enabled);
+        button.setAlpha(enabled ? 1f : 0.45f);
     }
 
     private void saveProgress() {
@@ -724,11 +862,13 @@ public class ActivityReader extends AppCompatActivity {
         progressRepository.saveProgress(bookId, chapterId, mediaController.getCurrentPosition(), getDurationMs());
     }
 
-    private boolean isControllerOnChapter(String bookId, String chapterId) {
-        if (mediaController == null || bookId == null || chapterId == null) {
-            return false;
-        }
-        return isCurrentMediaItem(mediaController.getCurrentMediaItem(), bookId, chapterId);
+    private boolean isSelectedChapter(String bookId, String chapterId) {
+        return currentBook != null
+                && currentChapter != null
+                && bookId != null
+                && chapterId != null
+                && bookId.equals(currentBook.getId())
+                && chapterId.equals(currentChapter.getId());
     }
 
     private boolean isCurrentMediaItem(MediaItem currentItem, String bookId, String chapterId) {
