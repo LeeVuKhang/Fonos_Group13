@@ -23,6 +23,7 @@ import com.example.fonos_group13.data.BookRepository;
 import com.example.fonos_group13.data.DownloadedAudioRepository;
 import com.example.fonos_group13.data.ProgressRepository;
 import com.example.fonos_group13.data.RepositoryCallback;
+import com.example.fonos_group13.data.SavedBookRepository;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
 import com.example.fonos_group13.model.UserProgress;
@@ -42,9 +43,12 @@ public class BookDetailActivity extends AppCompatActivity {
     private BookRepository bookRepository;
     private ProgressRepository progressRepository;
     private DownloadedAudioRepository downloadedAudioRepository;
+    private SavedBookRepository savedBookRepository;
     private Book currentBook;
     private String requestedBookId;
     private String downloadingChapterId;
+    private boolean currentBookSaved;
+    private boolean saveBookLoading;
 
     private final List<BookChapter> chapters = new ArrayList<>();
     private final Map<String, UserProgress> progressByChapterId = new HashMap<>();
@@ -55,6 +59,7 @@ public class BookDetailActivity extends AppCompatActivity {
     private TextView summaryView;
     private TextView messageView;
     private FloatingActionButton playResumeButton;
+    private ImageView saveBookButton;
     private ImageView downloadAllButton;
     private LinearLayout chaptersContainer;
 
@@ -67,6 +72,7 @@ public class BookDetailActivity extends AppCompatActivity {
         bookRepository = new BookRepository(this);
         progressRepository = new ProgressRepository(this);
         downloadedAudioRepository = new DownloadedAudioRepository(this);
+        savedBookRepository = new SavedBookRepository(this);
 
         bindViews();
         setupInsets();
@@ -88,6 +94,7 @@ public class BookDetailActivity extends AppCompatActivity {
         summaryView = findViewById(R.id.detail_summary);
         messageView = findViewById(R.id.detail_message);
         playResumeButton = findViewById(R.id.btn_play_resume);
+        saveBookButton = findViewById(R.id.btn_save_book);
         downloadAllButton = findViewById(R.id.btn_download_all);
         chaptersContainer = findViewById(R.id.chapters_container);
     }
@@ -116,6 +123,10 @@ public class BookDetailActivity extends AppCompatActivity {
                 }
             });
         }
+        if (saveBookButton != null) {
+            saveBookButton.setOnClickListener(v -> toggleSavedBook());
+            updateSaveBookButton();
+        }
         if (downloadAllButton != null) {
             downloadAllButton.setEnabled(false);
             downloadAllButton.setAlpha(0.35f);
@@ -143,6 +154,7 @@ public class BookDetailActivity extends AppCompatActivity {
                 }
                 currentBook = book;
                 bindBookHeader(book);
+                loadSavedState(bookId);
                 loadChapters(bookId);
             }
 
@@ -167,6 +179,32 @@ public class BookDetailActivity extends AppCompatActivity {
         if (authorView != null) {
             authorView.setText(book.getAuthor());
         }
+    }
+
+    private void loadSavedState(String bookId) {
+        saveBookLoading = true;
+        updateSaveBookButton();
+        savedBookRepository.isSaved(bookId, new RepositoryCallback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean saved) {
+                if (!bookId.equals(requestedBookId)) {
+                    return;
+                }
+                currentBookSaved = saved != null && saved;
+                saveBookLoading = false;
+                updateSaveBookButton();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                if (!bookId.equals(requestedBookId)) {
+                    return;
+                }
+                currentBookSaved = false;
+                saveBookLoading = false;
+                updateSaveBookButton();
+            }
+        });
     }
 
     private void loadChapters(String bookId) {
@@ -249,12 +287,66 @@ public class BookDetailActivity extends AppCompatActivity {
         }
         summaryView.setText(String.format(
                 Locale.US,
-                "%d chapters - %s - %d/%d finished",
-                chapters.size(),
+                "Audio - %s - %d/%d finished",
                 formatDuration(totalDurationMs),
                 completed,
                 chapters.size()
         ));
+    }
+
+    private void toggleSavedBook() {
+        if (currentBook == null || saveBookLoading) {
+            return;
+        }
+
+        String bookId = currentBook.getId();
+        boolean targetSaved = !currentBookSaved;
+        saveBookLoading = true;
+        updateSaveBookButton();
+
+        RepositoryCallback<Void> callback = new RepositoryCallback<Void>() {
+            @Override
+            public void onSuccess(Void data) {
+                currentBookSaved = targetSaved;
+                saveBookLoading = false;
+                updateSaveBookButton();
+                Toast.makeText(
+                        BookDetailActivity.this,
+                        targetSaved ? "Saved to library." : "Removed from library.",
+                        Toast.LENGTH_SHORT
+                ).show();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                saveBookLoading = false;
+                updateSaveBookButton();
+                String message = exception == null || exception.getMessage() == null
+                        ? "Could not update your library."
+                        : exception.getMessage();
+                Toast.makeText(BookDetailActivity.this, message, Toast.LENGTH_LONG).show();
+            }
+        };
+
+        if (targetSaved) {
+            savedBookRepository.saveBook(bookId, callback);
+        } else {
+            savedBookRepository.unsaveBook(bookId, callback);
+        }
+    }
+
+    private void updateSaveBookButton() {
+        if (saveBookButton == null) {
+            return;
+        }
+        boolean enabled = currentBook != null && !saveBookLoading;
+        saveBookButton.setEnabled(enabled);
+        saveBookButton.setAlpha(saveBookLoading ? 0.65f : (currentBookSaved ? 1f : 0.45f));
+        saveBookButton.setColorFilter(ContextCompat.getColor(
+                this,
+                currentBookSaved ? R.color.accent_green : R.color.accent
+        ));
+        saveBookButton.setContentDescription(currentBookSaved ? "Remove audiobook from library" : "Save audiobook");
     }
 
     private void updatePlayButtonState() {
