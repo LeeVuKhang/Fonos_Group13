@@ -998,6 +998,16 @@ does not automatically grant access to `books/{bookId}/chapters/{chapterId}`.
 For the current app query, chapter documents should use correct Firestore field
 types: `order` and `durationSec` as numbers, `published` as a boolean.
 
+For creator preview, Android access checks are defense in depth and require
+matching deployed Firestore rules. Book documents may be read publicly only
+when `published=true`; authenticated creators also need access to their own
+book documents for My Uploads. Unpublished chapter documents must be readable
+only when the parent `creatorUid` matches `request.auth.uid` and the parent
+`generationStatus` is `ready_for_review`. Nested chapter rules must inspect the
+parent document with `get()`, and public catalog queries must retain their
+`published=true` constraint because Firestore rules are not result filters.
+S3 public or signed URL access remains a separate backend security policy.
+
 ### Firestore Collection: `users`
 
 | Field | Data Type | Description | Constraints |
