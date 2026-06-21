@@ -2,8 +2,11 @@ package com.example.fonos_group13.data;
 
 import android.content.Context;
 
+import com.example.fonos_group13.model.AudiobookGenerationStatus;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
@@ -12,11 +15,13 @@ import java.util.List;
 
 public class BookRepository {
     private final boolean configured;
+    private FirebaseAuth auth;
     private FirebaseFirestore firestore;
 
     public BookRepository(Context context) {
         configured = FirebaseConfig.isConfigured(context);
         if (configured) {
+            auth = FirebaseAuth.getInstance();
             firestore = FirebaseFirestore.getInstance();
         }
     }
@@ -40,6 +45,14 @@ public class BookRepository {
     }
 
     public void getBook(String bookId, RepositoryCallback<Book> callback) {
+        getBook(bookId, BookAccessMode.PUBLISHED_ONLY, callback);
+    }
+
+    public void getBook(
+            String bookId,
+            BookAccessMode accessMode,
+            RepositoryCallback<Book> callback
+    ) {
         if (!configured || firestore == null) {
             callback.onError(FirebaseConfig.missingConfigException());
             return;
@@ -49,21 +62,60 @@ public class BookRepository {
                 .document(bookId)
                 .get()
                 .addOnSuccessListener(document -> {
-                    if (document.exists()) {
+                    BookAccessMode resolvedAccessMode = accessMode == null
+                            ? BookAccessMode.PUBLISHED_ONLY
+                            : accessMode;
+                    AudiobookGenerationStatus generationStatus = AudiobookGenerationStatus.fromValue(
+                            document.getString("generationStatus")
+                    );
+                    if (document.exists() && BookAccessPolicy.canReadBook(
+                            Boolean.TRUE.equals(document.getBoolean("published")),
+                            document.getString("creatorUid"),
+                            generationStatus,
+                            currentUserUid(),
+                            resolvedAccessMode
+                    )) {
                         callback.onSuccess(Book.fromDocument(document));
                     } else {
-                        callback.onError(new IllegalArgumentException("Book not found: " + bookId));
+                        callback.onError(unavailableBookException());
                     }
                 })
                 .addOnFailureListener(callback::onError);
     }
 
     public void getChapters(String bookId, RepositoryCallback<List<BookChapter>> callback) {
+        getChapters(bookId, BookAccessMode.PUBLISHED_ONLY, callback);
+    }
+
+    public void getChapters(
+            String bookId,
+            BookAccessMode accessMode,
+            RepositoryCallback<List<BookChapter>> callback
+    ) {
         if (!configured || firestore == null) {
             callback.onError(FirebaseConfig.missingConfigException());
             return;
         }
 
+        BookAccessMode resolvedAccessMode = accessMode == null
+                ? BookAccessMode.PUBLISHED_ONLY
+                : accessMode;
+        getBook(bookId, resolvedAccessMode, new RepositoryCallback<Book>() {
+            @Override
+            public void onSuccess(Book book) {
+                loadAuthorizedChapters(book, callback);
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                callback.onError(exception);
+            }
+        });
+    }
+
+    private void loadAuthorizedChapters(Book book, RepositoryCallback<List<BookChapter>> callback) {
+        String bookId = book.getId();
+        boolean creatorPreviewAuthorized = !book.isPublished();
         firestore.collection("books")
                 .document(bookId)
                 .collection("chapters")
@@ -73,7 +125,11 @@ public class BookRepository {
                     boolean hasChapterDocuments = !querySnapshot.isEmpty();
                     querySnapshot.getDocuments().forEach(document -> {
                         BookChapter chapter = BookChapter.fromDocument(bookId, document);
-                        if (chapter.isPublished()) {
+                        if (BookAccessPolicy.shouldIncludeChapter(
+                                book.isPublished(),
+                                creatorPreviewAuthorized,
+                                chapter.isPublished()
+                        )) {
                             chapters.add(chapter);
                         }
                     });
@@ -85,23 +141,22 @@ public class BookRepository {
                         return left.getTitle().compareToIgnoreCase(right.getTitle());
                     });
                     if (!hasChapterDocuments) {
-                        getBook(bookId, new RepositoryCallback<Book>() {
-                            @Override
-                            public void onSuccess(Book book) {
-                                List<BookChapter> fallbackChapters = new ArrayList<>();
-                                fallbackChapters.add(BookChapter.fromLegacyBook(book));
-                                callback.onSuccess(fallbackChapters);
-                            }
-
-                            @Override
-                            public void onError(Exception exception) {
-                                callback.onError(exception);
-                            }
-                        });
+                        List<BookChapter> fallbackChapters = new ArrayList<>();
+                        fallbackChapters.add(BookChapter.fromLegacyBook(book));
+                        callback.onSuccess(fallbackChapters);
                     } else {
                         callback.onSuccess(chapters);
                     }
                 })
                 .addOnFailureListener(callback::onError);
+    }
+
+    private String currentUserUid() {
+        FirebaseUser user = auth == null ? null : auth.getCurrentUser();
+        return user == null ? null : user.getUid();
+    }
+
+    private Exception unavailableBookException() {
+        return new SecurityException("This audiobook is unavailable.");
     }
 }
