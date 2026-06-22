@@ -5,6 +5,7 @@ import android.content.Context;
 import com.example.fonos_group13.model.AudiobookGenerationStatus;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
+import com.example.fonos_group13.model.FirestoreValueReader;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -66,11 +67,11 @@ public class BookRepository {
                             ? BookAccessMode.PUBLISHED_ONLY
                             : accessMode;
                     AudiobookGenerationStatus generationStatus = AudiobookGenerationStatus.fromValue(
-                            document.getString("generationStatus")
+                            FirestoreValueReader.string(document, "generationStatus")
                     );
                     if (document.exists() && BookAccessPolicy.canReadBook(
-                            Boolean.TRUE.equals(document.getBoolean("published")),
-                            document.getString("creatorUid"),
+                            FirestoreValueReader.booleanValue(document, "published", false),
+                            FirestoreValueReader.string(document, "creatorUid"),
                             generationStatus,
                             currentUserUid(),
                             resolvedAccessMode

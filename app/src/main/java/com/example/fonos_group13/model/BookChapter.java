@@ -41,20 +41,26 @@ public class BookChapter {
     }
 
     public static BookChapter fromDocument(String bookId, DocumentSnapshot document) {
-        long order = longValue(document.getLong("order"));
+        long order = FirestoreValueReader.longValue(document, "order");
         return new BookChapter(
                 document.getId(),
                 bookId,
                 valueOrDefault(
-                        firstNonBlank(document.getString("title"), document.getString("chapterTitle")),
+                        firstNonBlank(
+                                FirestoreValueReader.string(document, "title"),
+                                FirestoreValueReader.string(document, "chapterTitle")
+                        ),
                         titleFromOrder(order)
                 ),
-                valueOrDefault(document.getString("contentSample"), ""),
-                firstNonBlank(document.getString("audioUrl"), document.getString("url")),
-                optionalString(document.getString("audioStoragePath")),
-                longValue(document.getLong("durationSec")),
+                valueOrDefault(FirestoreValueReader.string(document, "contentSample"), ""),
+                firstNonBlank(
+                        FirestoreValueReader.string(document, "audioUrl"),
+                        FirestoreValueReader.string(document, "url")
+                ),
+                optionalString(FirestoreValueReader.string(document, "audioStoragePath")),
+                FirestoreValueReader.longValue(document, "durationSec"),
                 (int) order,
-                document.getBoolean("published") == null || Boolean.TRUE.equals(document.getBoolean("published")),
+                FirestoreValueReader.booleanValue(document, "published", true),
                 false
         );
     }
@@ -139,10 +145,6 @@ public class BookChapter {
             }
         }
         return null;
-    }
-
-    private static long longValue(Long value) {
-        return value == null ? 0 : value;
     }
 
     private static String titleFromOrder(long order) {

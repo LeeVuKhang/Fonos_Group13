@@ -49,30 +49,32 @@ public class UserGeneratedAudiobook {
     }
 
     public static UserGeneratedAudiobook fromDocument(DocumentSnapshot document) {
-        AudiobookGenerationStatus status = AudiobookGenerationStatus.fromValue(document.getString("generationStatus"));
-        boolean published = Boolean.TRUE.equals(document.getBoolean("published"));
+        AudiobookGenerationStatus status = AudiobookGenerationStatus.fromValue(
+                FirestoreValueReader.string(document, "generationStatus")
+        );
+        boolean published = FirestoreValueReader.booleanValue(document, "published", false);
         if (published) {
             status = AudiobookGenerationStatus.PUBLISHED;
         }
         return new UserGeneratedAudiobook(
                 document.getId(),
-                document.getString("title"),
-                document.getString("author"),
+                FirestoreValueReader.string(document, "title"),
+                FirestoreValueReader.string(document, "author"),
                 firstNonBlank(
-                        document.getString("coverUrl"),
-                        document.getString("coverImageUrl"),
-                        document.getString("imageUrl"),
-                        document.getString("thumbnailUrl")
+                        FirestoreValueReader.string(document, "coverUrl"),
+                        FirestoreValueReader.string(document, "coverImageUrl"),
+                        FirestoreValueReader.string(document, "imageUrl"),
+                        FirestoreValueReader.string(document, "thumbnailUrl")
                 ),
-                document.getString("languageCode"),
-                document.getString("voiceGender"),
-                document.getString("pollyVoiceId"),
+                FirestoreValueReader.string(document, "languageCode"),
+                FirestoreValueReader.string(document, "voiceGender"),
+                FirestoreValueReader.string(document, "pollyVoiceId"),
                 status,
-                document.getString("reviewStatus"),
+                FirestoreValueReader.string(document, "reviewStatus"),
                 published,
-                document.getTimestamp("createdAt"),
-                document.getTimestamp("updatedAt"),
-                document.getString("generationError")
+                FirestoreValueReader.timestamp(document, "createdAt"),
+                FirestoreValueReader.timestamp(document, "updatedAt"),
+                FirestoreValueReader.string(document, "generationError")
         );
     }
 

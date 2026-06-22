@@ -56,25 +56,28 @@ public class Book {
     public static Book fromDocument(DocumentSnapshot document) {
         return new Book(
                 document.getId(),
-                valueOrDefault(document.getString("title"), "Untitled"),
-                valueOrDefault(document.getString("author"), "Unknown author"),
-                valueOrDefault(document.getString("chapterTitle"), "Chapter 1"),
-                valueOrDefault(document.getString("contentSample"), ""),
+                valueOrDefault(FirestoreValueReader.string(document, "title"), "Untitled"),
+                valueOrDefault(FirestoreValueReader.string(document, "author"), "Unknown author"),
+                valueOrDefault(FirestoreValueReader.string(document, "chapterTitle"), "Chapter 1"),
+                valueOrDefault(FirestoreValueReader.string(document, "contentSample"), ""),
                 firstNonBlank(
-                        document.getString("coverUrl"),
-                        document.getString("coverImageUrl"),
-                        document.getString("imageUrl"),
-                        document.getString("thumbnailUrl")
+                        FirestoreValueReader.string(document, "coverUrl"),
+                        FirestoreValueReader.string(document, "coverImageUrl"),
+                        FirestoreValueReader.string(document, "imageUrl"),
+                        FirestoreValueReader.string(document, "thumbnailUrl")
                 ),
-                optionalString(document.getString("isbn")),
-                firstNonBlank(document.getString("audioUrl"), document.getString("url")),
-                optionalString(document.getString("audioStoragePath")),
-                longValue(document.getLong("durationSec")),
-                valueOrDefault(document.getString("languageCode"), "en-US"),
-                valueOrDefault(document.getString("voiceGender"), "female"),
-                booleanValue(document.getBoolean("featured")),
-                booleanValue(document.getBoolean("published")),
-                (int) longValue(document.getLong("order"))
+                optionalString(FirestoreValueReader.string(document, "isbn")),
+                firstNonBlank(
+                        FirestoreValueReader.string(document, "audioUrl"),
+                        FirestoreValueReader.string(document, "url")
+                ),
+                optionalString(FirestoreValueReader.string(document, "audioStoragePath")),
+                FirestoreValueReader.longValue(document, "durationSec"),
+                valueOrDefault(FirestoreValueReader.string(document, "languageCode"), "en-US"),
+                valueOrDefault(FirestoreValueReader.string(document, "voiceGender"), "female"),
+                FirestoreValueReader.booleanValue(document, "featured", false),
+                FirestoreValueReader.booleanValue(document, "published", false),
+                (int) FirestoreValueReader.longValue(document, "order")
         );
     }
 
@@ -98,14 +101,6 @@ public class Book {
             }
         }
         return null;
-    }
-
-    private static long longValue(Long value) {
-        return value == null ? 0 : value;
-    }
-
-    private static boolean booleanValue(Boolean value) {
-        return value != null && value;
     }
 
     private static String coverUrlFromIsbn(String isbn) {

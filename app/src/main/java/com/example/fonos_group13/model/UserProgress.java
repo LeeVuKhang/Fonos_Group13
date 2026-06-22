@@ -34,16 +34,16 @@ public class UserProgress {
     }
 
     public static UserProgress fromDocument(String bookId, String chapterId, DocumentSnapshot document) {
-        Long positionMs = document.getLong("positionMs");
-        Long durationMs = document.getLong("durationMs");
-        Boolean completed = document.getBoolean("completed");
-        String storedChapterId = document.getString("chapterId");
+        long positionMs = FirestoreValueReader.longValue(document, "positionMs");
+        long durationMs = FirestoreValueReader.longValue(document, "durationMs");
+        boolean completed = FirestoreValueReader.booleanValue(document, "completed", false);
+        String storedChapterId = FirestoreValueReader.string(document, "chapterId");
         return new UserProgress(
                 bookId,
                 storedChapterId == null || storedChapterId.trim().isEmpty() ? chapterId : storedChapterId,
-                positionMs == null ? 0 : positionMs,
-                durationMs == null ? 0 : durationMs,
-                completed != null && completed
+                positionMs,
+                durationMs,
+                completed
         );
     }
 
