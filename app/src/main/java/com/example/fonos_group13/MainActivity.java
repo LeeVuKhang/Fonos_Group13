@@ -19,5 +19,6 @@ public class MainActivity extends AppCompatActivity {
         );
         startActivity(intent);
         finish();
+        overridePendingTransition(0, 0);
     }
 }
