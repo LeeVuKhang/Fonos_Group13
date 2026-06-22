@@ -3,6 +3,9 @@ package com.example.fonos_group13.model;
 public class CreateAudiobookDraftInput {
     public static final String DEFAULT_CHAPTER_TITLE = "Chapter 1";
     public static final String DEFAULT_LANGUAGE_CODE = "en-US";
+    public static final int MAX_TITLE_CHARS = 120;
+    public static final int MAX_AUTHOR_CHARS = 120;
+    public static final int MAX_CHAPTER_TEXT_CHARS = 4000;
 
     private final String title;
     private final String author;

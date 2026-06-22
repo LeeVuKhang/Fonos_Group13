@@ -8,7 +8,9 @@ brand in the current interface. The app allows a reader to sign in, discover
 published audiobooks, search by title or author, open a book-detail playlist,
 choose chapters, play chapter audio, download chapter MP3 files for local
 playback, manage downloaded audio, choose a default playback speed, track
-listening progress, and review or edit basic profile information.
+listening progress, review or edit basic profile information, create
+user-generated audiobook drafts, view My Uploads, request generation, and
+preview ready-for-review uploads as the creator.
 
 The core problem addressed by the app is the fragmentation of reading,
 listening, and progress tracking. Instead of requiring separate tools for book
@@ -34,8 +36,10 @@ experience:
 - Internal app storage supports downloaded chapter MP3 files.
 - SharedPreferences stores the user's default playback speed.
 - XML layouts provide a familiar Android interface for discovery, search,
-  library, profile, audio preferences, login, registration, book detail, and
-  reader screens.
+  library, profile, audio preferences, login, registration, creator upload,
+  My Uploads, book detail, and reader screens.
+- User-generated audiobook backend implementation details are handed off in
+  [USER_GENERATED_AUDIOBOOK_BACKEND_HANDOFF.md](USER_GENERATED_AUDIOBOOK_BACKEND_HANDOFF.md).
 
 ## 2. Scope of the Application
 
@@ -66,6 +70,9 @@ experience:
 - Saving and restoring user listening progress per chapter.
 - Profile display with email, display name fallback, completed book count, and
   listened-hours statistic.
+- Creating user-generated audiobook drafts from one chapter of text.
+- Viewing My Uploads with generation states and retry/view actions.
+- Creator-only preview for ready-for-review unpublished uploads.
 
 ### Out of Scope
 
@@ -84,8 +91,8 @@ shipped feature set:
 
 ### Planned Future Capabilities
 
-- User-generated audiobooks from text, with AWS Polly text-to-speech handled by
-  a backend service and generated MP3 files stored in S3.
+- A separate Node.js + Express backend for user-generated audiobook generation,
+  with AWS Polly text-to-speech and generated MP3 files stored in S3.
 - Book-level ratings and short text reviews for published audiobooks.
 - A future moderation workflow for user-created books before they become
   visible through `published=true`.
@@ -141,9 +148,13 @@ shipped feature set:
 | FR-17 | Display profile stats | The app shall display completed books and approximate listened hours aggregated from chapter progress. | Medium | `ProfileActivity`, `ProgressRepository` |
 | FR-18 | Show empty/error states | The app shall show clear messages when books, search results, library rows, downloads, or audio sources are unavailable. | Medium | Discover, Search, Library, Reader, Audio Preferences |
 | FR-19 | Continue playback in background | The app shall keep audio playing when the user leaves `ActivityReader`, expose system media controls, and reopen the active reader chapter from the media notification when available. | High | `PlaybackService`, Android Manifest |
+| FR-20 | Create user-generated audiobook drafts | The app shall let signed-in users enter title, author, optional cover URL, chapter text, and voice choice for a user-generated audiobook. | Medium | CreateAudiobookActivity, CreatorAudiobookRepository |
+| FR-21 | View creator uploads | The app shall list the signed-in user's generated audiobook uploads and show draft, pending, failed, ready-for-review, and published states. | Medium | MyUploadsActivity, CreatorAudiobookRepository |
+| FR-22 | Creator-only preview | The app shall allow the creator to open and play ready-for-review unpublished audiobooks without exposing them in Discover/Search. | High | MyUploadsActivity, BookRepository, BookDetailActivity, ActivityReader |
 
-Future requirements for user-created audiobooks, AWS Polly/S3 generation, and
-book-level reviews remain outside the current reader MVP.
+Backend Polly/S3 generation and book-level reviews remain outside the current
+Android-only MVP. The backend handoff is documented in
+[USER_GENERATED_AUDIOBOOK_BACKEND_HANDOFF.md](USER_GENERATED_AUDIOBOOK_BACKEND_HANDOFF.md).
 
 ## 4. Non-Functional Requirements
 
@@ -963,10 +974,10 @@ app storage for downloaded MP3 files.
 | `published` | Boolean | Whether the book is visible in the app. | Only `true` books are loaded |
 | `order` | Number | Sort order for display. | Defaults to `0` |
 
-Future user-generated audiobook fields are expected to include `creatorUid`,
-`sourceType`, `generationStatus`, `createdByUser`, `reviewStatus`,
-`ratingAverage`, and `ratingCount`. These fields are not required by the
-current reader MVP.
+User-generated audiobook documents include `creatorUid`, `sourceType`,
+`generationStatus`, `createdByUser`, `reviewStatus`, and
+`published=false`. Future rating fields may include `ratingAverage` and
+`ratingCount`.
 
 ### Firestore Subcollection: `books/{bookId}/chapters`
 
@@ -983,9 +994,9 @@ current reader MVP.
 | `order` | Number | Chapter sort order. | Must be a Firestore number, not a quoted string |
 | `published` | Boolean | Whether this chapter should appear in the playlist. | Missing value is treated as published by the app |
 
-Future generated chapters are expected to include `sourceText`, `pollyVoiceId`,
+Generated chapters include `sourceText`, `pollyVoiceId`, `voiceGender`,
 `s3Key`, `generationStatus`, and `generationError`. After generation succeeds,
-the backend still writes `audioUrl` so the current playback and download flow can
+the backend writes `audioUrl` so the current playback and download flow can
 continue to work.
 
 If a book has no `chapters` documents, the app creates a temporary legacy
@@ -1359,6 +1370,10 @@ notification.
 - Firebase project with Authentication and Cloud Firestore enabled.
 - `app/google-services.json` downloaded from Firebase Console and placed in the
   `app/` directory.
+- For creator audiobook generation, run the sibling `Fonos_Audiobook_Backend`
+  service locally and set `BACKEND_BASE_URL=http://10.0.2.2:8080` in
+  `local.properties` for Android Emulator debug builds. Keep `local.properties`
+  uncommitted.
 
 ### Open the Project
 
@@ -1381,6 +1396,9 @@ Important build configuration:
 - Java source/target compatibility: `JavaVersion.VERSION_11`.
 - Firebase Google Services plugin is applied only if `app/google-services.json`
   exists.
+- Debug builds expose `BuildConfig.BACKEND_BASE_URL` from `local.properties`,
+  defaulting to the emulator bridge URL `http://10.0.2.2:8080`; release builds
+  leave the value empty unless an HTTPS backend URL is configured explicitly.
 
 Major dependencies:
 
@@ -1432,8 +1450,10 @@ security rules.
   files are locally available.
 - The media service exposes playback controls, but it does not implement a full
   `MediaLibraryService` browse tree.
-- The app does not yet include user-created audiobook drafts, AWS Polly/S3 audio
-  generation, reviews, or moderation/admin flows.
+- The app includes user-created audiobook screens, creator preview, and an
+  authenticated backend write path for draft/generation actions. A real demo
+  still requires Firebase Admin credentials, AWS credentials, and the public demo
+  S3 bucket described in the sibling backend README.
 - Search is local over the currently loaded book list, not a server-side or
   indexed search.
 - The Library screen binds a limited number of visible rows.
@@ -1441,16 +1461,17 @@ security rules.
   the published catalog; orphaned files for removed Firestore books are not
   listed.
 - There is no explicit retry queue for failed progress saves.
-- The current automated tests are default template tests rather than
-  app-specific test coverage.
+- Automated coverage is still light, but creator preview access policy has an
+  app-specific unit test.
 
 ### Future Improvements
 
-- Add user-generated audiobook creation from text using a backend service that
-  calls AWS Polly, stores MP3 output in S3, and writes `audioUrl` back to
-  Firestore.
-- Add My Uploads, generation status, retry states, and review/moderation
-  handling for user-created books.
+- Harden and deploy the local Node.js + Express backend if user-generated
+  audiobooks move beyond the laptop demo.
+- Add signed URLs or an authenticated audio proxy before storing private or
+  production generated audio.
+- Add review/moderation handling for user-created books if publishing becomes
+  required later.
 - Add book-level star ratings and short text reviews, with rating summaries on
   book documents.
 - Add a richer media browse tree if Android Auto, assistant, or external media

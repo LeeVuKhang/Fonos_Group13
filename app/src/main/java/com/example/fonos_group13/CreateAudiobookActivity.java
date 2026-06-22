@@ -16,6 +16,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.example.fonos_group13.data.AuthRepository;
 import com.example.fonos_group13.data.CreatorAudiobookRepository;
+import com.example.fonos_group13.data.DraftSavedGenerationRequestException;
 import com.example.fonos_group13.data.RepositoryCallback;
 import com.example.fonos_group13.model.CreateAudiobookDraftInput;
 import com.example.fonos_group13.model.CreatorVoiceOption;
@@ -118,14 +119,21 @@ public class CreateAudiobookActivity extends AppCompatActivity {
                         requestGeneration ? "Generation request queued." : "Audiobook draft saved.",
                         Toast.LENGTH_SHORT
                 ).show();
-                Intent intent = new Intent(CreateAudiobookActivity.this, MyUploadsActivity.class);
-                startActivity(intent);
-                finish();
+                openMyUploadsAndFinish();
             }
 
             @Override
             public void onError(Exception exception) {
                 setLoading(false, requestGeneration);
+                if (exception instanceof DraftSavedGenerationRequestException) {
+                    Toast.makeText(
+                            CreateAudiobookActivity.this,
+                            exception.getMessage(),
+                            Toast.LENGTH_LONG
+                    ).show();
+                    openMyUploadsAndFinish();
+                    return;
+                }
                 Toast.makeText(
                         CreateAudiobookActivity.this,
                         AuthRepository.friendlyError(exception),
@@ -162,6 +170,21 @@ public class CreateAudiobookActivity extends AppCompatActivity {
             inputChapterText.requestFocus();
             return null;
         }
+        if (title.length() > CreateAudiobookDraftInput.MAX_TITLE_CHARS) {
+            inputTitle.setError("Title must be 120 characters or fewer");
+            inputTitle.requestFocus();
+            return null;
+        }
+        if (author.length() > CreateAudiobookDraftInput.MAX_AUTHOR_CHARS) {
+            inputAuthor.setError("Author must be 120 characters or fewer");
+            inputAuthor.requestFocus();
+            return null;
+        }
+        if (chapterText.length() > CreateAudiobookDraftInput.MAX_CHAPTER_TEXT_CHARS) {
+            inputChapterText.setError("Chapter text must be 4000 characters or fewer");
+            inputChapterText.requestFocus();
+            return null;
+        }
 
         return new CreateAudiobookDraftInput(
                 title,
@@ -193,5 +216,11 @@ public class CreateAudiobookActivity extends AppCompatActivity {
 
     private String textFrom(EditText input) {
         return input == null || input.getText() == null ? "" : input.getText().toString().trim();
+    }
+
+    private void openMyUploadsAndFinish() {
+        Intent intent = new Intent(CreateAudiobookActivity.this, MyUploadsActivity.class);
+        startActivity(intent);
+        finish();
     }
 }
