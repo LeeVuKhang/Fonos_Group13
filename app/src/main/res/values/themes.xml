@@ -12,9 +12,9 @@
 
     <style name="Theme.Fonos_Group13" parent="Base.Theme.Fonos_Group13" />
     <style name="Theme.Fonos_Group13.Splash" parent="Theme.Fonos_Group13">
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:windowDisablePreview">false</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowContentOverlay">@null</item>
     </style>

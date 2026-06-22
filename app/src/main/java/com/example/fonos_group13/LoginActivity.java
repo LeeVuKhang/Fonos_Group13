@@ -116,8 +116,11 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void openDiscover() {
-        Intent intent = new Intent(LoginActivity.this, DiscoverActivity.class);
+        Intent intent = new Intent(LoginActivity.this, DiscoverActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
         startActivity(intent);
+        overridePendingTransition(0, 0);
         finish();
+        overridePendingTransition(0, 0);
     }
 }
