@@ -180,8 +180,8 @@ public class CreateAudiobookActivity extends AppCompatActivity {
             inputAuthor.requestFocus();
             return null;
         }
-        if (chapterText.length() > CreateAudiobookDraftInput.MAX_CHAPTER_TEXT_CHARS) {
-            inputChapterText.setError("Chapter text must be 4000 characters or fewer");
+        if (CreateAudiobookDraftInput.countWords(chapterText) > CreateAudiobookDraftInput.MAX_CHAPTER_TEXT_WORDS) {
+            inputChapterText.setError("Chapter text must be 3500 words or fewer");
             inputChapterText.requestFocus();
             return null;
         }

@@ -62,24 +62,25 @@ public class CreatorAudiobookRepositoryBackendTest {
     }
 
     @Test
-    public void acceptsFourThousandCharacterChapterText() {
+    public void acceptsThreeThousandFiveHundredWordChapterText() {
         FakeBackendApi backendApi = new FakeBackendApi();
         CreatorAudiobookRepository repository = repositoryWith(backendApi, "user-1");
         CapturingCallback<String> callback = new CapturingCallback<>();
+        String chapterText = repeatedWords(3500);
 
-        repository.createDraft(inputWithChapterText(repeat("x", 4000)), callback);
+        repository.createDraft(inputWithChapterText(chapterText), callback);
 
         assertEquals(null, callback.error);
-        assertEquals(4000, backendApi.createdInput.getChapterText().length());
+        assertEquals(chapterText, backendApi.createdInput.getChapterText());
     }
 
     @Test
-    public void rejectsChapterTextOverFourThousandCharacters() {
+    public void rejectsChapterTextOverThreeThousandFiveHundredWords() {
         FakeBackendApi backendApi = new FakeBackendApi();
         CreatorAudiobookRepository repository = repositoryWith(backendApi, "user-1");
         CapturingCallback<String> callback = new CapturingCallback<>();
 
-        repository.createDraft(inputWithChapterText(repeat("x", 4001)), callback);
+        repository.createDraft(inputWithChapterText(repeatedWords(3501)), callback);
 
         assertTrue(callback.error instanceof IllegalArgumentException);
         assertEquals(null, backendApi.createdInput);
@@ -110,10 +111,13 @@ public class CreatorAudiobookRepositoryBackendTest {
         );
     }
 
-    private static String repeat(String value, int count) {
+    private static String repeatedWords(int count) {
         StringBuilder builder = new StringBuilder();
         for (int index = 0; index < count; index++) {
-            builder.append(value);
+            if (index > 0) {
+                builder.append(" ");
+            }
+            builder.append("word");
         }
         return builder.toString();
     }

@@ -5,7 +5,7 @@ public class CreateAudiobookDraftInput {
     public static final String DEFAULT_LANGUAGE_CODE = "en-US";
     public static final int MAX_TITLE_CHARS = 120;
     public static final int MAX_AUTHOR_CHARS = 120;
-    public static final int MAX_CHAPTER_TEXT_CHARS = 4000;
+    public static final int MAX_CHAPTER_TEXT_WORDS = 3500;
 
     private final String title;
     private final String author;
@@ -59,6 +59,14 @@ public class CreateAudiobookDraftInput {
 
     public CreatorVoiceOption getVoiceOption() {
         return voiceOption;
+    }
+
+    public static int countWords(String value) {
+        String trimmed = trim(value);
+        if (trimmed.isEmpty()) {
+            return 0;
+        }
+        return trimmed.split("\\s+").length;
     }
 
     private static String valueOrDefault(String value, String fallback) {

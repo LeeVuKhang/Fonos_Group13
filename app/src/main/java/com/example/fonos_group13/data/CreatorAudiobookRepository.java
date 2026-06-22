@@ -164,8 +164,8 @@ public class CreatorAudiobookRepository {
             callback.onError(new IllegalArgumentException("Author must be 120 characters or fewer."));
             return false;
         }
-        if (input.getChapterText().length() > CreateAudiobookDraftInput.MAX_CHAPTER_TEXT_CHARS) {
-            callback.onError(new IllegalArgumentException("Chapter text must be 4000 characters or fewer."));
+        if (CreateAudiobookDraftInput.countWords(input.getChapterText()) > CreateAudiobookDraftInput.MAX_CHAPTER_TEXT_WORDS) {
+            callback.onError(new IllegalArgumentException("Chapter text must be 3500 words or fewer."));
             return false;
         }
         return true;
