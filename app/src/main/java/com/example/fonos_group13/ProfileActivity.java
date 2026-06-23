@@ -83,6 +83,16 @@ public class ProfileActivity extends AppCompatActivity {
             audioPreferences.setOnClickListener(v -> startActivity(new Intent(this, AudioPreferencesActivity.class)));
         }
 
+        View createAudiobook = findViewById(R.id.btn_create_audiobook);
+        if (createAudiobook != null) {
+            createAudiobook.setOnClickListener(v -> startActivity(new Intent(this, CreateAudiobookActivity.class)));
+        }
+
+        View myUploads = findViewById(R.id.btn_my_uploads);
+        if (myUploads != null) {
+            myUploads.setOnClickListener(v -> startActivity(new Intent(this, MyUploadsActivity.class)));
+        }
+
         View logout = findViewById(R.id.btn_logout);
         if (logout != null) {
             logout.setOnClickListener(v -> {

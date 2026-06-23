@@ -137,6 +137,7 @@ public class PlaybackService extends MediaSessionService {
         } else {
             intent = new Intent(this, ActivityReader.class);
             intent.putExtra(ActivityReader.EXTRA_BOOK_ID, bookId);
+            intent.putExtra(ActivityReader.EXTRA_CREATOR_PREVIEW, isCurrentCreatorPreview());
             if (chapterId != null) {
                 intent.putExtra(ActivityReader.EXTRA_CHAPTER_ID, chapterId);
             }
@@ -194,6 +195,20 @@ public class PlaybackService extends MediaSessionService {
         }
         String trimmed = chapterId.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private boolean isCurrentCreatorPreview() {
+        if (player == null) {
+            return false;
+        }
+        MediaItem currentItem = player.getCurrentMediaItem();
+        if (currentItem == null || currentItem.mediaMetadata.extras == null) {
+            return false;
+        }
+        return currentItem.mediaMetadata.extras.getBoolean(
+                ActivityReader.METADATA_CREATOR_PREVIEW,
+                false
+        );
     }
 
     private void saveCurrentProgress() {

@@ -2,6 +2,7 @@ package com.example.fonos_group13.data;
 
 import android.content.Context;
 
+import com.example.fonos_group13.model.FirestoreValueReader;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FieldValue;
@@ -91,7 +92,7 @@ public class SavedBookRepository {
                 .addOnSuccessListener(querySnapshot -> {
                     List<String> bookIds = new ArrayList<>();
                     querySnapshot.getDocuments().forEach(document -> {
-                        String bookId = document.getString("bookId");
+                        String bookId = FirestoreValueReader.string(document, "bookId");
                         bookIds.add(isBlank(bookId) ? document.getId() : bookId);
                     });
                     callback.onSuccess(bookIds);

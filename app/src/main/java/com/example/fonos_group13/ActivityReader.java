@@ -33,6 +33,7 @@ import com.example.fonos_group13.audio.AudioPreferences;
 import com.example.fonos_group13.audio.AudioSourceResolver;
 import com.example.fonos_group13.audio.PlaybackService;
 import com.example.fonos_group13.data.BookRepository;
+import com.example.fonos_group13.data.BookAccessMode;
 import com.example.fonos_group13.data.DownloadedAudioRepository;
 import com.example.fonos_group13.data.ProgressRepository;
 import com.example.fonos_group13.data.RepositoryCallback;
@@ -54,8 +55,10 @@ public class ActivityReader extends AppCompatActivity {
     public static final String EXTRA_BOOK_ID = "book_id";
     public static final String EXTRA_CHAPTER_ID = "chapter_id";
     public static final String EXTRA_AUTO_PLAY = "auto_play";
+    public static final String EXTRA_CREATOR_PREVIEW = "creator_review_preview";
     public static final String METADATA_BOOK_ID = "metadata_book_id";
     public static final String METADATA_CHAPTER_ID = "metadata_chapter_id";
+    public static final String METADATA_CREATOR_PREVIEW = "metadata_creator_review_preview";
 
     private final List<BookChapter> currentChapters = new ArrayList<>();
     private final Handler progressHandler = new Handler(Looper.getMainLooper());
@@ -107,6 +110,8 @@ public class ActivityReader extends AppCompatActivity {
     private String requestedBookId;
     private String requestedChapterId;
     private boolean requestedAutoPlay;
+    private boolean requestedCreatorPreview;
+    private boolean creatorPreviewActive;
     private boolean userSeeking;
     private boolean downloadingAudio;
     private boolean playerEnabled;
@@ -290,14 +295,17 @@ public class ActivityReader extends AppCompatActivity {
         }
         String chapterId = intent == null ? null : trimToNull(intent.getStringExtra(EXTRA_CHAPTER_ID));
         boolean autoPlay = intent != null && intent.getBooleanExtra(EXTRA_AUTO_PLAY, false);
+        boolean creatorPreview = intent != null && intent.getBooleanExtra(EXTRA_CREATOR_PREVIEW, false);
 
         if (currentBook != null
                 && currentChapter != null
                 && bookId.equals(currentBook.getId())
-                && (chapterId == null || chapterId.equals(currentChapter.getId()))) {
+                && (chapterId == null || chapterId.equals(currentChapter.getId()))
+                && (currentBook.isPublished() || creatorPreview == creatorPreviewActive)) {
             requestedBookId = bookId;
             requestedChapterId = currentChapter.getId();
             requestedAutoPlay = autoPlay;
+            requestedCreatorPreview = creatorPreview;
             refreshCurrentChapter();
             return;
         }
@@ -305,13 +313,15 @@ public class ActivityReader extends AppCompatActivity {
         if (currentBook == null
                 && bookId.equals(requestedBookId)
                 && ((chapterId == null && requestedChapterId == null)
-                || (chapterId != null && chapterId.equals(requestedChapterId)))) {
+                || (chapterId != null && chapterId.equals(requestedChapterId)))
+                && creatorPreview == requestedCreatorPreview) {
             return;
         }
 
         requestedBookId = bookId;
         requestedChapterId = chapterId;
         requestedAutoPlay = autoPlay;
+        requestedCreatorPreview = creatorPreview;
         loadBookAndChapter(bookId, chapterId);
     }
 
@@ -327,21 +337,28 @@ public class ActivityReader extends AppCompatActivity {
 
     private void loadBookAndChapter(String bookId, String chapterId) {
         String loadingBookId = bookId;
-        bookRepository.getBook(bookId, new RepositoryCallback<Book>() {
+        boolean loadingCreatorPreview = requestedCreatorPreview;
+        BookAccessMode accessMode = loadingCreatorPreview
+                ? BookAccessMode.CREATOR_REVIEW_PREVIEW
+                : BookAccessMode.PUBLISHED_ONLY;
+        bookRepository.getBook(bookId, accessMode, new RepositoryCallback<Book>() {
             @Override
             public void onSuccess(Book book) {
-                if (!loadingBookId.equals(requestedBookId)) {
+                if (!loadingBookId.equals(requestedBookId)
+                        || loadingCreatorPreview != requestedCreatorPreview) {
                     return;
                 }
+                creatorPreviewActive = loadingCreatorPreview && !book.isPublished();
                 loadChapter(book, chapterId);
             }
 
             @Override
             public void onError(Exception exception) {
-                if (!loadingBookId.equals(requestedBookId)) {
+                if (!loadingBookId.equals(requestedBookId)
+                        || loadingCreatorPreview != requestedCreatorPreview) {
                     return;
                 }
-                Toast.makeText(ActivityReader.this, "Could not load this book from Firestore.", Toast.LENGTH_LONG).show();
+                Toast.makeText(ActivityReader.this, "This audiobook is unavailable.", Toast.LENGTH_LONG).show();
                 finish();
             }
         });
@@ -349,7 +366,10 @@ public class ActivityReader extends AppCompatActivity {
 
     private void loadChapter(Book book, String chapterId) {
         String loadingBookId = book.getId();
-        bookRepository.getChapters(book.getId(), new RepositoryCallback<List<BookChapter>>() {
+        BookAccessMode accessMode = creatorPreviewActive
+                ? BookAccessMode.CREATOR_REVIEW_PREVIEW
+                : BookAccessMode.PUBLISHED_ONLY;
+        bookRepository.getChapters(book.getId(), accessMode, new RepositoryCallback<List<BookChapter>>() {
             @Override
             public void onSuccess(List<BookChapter> chapters) {
                 if (!loadingBookId.equals(requestedBookId)) {
@@ -580,6 +600,7 @@ public class ActivityReader extends AppCompatActivity {
         Bundle extras = new Bundle();
         extras.putString(METADATA_BOOK_ID, book.getId());
         extras.putString(METADATA_CHAPTER_ID, chapter.getId());
+        extras.putBoolean(METADATA_CREATOR_PREVIEW, creatorPreviewActive);
 
         MediaMetadata.Builder metadataBuilder = new MediaMetadata.Builder()
                 .setTitle(chapter.getTitle())

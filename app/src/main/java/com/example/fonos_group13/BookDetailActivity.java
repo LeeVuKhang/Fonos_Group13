@@ -20,6 +20,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.example.fonos_group13.data.BookRepository;
+import com.example.fonos_group13.data.BookAccessMode;
 import com.example.fonos_group13.data.DownloadedAudioRepository;
 import com.example.fonos_group13.data.ProgressRepository;
 import com.example.fonos_group13.data.RepositoryCallback;
@@ -39,6 +40,7 @@ import java.util.Map;
 
 public class BookDetailActivity extends AppCompatActivity {
     public static final String EXTRA_BOOK_ID = "book_id";
+    public static final String EXTRA_CREATOR_PREVIEW = "creator_review_preview";
 
     private BookRepository bookRepository;
     private ProgressRepository progressRepository;
@@ -49,6 +51,8 @@ public class BookDetailActivity extends AppCompatActivity {
     private String downloadingChapterId;
     private boolean currentBookSaved;
     private boolean saveBookLoading;
+    private boolean creatorPreviewRequested;
+    private boolean creatorPreviewActive;
 
     private final List<BookChapter> chapters = new ArrayList<>();
     private final Map<String, UserProgress> progressByChapterId = new HashMap<>();
@@ -140,21 +144,34 @@ public class BookDetailActivity extends AppCompatActivity {
             finish();
             return;
         }
+        creatorPreviewRequested = intent.getBooleanExtra(EXTRA_CREATOR_PREVIEW, false);
+        creatorPreviewActive = false;
         requestedBookId = bookId;
+        updateSaveBookButton();
         loadBook(bookId);
     }
 
     private void loadBook(String bookId) {
         showMessage("Loading chapters...");
-        bookRepository.getBook(bookId, new RepositoryCallback<Book>() {
+        BookAccessMode accessMode = creatorPreviewRequested
+                ? BookAccessMode.CREATOR_REVIEW_PREVIEW
+                : BookAccessMode.PUBLISHED_ONLY;
+        bookRepository.getBook(bookId, accessMode, new RepositoryCallback<Book>() {
             @Override
             public void onSuccess(Book book) {
                 if (!bookId.equals(requestedBookId)) {
                     return;
                 }
                 currentBook = book;
+                creatorPreviewActive = creatorPreviewRequested && !book.isPublished();
                 bindBookHeader(book);
-                loadSavedState(bookId);
+                if (creatorPreviewActive) {
+                    currentBookSaved = false;
+                    saveBookLoading = false;
+                    updateSaveBookButton();
+                } else {
+                    loadSavedState(bookId);
+                }
                 loadChapters(bookId);
             }
 
@@ -163,8 +180,8 @@ public class BookDetailActivity extends AppCompatActivity {
                 if (!bookId.equals(requestedBookId)) {
                     return;
                 }
-                showMessage("Could not load this book.");
-                Toast.makeText(BookDetailActivity.this, "Could not load this book from Firestore.", Toast.LENGTH_SHORT).show();
+                showMessage("This audiobook is unavailable.");
+                Toast.makeText(BookDetailActivity.this, "This audiobook is unavailable.", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -208,7 +225,10 @@ public class BookDetailActivity extends AppCompatActivity {
     }
 
     private void loadChapters(String bookId) {
-        bookRepository.getChapters(bookId, new RepositoryCallback<List<BookChapter>>() {
+        BookAccessMode accessMode = creatorPreviewActive
+                ? BookAccessMode.CREATOR_REVIEW_PREVIEW
+                : BookAccessMode.PUBLISHED_ONLY;
+        bookRepository.getChapters(bookId, accessMode, new RepositoryCallback<List<BookChapter>>() {
             @Override
             public void onSuccess(List<BookChapter> data) {
                 if (!bookId.equals(requestedBookId)) {
@@ -295,7 +315,7 @@ public class BookDetailActivity extends AppCompatActivity {
     }
 
     private void toggleSavedBook() {
-        if (currentBook == null || saveBookLoading) {
+        if (currentBook == null || saveBookLoading || creatorPreviewActive) {
             return;
         }
 
@@ -337,6 +357,12 @@ public class BookDetailActivity extends AppCompatActivity {
 
     private void updateSaveBookButton() {
         if (saveBookButton == null) {
+            return;
+        }
+        boolean hideForPreview = creatorPreviewRequested
+                && (currentBook == null || creatorPreviewActive);
+        saveBookButton.setVisibility(hideForPreview ? View.GONE : View.VISIBLE);
+        if (hideForPreview) {
             return;
         }
         boolean enabled = currentBook != null && !saveBookLoading;
@@ -540,6 +566,7 @@ public class BookDetailActivity extends AppCompatActivity {
         intent.putExtra(ActivityReader.EXTRA_BOOK_ID, currentBook.getId());
         intent.putExtra(ActivityReader.EXTRA_CHAPTER_ID, chapter.getId());
         intent.putExtra(ActivityReader.EXTRA_AUTO_PLAY, autoPlay);
+        intent.putExtra(ActivityReader.EXTRA_CREATOR_PREVIEW, creatorPreviewActive);
         startActivity(intent);
     }
 
