@@ -38,8 +38,7 @@ experience:
 - XML layouts provide a familiar Android interface for discovery, search,
   library, profile, audio preferences, login, registration, creator upload,
   My Uploads, book detail, and reader screens.
-- User-generated audiobook backend implementation details are handed off in
-  [USER_GENERATED_AUDIOBOOK_BACKEND_HANDOFF.md](USER_GENERATED_AUDIOBOOK_BACKEND_HANDOFF.md).
+- User-generated audiobook backend implementation details https://github.com/LeeVuKhang/Fonos_Backend.
 
 ## 2. Scope of the Application
 
