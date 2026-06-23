@@ -1,14 +1,14 @@
 package com.example.fonos_group13.model;
 
 public class CreatorVoiceOption {
-    public static final CreatorVoiceOption MATTHEW = new CreatorVoiceOption("Matthew", "male");
     public static final CreatorVoiceOption RUTH = new CreatorVoiceOption("Ruth", "female");
+    public static final CreatorVoiceOption PATRICK = new CreatorVoiceOption("Patrick", "male");
 
     private final String voiceId;
     private final String gender;
 
     public CreatorVoiceOption(String voiceId, String gender) {
-        this.voiceId = valueOrDefault(voiceId, "Matthew");
+        this.voiceId = valueOrDefault(voiceId, "Patrick");
         this.gender = valueOrDefault(gender, "male").toLowerCase();
     }
 

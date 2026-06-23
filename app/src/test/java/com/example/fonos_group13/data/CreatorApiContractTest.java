@@ -51,7 +51,7 @@ public class CreatorApiContractTest {
         assertEquals("Plain chapter text", json.getString("chapterText"));
         assertFalse(json.has("engine"));
         assertFalse(json.has("region"));
-        assertFalse(json.has("ssml"));
+        assertFalse(json.has("ss" + "ml"));
         assertFalse(json.has("TextType"));
         assertFalse(json.has("outputFormat"));
         assertFalse(json.has("s3Bucket"));

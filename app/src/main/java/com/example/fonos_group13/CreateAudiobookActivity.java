@@ -28,11 +28,11 @@ public class CreateAudiobookActivity extends AppCompatActivity {
     private EditText inputAuthor;
     private EditText inputCoverUrl;
     private EditText inputChapterText;
-    private TextView voiceMatthew;
+    private TextView voicePatrick;
     private TextView voiceRuth;
     private MaterialButton saveDraftButton;
     private MaterialButton requestGenerationButton;
-    private CreatorVoiceOption selectedVoice = CreatorVoiceOption.MATTHEW;
+    private CreatorVoiceOption selectedVoice = CreatorVoiceOption.PATRICK;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,7 +44,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         bindViews();
         setupInsets();
         setupControls();
-        selectVoice(CreatorVoiceOption.MATTHEW);
+        selectVoice(CreatorVoiceOption.PATRICK);
     }
 
     private void bindViews() {
@@ -52,7 +52,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         inputAuthor = findViewById(R.id.input_audiobook_author);
         inputCoverUrl = findViewById(R.id.input_cover_url);
         inputChapterText = findViewById(R.id.input_chapter_text);
-        voiceMatthew = findViewById(R.id.voice_matthew);
+        voicePatrick = findViewById(R.id.voice_patrick);
         voiceRuth = findViewById(R.id.voice_ruth);
         saveDraftButton = findViewById(R.id.btn_save_draft);
         requestGenerationButton = findViewById(R.id.btn_request_generation);
@@ -74,8 +74,8 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         if (back != null) {
             back.setOnClickListener(v -> finish());
         }
-        if (voiceMatthew != null) {
-            voiceMatthew.setOnClickListener(v -> selectVoice(CreatorVoiceOption.MATTHEW));
+        if (voicePatrick != null) {
+            voicePatrick.setOnClickListener(v -> selectVoice(CreatorVoiceOption.PATRICK));
         }
         if (voiceRuth != null) {
             voiceRuth.setOnClickListener(v -> selectVoice(CreatorVoiceOption.RUTH));
@@ -89,8 +89,8 @@ public class CreateAudiobookActivity extends AppCompatActivity {
     }
 
     private void selectVoice(CreatorVoiceOption voiceOption) {
-        selectedVoice = voiceOption == null ? CreatorVoiceOption.MATTHEW : voiceOption;
-        bindVoiceChip(voiceMatthew, selectedVoice == CreatorVoiceOption.MATTHEW);
+        selectedVoice = voiceOption == null ? CreatorVoiceOption.PATRICK : voiceOption;
+        bindVoiceChip(voicePatrick, selectedVoice == CreatorVoiceOption.PATRICK);
         bindVoiceChip(voiceRuth, selectedVoice == CreatorVoiceOption.RUTH);
     }
 
@@ -206,8 +206,8 @@ public class CreateAudiobookActivity extends AppCompatActivity {
             requestGenerationButton.setEnabled(!loading);
             requestGenerationButton.setText(loading && requestGeneration ? "Requesting..." : "Request Generation");
         }
-        if (voiceMatthew != null) {
-            voiceMatthew.setEnabled(!loading);
+        if (voicePatrick != null) {
+            voicePatrick.setEnabled(!loading);
         }
         if (voiceRuth != null) {
             voiceRuth.setEnabled(!loading);

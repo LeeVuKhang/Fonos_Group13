@@ -162,7 +162,7 @@
                     android:orientation="horizontal">
 
                     <TextView
-                        android:id="@+id/voice_matthew"
+                        android:id="@+id/voice_patrick"
                         android:layout_width="0dp"
                         android:layout_height="44dp"
                         android:layout_marginEnd="8dp"
@@ -171,7 +171,7 @@
                         android:clickable="true"
                         android:focusable="true"
                         android:gravity="center"
-                        android:text="Matthew - male"
+                        android:text="Patrick - male"
                         android:textColor="@color/text_muted"
                         android:textSize="14sp"
                         android:textStyle="bold" />

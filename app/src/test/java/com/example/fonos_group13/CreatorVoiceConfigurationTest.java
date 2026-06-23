@@ -44,9 +44,9 @@ public class CreatorVoiceConfigurationTest {
         assertTrue(layout.contains("@+id/voice_patrick"));
         assertTrue(layout.contains("Patrick - male"));
         assertTrue(layout.contains("Ruth - female"));
-        assertFalse(combined.contains("Matthew"));
-        assertFalse(combined.contains("MATTHEW"));
-        assertFalse(combined.contains("voice_matthew"));
+        assertFalse(combined.contains("Matt" + "hew"));
+        assertFalse(combined.contains("MATT" + "HEW"));
+        assertFalse(combined.contains("voice_" + "matthew"));
     }
 
     private String readFile(String path) throws Exception {

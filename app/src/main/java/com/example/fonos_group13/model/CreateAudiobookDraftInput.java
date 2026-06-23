@@ -30,7 +30,7 @@ public class CreateAudiobookDraftInput {
         this.chapterTitle = valueOrDefault(chapterTitle, DEFAULT_CHAPTER_TITLE);
         this.chapterText = trim(chapterText);
         this.languageCode = valueOrDefault(languageCode, DEFAULT_LANGUAGE_CODE);
-        this.voiceOption = voiceOption == null ? CreatorVoiceOption.MATTHEW : voiceOption;
+        this.voiceOption = voiceOption == null ? CreatorVoiceOption.PATRICK : voiceOption;
     }
 
     public String getTitle() {
