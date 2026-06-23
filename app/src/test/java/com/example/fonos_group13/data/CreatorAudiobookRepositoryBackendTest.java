@@ -107,7 +107,7 @@ public class CreatorAudiobookRepositoryBackendTest {
                 "Chapter 1",
                 chapterText,
                 "en-US",
-                CreatorVoiceOption.MATTHEW
+                CreatorVoiceOption.PATRICK
         );
     }
 

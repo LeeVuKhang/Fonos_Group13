@@ -34,6 +34,31 @@ public class CreatorApiContractTest {
     }
 
     @Test
+    public void maleNarratorUsesPatrickAndExcludesBackendOwnedSynthesisSettings() throws Exception {
+        CreateAudiobookDraftInput input = new CreateAudiobookDraftInput(
+                "Title",
+                "Author",
+                null,
+                "Chapter 1",
+                "Plain chapter text",
+                "en-US",
+                CreatorVoiceOption.PATRICK
+        );
+
+        JSONObject json = new JSONObject(CreatorApiContract.createDraftJson(input));
+
+        assertEquals("Patrick", json.getString("voiceId"));
+        assertEquals("Plain chapter text", json.getString("chapterText"));
+        assertFalse(json.has("engine"));
+        assertFalse(json.has("region"));
+        assertFalse(json.has("ssml"));
+        assertFalse(json.has("TextType"));
+        assertFalse(json.has("outputFormat"));
+        assertFalse(json.has("s3Bucket"));
+        assertFalse(json.has("OutputS3BucketName"));
+    }
+
+    @Test
     public void parsesSuccessAndErrorEnvelopes() throws Exception {
         String success = "{\"data\":{\"bookId\":\"book-1\",\"generationStatus\":\"draft\"}}";
         assertEquals("book-1", CreatorApiContract.parseBookId(201, success));
