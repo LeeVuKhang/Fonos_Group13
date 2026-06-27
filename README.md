@@ -70,7 +70,8 @@ experience:
 - Profile display with email, display name fallback, completed book count, and
   listened-hours statistic.
 - Creating user-generated audiobook drafts from one chapter of text.
-- Viewing My Uploads with generation states and retry/view actions.
+- Viewing My Uploads with live generation states, retry/view actions, and
+  generation completion/failure notifications.
 - Creator-only preview for ready-for-review unpublished uploads.
 
 ### Out of Scope
@@ -80,8 +81,7 @@ shipped feature set:
 
 - Payment, subscription, or premium content access.
 - Social sharing, playlists, and recommendations.
-- Push notifications or scheduled reminders outside the media playback
-  notification.
+- Scheduled reminders and non-generation marketing notifications.
 - Room, SQLite, or other structured catalog/progress caching.
 - Full admin/moderation tools for creating, editing, or approving books inside
   the mobile app.
@@ -1028,6 +1028,21 @@ S3 public or signed URL access remains a separate backend security policy.
 | `createdAt` | Timestamp | Server timestamp for registration. | Set by Firestore |
 | `updatedAt` | Timestamp | Server timestamp for profile updates. | Set when display name changes |
 
+### Firestore Subcollection: `users/{uid}/notificationTokens`
+
+| Field | Data Type | Description | Constraints |
+|---|---|---|---|
+| Document ID | String | SHA-256 hash of the FCM token. | Required |
+| `token` | String | FCM registration token for Android generation notifications. | Required |
+| `platform` | String | Device platform. | `android` |
+| `updatedAt` | Timestamp | Last token registration timestamp. | Set by Firestore |
+
+My Uploads registers this token when a user requests generation or has pending
+uploads visible. The backend sends data-only FCM messages for
+`ready_for_review` and `failed`, and notification taps reopen My Uploads. Rules
+must restrict this subcollection so users can write and delete only their own
+token documents.
+
 ### Firestore Subcollection: `users/{uid}/progress`
 
 | Field | Data Type | Description | Constraints |
@@ -1314,13 +1329,13 @@ flowchart TD
 
 | Component | Used? | Implementation |
 |---|---|---|
-| Activity | Yes | `MainActivity`, `LoginActivity`, `RegisterActivity`, `DiscoverActivity`, `SearchActivity`, `LibraryActivity`, `BookDetailActivity`, `ProfileActivity`, `AudioPreferencesActivity`, `ActivityReader`. |
+| Activity | Yes | `MainActivity`, `LoginActivity`, `RegisterActivity`, `DiscoverActivity`, `SearchActivity`, `LibraryActivity`, `BookDetailActivity`, `ProfileActivity`, `CreateAudiobookActivity`, `MyUploadsActivity`, `AudioPreferencesActivity`, `ActivityReader`. |
 | Fragment | No | The app currently uses Activity-based screens only. |
-| Service | Yes | `.audio.PlaybackService` extends Media3 `MediaSessionService` and is declared in `AndroidManifest.xml`. |
+| Service | Yes | `.audio.PlaybackService` extends Media3 `MediaSessionService`, and `.notifications.GenerationNotificationMessagingService` handles FCM upload-generation messages. Both are declared in `AndroidManifest.xml`. |
 | Foreground Service | Yes | `PlaybackService` uses `android:foregroundServiceType="mediaPlayback"` for ongoing audiobook playback. |
 | BroadcastReceiver | No | No receiver is declared or registered. |
 | AlarmManager / WorkManager | No | The app does not schedule background work. |
-| Media notification | Yes | Media3 `DefaultMediaNotificationProvider` creates playback notification controls for the active `MediaSession`, including play/pause and previous/next chapter actions; tapping the notification can reopen the active reader chapter when a media item has book and chapter metadata. The app does not use `NotificationManager` directly. |
+| Media notification | Yes | Media3 `DefaultMediaNotificationProvider` creates playback notification controls for the active `MediaSession`; upload-generation completion/failure uses a separate notification channel that opens My Uploads. |
 | ContentProvider | No | No provider is declared. |
 
 ### Permissions
@@ -1330,11 +1345,10 @@ flowchart TD
 | `android.permission.INTERNET` | Required for Firebase Authentication, Firestore reads/writes, cover image loading, and remote MP3 download/playback. | Declared in `AndroidManifest.xml`; granted at install time as a normal permission. | The app transmits authentication data through Firebase SDKs and downloads remote media from configured URLs. |
 | `android.permission.FOREGROUND_SERVICE` | Allows the app to run a foreground service. | Declared in `AndroidManifest.xml`. | Used only for playback service lifecycle. |
 | `android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK` | Required on modern Android for foreground services with media playback type. | Declared in `AndroidManifest.xml`. | Applies to ongoing audiobook playback and media controls. |
+| `android.permission.POST_NOTIFICATIONS` | Allows Android 13+ devices to show upload-generation completion or failure notifications. | Requested from My Uploads when generation is requested or pending uploads are visible. | Denial does not affect live Firestore refresh; it only suppresses system notifications. |
 
 No storage permission is required because downloaded MP3 files are saved inside
-the app-private internal files directory. The app does not request
-`POST_NOTIFICATIONS`; the current notification is a media session playback
-notification.
+the app-private internal files directory.
 
 ## 15. Error Handling and Validation
 
@@ -1403,7 +1417,7 @@ Major dependencies:
 
 - AndroidX AppCompat, Core KTX, Activity KTX, ConstraintLayout.
 - Material Components.
-- Firebase BoM, Firebase Auth, Firebase Firestore.
+- Firebase BoM, Firebase Auth, Firebase Firestore, Firebase Messaging.
 - Media3 ExoPlayer, Media3 Common, and Media3 Session.
 - Glide.
 - JUnit, AndroidX JUnit, Espresso.

@@ -7,6 +7,8 @@ import com.example.fonos_group13.model.CreateAudiobookDraftInput;
 import com.example.fonos_group13.model.UserGeneratedAudiobook;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -104,15 +106,32 @@ public class CreatorAudiobookRepository {
                 .whereEqualTo("createdByUser", true)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
-                    List<UserGeneratedAudiobook> uploads = new ArrayList<>();
-                    querySnapshot.getDocuments().forEach(document -> uploads.add(UserGeneratedAudiobook.fromDocument(document)));
-                    Collections.sort(uploads, (left, right) -> Long.compare(
-                            right.getSortTimestampMillis(),
-                            left.getSortTimestampMillis()
-                    ));
-                    callback.onSuccess(uploads);
+                    callback.onSuccess(mapUploads(querySnapshot));
                 })
                 .addOnFailureListener(callback::onError);
+    }
+
+    public ListenerRegistration observeMyUploads(RepositoryCallback<List<UserGeneratedAudiobook>> callback) {
+        String uid = currentUserUid();
+        if (!configured || firestore == null) {
+            callback.onError(FirebaseConfig.missingConfigException());
+            return null;
+        }
+        if (uid == null) {
+            callback.onError(new IllegalStateException("Please sign in to view your uploads."));
+            return null;
+        }
+
+        return firestore.collection(COLLECTION_BOOKS)
+                .whereEqualTo("creatorUid", uid)
+                .whereEqualTo("createdByUser", true)
+                .addSnapshotListener((querySnapshot, exception) -> {
+                    if (exception != null) {
+                        callback.onError(exception);
+                        return;
+                    }
+                    callback.onSuccess(mapUploads(querySnapshot));
+                });
     }
 
     public void requestGeneration(String bookId, RepositoryCallback<Void> callback) {
@@ -125,6 +144,18 @@ public class CreatorAudiobookRepository {
             return;
         }
         backendApi.requestGeneration(safeBookId, callback);
+    }
+
+    private List<UserGeneratedAudiobook> mapUploads(QuerySnapshot querySnapshot) {
+        List<UserGeneratedAudiobook> uploads = new ArrayList<>();
+        if (querySnapshot != null) {
+            querySnapshot.getDocuments().forEach(document -> uploads.add(UserGeneratedAudiobook.fromDocument(document)));
+        }
+        Collections.sort(uploads, (left, right) -> Long.compare(
+                right.getSortTimestampMillis(),
+                left.getSortTimestampMillis()
+        ));
+        return uploads;
     }
 
     private boolean canWrite(RepositoryCallback<?> callback) {

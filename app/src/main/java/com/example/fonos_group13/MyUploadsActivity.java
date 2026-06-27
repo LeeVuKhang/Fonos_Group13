@@ -1,9 +1,12 @@
 package com.example.fonos_group13;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -14,6 +17,7 @@ import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -21,21 +25,31 @@ import androidx.core.view.WindowInsetsCompat;
 import com.example.fonos_group13.data.AuthRepository;
 import com.example.fonos_group13.data.CreatorAudiobookRepository;
 import com.example.fonos_group13.data.RepositoryCallback;
+import com.example.fonos_group13.data.UploadNotificationTokenRepository;
 import com.example.fonos_group13.model.AudiobookGenerationStatus;
 import com.example.fonos_group13.model.UserGeneratedAudiobook;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
 public class MyUploadsActivity extends AppCompatActivity {
+    private static final int REQUEST_POST_NOTIFICATIONS = 4102;
+
     private CreatorAudiobookRepository repository;
+    private UploadNotificationTokenRepository notificationTokenRepository;
     private LinearLayout uploadsContainer;
     private TextView emptyState;
     private MaterialButton createButton;
+    private ListenerRegistration uploadsRegistration;
+    private List<UserGeneratedAudiobook> currentUploads = Collections.emptyList();
     private String loadingBookId;
+    private boolean notificationRegistrationAttempted;
+    private boolean notificationPermissionRequested;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,15 +58,22 @@ public class MyUploadsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_my_uploads);
 
         repository = new CreatorAudiobookRepository(this);
+        notificationTokenRepository = new UploadNotificationTokenRepository(this);
         bindViews();
         setupInsets();
         setupControls();
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        loadUploads();
+    protected void onStart() {
+        super.onStart();
+        startObservingUploads();
+    }
+
+    @Override
+    protected void onStop() {
+        stopObservingUploads();
+        super.onStop();
     }
 
     private void bindViews() {
@@ -82,19 +103,27 @@ public class MyUploadsActivity extends AppCompatActivity {
         }
     }
 
-    private void loadUploads() {
-        if (uploadsContainer != null) {
-            uploadsContainer.removeAllViews();
+    private void startObservingUploads() {
+        stopObservingUploads();
+        if (currentUploads.isEmpty()) {
+            if (uploadsContainer != null) {
+                uploadsContainer.removeAllViews();
+            }
+            showMessage("Loading uploads...");
         }
-        showMessage("Loading uploads...");
-        repository.getMyUploads(new RepositoryCallback<List<UserGeneratedAudiobook>>() {
+        uploadsRegistration = repository.observeMyUploads(new RepositoryCallback<List<UserGeneratedAudiobook>>() {
             @Override
             public void onSuccess(List<UserGeneratedAudiobook> uploads) {
+                currentUploads = uploads == null ? Collections.emptyList() : uploads;
                 renderUploads(uploads);
+                if (hasPendingUploads(currentUploads)) {
+                    ensureGenerationNotifications();
+                }
             }
 
             @Override
             public void onError(Exception exception) {
+                currentUploads = Collections.emptyList();
                 if (uploadsContainer != null) {
                     uploadsContainer.removeAllViews();
                 }
@@ -106,6 +135,13 @@ public class MyUploadsActivity extends AppCompatActivity {
                 ).show();
             }
         });
+    }
+
+    private void stopObservingUploads() {
+        if (uploadsRegistration != null) {
+            uploadsRegistration.remove();
+            uploadsRegistration = null;
+        }
     }
 
     private void renderUploads(List<UserGeneratedAudiobook> uploads) {
@@ -264,14 +300,15 @@ public class MyUploadsActivity extends AppCompatActivity {
         if (upload == null || loadingBookIdActive()) {
             return;
         }
+        ensureGenerationNotifications();
         loadingBookId = upload.getId();
-        loadUploads();
+        renderUploads(currentUploads);
         repository.requestGeneration(upload.getId(), new RepositoryCallback<Void>() {
             @Override
             public void onSuccess(Void data) {
                 loadingBookId = null;
                 Toast.makeText(MyUploadsActivity.this, "Generation request queued.", Toast.LENGTH_SHORT).show();
-                loadUploads();
+                renderUploads(currentUploads);
             }
 
             @Override
@@ -282,7 +319,7 @@ public class MyUploadsActivity extends AppCompatActivity {
                         AuthRepository.friendlyError(exception),
                         Toast.LENGTH_LONG
                 ).show();
-                loadUploads();
+                renderUploads(currentUploads);
             }
         });
     }
@@ -296,6 +333,56 @@ public class MyUploadsActivity extends AppCompatActivity {
 
     private boolean loadingBookIdActive() {
         return loadingBookId != null && !loadingBookId.trim().isEmpty();
+    }
+
+    private boolean hasPendingUploads(List<UserGeneratedAudiobook> uploads) {
+        if (uploads == null) {
+            return false;
+        }
+        for (UserGeneratedAudiobook upload : uploads) {
+            if (upload != null && upload.getGenerationStatus() == AudiobookGenerationStatus.PENDING_GENERATION) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void ensureGenerationNotifications() {
+        registerNotificationTokenOnce();
+        requestNotificationPermissionOnce();
+    }
+
+    private void registerNotificationTokenOnce() {
+        if (notificationRegistrationAttempted || notificationTokenRepository == null) {
+            return;
+        }
+        notificationRegistrationAttempted = true;
+        notificationTokenRepository.registerCurrentDevice(new RepositoryCallback<Void>() {
+            @Override
+            public void onSuccess(Void data) {
+                // No UI needed; live Firestore refresh remains the foreground source of truth.
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                // Token registration is best-effort and should not block generation.
+            }
+        });
+    }
+
+    private void requestNotificationPermissionOnce() {
+        if (Build.VERSION.SDK_INT < 33 || notificationPermissionRequested) {
+            return;
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        notificationPermissionRequested = true;
+        requestPermissions(
+                new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                REQUEST_POST_NOTIFICATIONS
+        );
     }
 
     private void showMessage(String message) {
