@@ -6,6 +6,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.example.fonos_group13.model.CreateAudiobookDraftInput;
 import com.example.fonos_group13.model.CreatorVoiceOption;
+import com.example.fonos_group13.model.EditableAudiobookDraft;
 
 import org.json.JSONObject;
 import org.junit.Test;
@@ -56,6 +57,53 @@ public class CreatorApiContractTest {
         assertFalse(json.has("outputFormat"));
         assertFalse(json.has("s3Bucket"));
         assertFalse(json.has("OutputS3BucketName"));
+    }
+
+    @Test
+    public void updateDraftJsonUsesTheSameSafePayloadAsCreate() throws Exception {
+        CreateAudiobookDraftInput input = new CreateAudiobookDraftInput(
+                "Updated",
+                "Author",
+                null,
+                "Chapter 1",
+                "Edited chapter text",
+                "en-US",
+                CreatorVoiceOption.PATRICK
+        );
+
+        JSONObject json = new JSONObject(CreatorApiContract.createDraftJson(input));
+
+        assertEquals("Updated", json.getString("title"));
+        assertEquals("Edited chapter text", json.getString("chapterText"));
+        assertFalse(json.has("bookId"));
+        assertFalse(json.has("creatorUid"));
+        assertFalse(json.has("generationStatus"));
+    }
+
+    @Test
+    public void parsesEditableDraftEnvelope() throws Exception {
+        String response = "{"
+                + "\"data\":{"
+                + "\"bookId\":\"book-1\","
+                + "\"title\":\"Title\","
+                + "\"author\":\"Author\","
+                + "\"coverUrl\":null,"
+                + "\"chapterTitle\":\"Chapter 1\","
+                + "\"chapterText\":\"Full text\","
+                + "\"languageCode\":\"en-US\","
+                + "\"voiceId\":\"Ruth\","
+                + "\"generationStatus\":\"draft\""
+                + "}"
+                + "}";
+
+        EditableAudiobookDraft draft = CreatorApiContract.parseEditableDraft(200, response);
+
+        assertEquals("book-1", draft.getBookId());
+        assertEquals("Title", draft.getTitle());
+        assertEquals(null, draft.getCoverUrl());
+        assertEquals("Full text", draft.getChapterText());
+        assertEquals("Ruth", draft.getVoiceOption().getVoiceId());
+        assertEquals("draft", draft.getGenerationStatus().getValue());
     }
 
     @Test

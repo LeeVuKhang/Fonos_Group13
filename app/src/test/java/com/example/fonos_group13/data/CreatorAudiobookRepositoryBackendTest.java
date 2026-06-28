@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.example.fonos_group13.model.CreateAudiobookDraftInput;
 import com.example.fonos_group13.model.CreatorVoiceOption;
+import com.example.fonos_group13.model.EditableAudiobookDraft;
 
 import org.junit.Test;
 
@@ -50,6 +51,57 @@ public class CreatorAudiobookRepositoryBackendTest {
     }
 
     @Test
+    public void publishAudiobookDelegatesToBackendApi() {
+        FakeBackendApi backendApi = new FakeBackendApi();
+        CreatorAudiobookRepository repository = repositoryWith(backendApi, "user-1");
+        CapturingCallback<Void> callback = new CapturingCallback<>();
+
+        repository.publishAudiobook("book-1", callback);
+
+        assertEquals("book-1", backendApi.publishedBookId);
+        assertEquals(null, callback.error);
+    }
+
+    @Test
+    public void getDraftForEditDelegatesToBackendApi() {
+        FakeBackendApi backendApi = new FakeBackendApi();
+        CreatorAudiobookRepository repository = repositoryWith(backendApi, "user-1");
+        CapturingCallback<EditableAudiobookDraft> callback = new CapturingCallback<>();
+
+        repository.getDraftForEdit("book-1", callback);
+
+        assertEquals("book-1", backendApi.loadedBookId);
+        assertEquals("book-1", callback.value.getBookId());
+        assertEquals("Title", callback.value.getTitle());
+    }
+
+    @Test
+    public void updateDraftDelegatesToBackendApi() {
+        FakeBackendApi backendApi = new FakeBackendApi();
+        CreatorAudiobookRepository repository = repositoryWith(backendApi, "user-1");
+        CapturingCallback<String> callback = new CapturingCallback<>();
+
+        repository.updateDraft("book-1", validInput(), callback);
+
+        assertEquals("book-1", backendApi.updatedBookId);
+        assertEquals("Title", backendApi.updatedInput.getTitle());
+        assertEquals("book-1", callback.value);
+    }
+
+    @Test
+    public void updateDraftAndRequestGenerationUsesExistingBookId() {
+        FakeBackendApi backendApi = new FakeBackendApi();
+        CreatorAudiobookRepository repository = repositoryWith(backendApi, "user-1");
+        CapturingCallback<String> callback = new CapturingCallback<>();
+
+        repository.updateDraftAndRequestGeneration("book-1", validInput(), callback);
+
+        assertEquals("book-1", backendApi.updatedBookId);
+        assertEquals("book-1", backendApi.requestedBookId);
+        assertEquals("book-1", callback.value);
+    }
+
+    @Test
     public void writeMethodsRequireSignedInUserBeforeCallingBackend() {
         FakeBackendApi backendApi = new FakeBackendApi();
         CreatorAudiobookRepository repository = repositoryWith(backendApi, null);
@@ -59,6 +111,30 @@ public class CreatorAudiobookRepositoryBackendTest {
 
         assertTrue(callback.error instanceof IllegalStateException);
         assertEquals(null, backendApi.createdInput);
+    }
+
+    @Test
+    public void updateDraftRequiresSignedInUserBeforeCallingBackend() {
+        FakeBackendApi backendApi = new FakeBackendApi();
+        CreatorAudiobookRepository repository = repositoryWith(backendApi, null);
+        CapturingCallback<String> callback = new CapturingCallback<>();
+
+        repository.updateDraft("book-1", validInput(), callback);
+
+        assertTrue(callback.error instanceof IllegalStateException);
+        assertEquals(null, backendApi.updatedInput);
+    }
+
+    @Test
+    public void publishRequiresSignedInUserBeforeCallingBackend() {
+        FakeBackendApi backendApi = new FakeBackendApi();
+        CreatorAudiobookRepository repository = repositoryWith(backendApi, null);
+        CapturingCallback<Void> callback = new CapturingCallback<>();
+
+        repository.publishAudiobook("book-1", callback);
+
+        assertTrue(callback.error instanceof IllegalStateException);
+        assertEquals(null, backendApi.publishedBookId);
     }
 
     @Test
@@ -124,14 +200,41 @@ public class CreatorAudiobookRepositoryBackendTest {
 
     private static class FakeBackendApi implements CreatorBackendDataSource {
         CreateAudiobookDraftInput createdInput;
+        CreateAudiobookDraftInput updatedInput;
         String createdBookId = "book-1";
+        String loadedBookId;
+        String updatedBookId;
         String requestedBookId;
+        String publishedBookId;
         Exception generationError;
 
         @Override
         public void createDraft(CreateAudiobookDraftInput input, RepositoryCallback<String> callback) {
             createdInput = input;
             callback.onSuccess(createdBookId);
+        }
+
+        @Override
+        public void getDraftForEdit(String bookId, RepositoryCallback<EditableAudiobookDraft> callback) {
+            loadedBookId = bookId;
+            callback.onSuccess(new EditableAudiobookDraft(
+                    bookId,
+                    "Title",
+                    "Author",
+                    null,
+                    "Chapter 1",
+                    "Hello",
+                    "en-US",
+                    CreatorVoiceOption.PATRICK,
+                    null
+            ));
+        }
+
+        @Override
+        public void updateDraft(String bookId, CreateAudiobookDraftInput input, RepositoryCallback<String> callback) {
+            updatedBookId = bookId;
+            updatedInput = input;
+            callback.onSuccess(bookId);
         }
 
         @Override
@@ -142,6 +245,12 @@ public class CreatorAudiobookRepositoryBackendTest {
             } else {
                 callback.onSuccess(null);
             }
+        }
+
+        @Override
+        public void publishAudiobook(String bookId, RepositoryCallback<Void> callback) {
+            publishedBookId = bookId;
+            callback.onSuccess(null);
         }
     }
 

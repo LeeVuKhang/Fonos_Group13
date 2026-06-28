@@ -20,10 +20,14 @@ import com.example.fonos_group13.data.DraftSavedGenerationRequestException;
 import com.example.fonos_group13.data.RepositoryCallback;
 import com.example.fonos_group13.model.CreateAudiobookDraftInput;
 import com.example.fonos_group13.model.CreatorVoiceOption;
+import com.example.fonos_group13.model.EditableAudiobookDraft;
 import com.google.android.material.button.MaterialButton;
 
 public class CreateAudiobookActivity extends AppCompatActivity {
+    public static final String EXTRA_EDIT_BOOK_ID = "com.example.fonos_group13.EXTRA_EDIT_BOOK_ID";
+
     private CreatorAudiobookRepository repository;
+    private TextView headerTitle;
     private EditText inputTitle;
     private EditText inputAuthor;
     private EditText inputCoverUrl;
@@ -33,6 +37,8 @@ public class CreateAudiobookActivity extends AppCompatActivity {
     private MaterialButton saveDraftButton;
     private MaterialButton requestGenerationButton;
     private CreatorVoiceOption selectedVoice = CreatorVoiceOption.PATRICK;
+    private String editingBookId;
+    private boolean loadingDraft;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,13 +47,19 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         setContentView(R.layout.activity_create_audiobook);
 
         repository = new CreatorAudiobookRepository(this);
+        editingBookId = trimToNull(getIntent().getStringExtra(EXTRA_EDIT_BOOK_ID));
         bindViews();
         setupInsets();
         setupControls();
         selectVoice(CreatorVoiceOption.PATRICK);
+        configureMode();
+        if (isEditMode()) {
+            loadDraftForEdit();
+        }
     }
 
     private void bindViews() {
+        headerTitle = findViewById(R.id.create_audiobook_header_title);
         inputTitle = findViewById(R.id.input_audiobook_title);
         inputAuthor = findViewById(R.id.input_audiobook_author);
         inputCoverUrl = findViewById(R.id.input_cover_url);
@@ -88,6 +100,18 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         }
     }
 
+    private void configureMode() {
+        if (headerTitle != null) {
+            headerTitle.setText(isEditMode() ? "Edit Draft" : "Create Audiobook");
+        }
+        if (saveDraftButton != null) {
+            saveDraftButton.setText(saveButtonText(false, false));
+        }
+        if (requestGenerationButton != null) {
+            requestGenerationButton.setText(requestButtonText(false, false));
+        }
+    }
+
     private void selectVoice(CreatorVoiceOption voiceOption) {
         selectedVoice = voiceOption == null ? CreatorVoiceOption.PATRICK : voiceOption;
         bindVoiceChip(voicePatrick, selectedVoice == CreatorVoiceOption.PATRICK);
@@ -104,6 +128,9 @@ public class CreateAudiobookActivity extends AppCompatActivity {
     }
 
     private void saveDraft(boolean requestGeneration) {
+        if (loadingDraft) {
+            return;
+        }
         CreateAudiobookDraftInput input = readAndValidateInput();
         if (input == null) {
             return;
@@ -116,7 +143,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
                 setLoading(false, requestGeneration);
                 Toast.makeText(
                         CreateAudiobookActivity.this,
-                        requestGeneration ? "Generation request queued." : "Audiobook draft saved.",
+                        successMessage(requestGeneration),
                         Toast.LENGTH_SHORT
                 ).show();
                 openMyUploadsAndFinish();
@@ -143,10 +170,57 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         };
 
         if (requestGeneration) {
-            repository.createDraftAndRequestGeneration(input, callback);
+            if (isEditMode()) {
+                repository.updateDraftAndRequestGeneration(editingBookId, input, callback);
+            } else {
+                repository.createDraftAndRequestGeneration(input, callback);
+            }
+        } else if (isEditMode()) {
+            repository.updateDraft(editingBookId, input, callback);
         } else {
             repository.createDraft(input, callback);
         }
+    }
+
+    private void loadDraftForEdit() {
+        setDraftLoading(true);
+        repository.getDraftForEdit(editingBookId, new RepositoryCallback<EditableAudiobookDraft>() {
+            @Override
+            public void onSuccess(EditableAudiobookDraft draft) {
+                setDraftLoading(false);
+                bindDraft(draft);
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                setDraftLoading(false);
+                Toast.makeText(
+                        CreateAudiobookActivity.this,
+                        AuthRepository.friendlyError(exception),
+                        Toast.LENGTH_LONG
+                ).show();
+                finish();
+            }
+        });
+    }
+
+    private void bindDraft(EditableAudiobookDraft draft) {
+        if (draft == null) {
+            return;
+        }
+        if (inputTitle != null) {
+            inputTitle.setText(draft.getTitle());
+        }
+        if (inputAuthor != null) {
+            inputAuthor.setText(draft.getAuthor());
+        }
+        if (inputCoverUrl != null) {
+            inputCoverUrl.setText(draft.getCoverUrl() == null ? "" : draft.getCoverUrl());
+        }
+        if (inputChapterText != null) {
+            inputChapterText.setText(draft.getChapterText());
+        }
+        selectVoice(draft.getVoiceOption());
     }
 
     private CreateAudiobookDraftInput readAndValidateInput() {
@@ -198,13 +272,14 @@ public class CreateAudiobookActivity extends AppCompatActivity {
     }
 
     private void setLoading(boolean loading, boolean requestGeneration) {
+        setInputsEnabled(!loading);
         if (saveDraftButton != null) {
             saveDraftButton.setEnabled(!loading);
-            saveDraftButton.setText(loading && !requestGeneration ? "Saving..." : "Save Draft");
+            saveDraftButton.setText(saveButtonText(loading, requestGeneration));
         }
         if (requestGenerationButton != null) {
             requestGenerationButton.setEnabled(!loading);
-            requestGenerationButton.setText(loading && requestGeneration ? "Requesting..." : "Request Generation");
+            requestGenerationButton.setText(requestButtonText(loading, requestGeneration));
         }
         if (voicePatrick != null) {
             voicePatrick.setEnabled(!loading);
@@ -214,8 +289,75 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         }
     }
 
+    private void setDraftLoading(boolean loading) {
+        loadingDraft = loading;
+        setInputsEnabled(!loading);
+        if (saveDraftButton != null) {
+            saveDraftButton.setEnabled(!loading);
+            saveDraftButton.setText(loading ? "Loading..." : saveButtonText(false, false));
+        }
+        if (requestGenerationButton != null) {
+            requestGenerationButton.setEnabled(!loading);
+            requestGenerationButton.setText(loading ? "Loading..." : requestButtonText(false, false));
+        }
+    }
+
+    private void setInputsEnabled(boolean enabled) {
+        if (inputTitle != null) {
+            inputTitle.setEnabled(enabled);
+        }
+        if (inputAuthor != null) {
+            inputAuthor.setEnabled(enabled);
+        }
+        if (inputCoverUrl != null) {
+            inputCoverUrl.setEnabled(enabled);
+        }
+        if (inputChapterText != null) {
+            inputChapterText.setEnabled(enabled);
+        }
+        if (voicePatrick != null) {
+            voicePatrick.setEnabled(enabled);
+        }
+        if (voiceRuth != null) {
+            voiceRuth.setEnabled(enabled);
+        }
+    }
+
+    private String successMessage(boolean requestGeneration) {
+        if (requestGeneration) {
+            return "Generation request queued.";
+        }
+        return isEditMode() ? "Audiobook draft updated." : "Audiobook draft saved.";
+    }
+
+    private String saveButtonText(boolean loading, boolean requestGeneration) {
+        if (loading && !requestGeneration) {
+            return "Saving...";
+        }
+        return isEditMode() ? "Save Changes" : "Save Draft";
+    }
+
+    private String requestButtonText(boolean loading, boolean requestGeneration) {
+        if (loading && requestGeneration) {
+            return "Requesting...";
+        }
+        return isEditMode() ? "Save & Request Generation" : "Request Generation";
+    }
+
     private String textFrom(EditText input) {
         return input == null || input.getText() == null ? "" : input.getText().toString().trim();
+    }
+
+    private boolean isEditMode() {
+        return editingBookId != null;
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private void openMyUploadsAndFinish() {

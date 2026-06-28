@@ -50,6 +50,28 @@ public class MyUploadsLiveNotificationConfigurationTest {
     }
 
     @Test
+    public void myUploadsLetsUsersEditSavedDrafts() throws Exception {
+        String activity = readFile("src/main/java/com/example/fonos_group13/MyUploadsActivity.java");
+        String createActivity = readFile("src/main/java/com/example/fonos_group13/CreateAudiobookActivity.java");
+
+        assertTrue(activity.contains("Edit Draft"));
+        assertTrue(activity.contains("CreateAudiobookActivity.EXTRA_EDIT_BOOK_ID"));
+        assertTrue(createActivity.contains("updateDraft("));
+        assertTrue(createActivity.contains("updateDraftAndRequestGeneration("));
+        assertTrue(createActivity.contains("Save Changes"));
+    }
+
+    @Test
+    public void uploadStatusChipsUseDisplayLabels() throws Exception {
+        String activity = readFile("src/main/java/com/example/fonos_group13/MyUploadsActivity.java");
+        String status = readFile("src/main/java/com/example/fonos_group13/model/AudiobookGenerationStatus.java");
+
+        assertTrue(activity.contains("status.getDisplayLabel()"));
+        assertTrue(status.contains("Pending Generation"));
+        assertTrue(status.contains("Ready for Review"));
+    }
+
+    @Test
     public void generationNotificationTextHandlesReadyAndFailedPayloads() {
         Map<String, String> payload = new HashMap<>();
         payload.put("type", "audiobook_generation_status");

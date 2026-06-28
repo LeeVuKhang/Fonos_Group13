@@ -18,6 +18,24 @@ public enum AudiobookGenerationStatus {
         return value;
     }
 
+    public String getDisplayLabel() {
+        switch (this) {
+            case PENDING_GENERATION:
+                return "Pending Generation";
+            case READY_FOR_REVIEW:
+                return "Ready for Review";
+            case PUBLISHED:
+                return "Published";
+            case REJECTED:
+                return "Rejected";
+            case FAILED:
+                return "Failed";
+            case DRAFT:
+            default:
+                return "Draft";
+        }
+    }
+
     public static AudiobookGenerationStatus fromValue(String value) {
         if (value != null) {
             for (AudiobookGenerationStatus status : values()) {

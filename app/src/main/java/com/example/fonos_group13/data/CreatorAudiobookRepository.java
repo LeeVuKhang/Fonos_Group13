@@ -4,6 +4,7 @@ import android.content.Context;
 
 import com.example.fonos_group13.BuildConfig;
 import com.example.fonos_group13.model.CreateAudiobookDraftInput;
+import com.example.fonos_group13.model.EditableAudiobookDraft;
 import com.example.fonos_group13.model.UserGeneratedAudiobook;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -90,6 +91,68 @@ public class CreatorAudiobookRepository {
         });
     }
 
+    public void getDraftForEdit(String bookId, RepositoryCallback<EditableAudiobookDraft> callback) {
+        if (!canUseBackend(callback, "Please sign in to edit audiobooks.")) {
+            return;
+        }
+        String safeBookId = trimToNull(bookId);
+        if (safeBookId == null) {
+            callback.onError(new IllegalArgumentException("Missing audiobook id."));
+            return;
+        }
+        backendApi.getDraftForEdit(safeBookId, callback);
+    }
+
+    public void updateDraft(String bookId, CreateAudiobookDraftInput input, RepositoryCallback<String> callback) {
+        if (!canWrite(callback)) {
+            return;
+        }
+        String safeBookId = trimToNull(bookId);
+        if (safeBookId == null) {
+            callback.onError(new IllegalArgumentException("Missing audiobook id."));
+            return;
+        }
+        if (!isValidInput(input, callback)) {
+            return;
+        }
+        backendApi.updateDraft(safeBookId, input, callback);
+    }
+
+    public void updateDraftAndRequestGeneration(String bookId, CreateAudiobookDraftInput input, RepositoryCallback<String> callback) {
+        if (!canWrite(callback)) {
+            return;
+        }
+        String safeBookId = trimToNull(bookId);
+        if (safeBookId == null) {
+            callback.onError(new IllegalArgumentException("Missing audiobook id."));
+            return;
+        }
+        if (!isValidInput(input, callback)) {
+            return;
+        }
+        backendApi.updateDraft(safeBookId, input, new RepositoryCallback<String>() {
+            @Override
+            public void onSuccess(String updatedBookId) {
+                backendApi.requestGeneration(safeBookId, new RepositoryCallback<Void>() {
+                    @Override
+                    public void onSuccess(Void data) {
+                        callback.onSuccess(updatedBookId);
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        callback.onError(new DraftSavedGenerationRequestException(safeBookId, exception));
+                    }
+                });
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                callback.onError(exception);
+            }
+        });
+    }
+
     public void getMyUploads(RepositoryCallback<List<UserGeneratedAudiobook>> callback) {
         String uid = currentUserUid();
         if (!configured || firestore == null) {
@@ -146,6 +209,18 @@ public class CreatorAudiobookRepository {
         backendApi.requestGeneration(safeBookId, callback);
     }
 
+    public void publishAudiobook(String bookId, RepositoryCallback<Void> callback) {
+        if (!canUseBackend(callback, "Please sign in to publish audiobooks.")) {
+            return;
+        }
+        String safeBookId = trimToNull(bookId);
+        if (safeBookId == null) {
+            callback.onError(new IllegalArgumentException("Missing audiobook id."));
+            return;
+        }
+        backendApi.publishAudiobook(safeBookId, callback);
+    }
+
     private List<UserGeneratedAudiobook> mapUploads(QuerySnapshot querySnapshot) {
         List<UserGeneratedAudiobook> uploads = new ArrayList<>();
         if (querySnapshot != null) {
@@ -159,12 +234,16 @@ public class CreatorAudiobookRepository {
     }
 
     private boolean canWrite(RepositoryCallback<?> callback) {
+        return canUseBackend(callback, "Please sign in to create audiobooks.");
+    }
+
+    private boolean canUseBackend(RepositoryCallback<?> callback, String signedOutMessage) {
         if (!configured || backendApi == null) {
             callback.onError(FirebaseConfig.missingConfigException());
             return false;
         }
         if (currentUserUid() == null) {
-            callback.onError(new IllegalStateException("Please sign in to create audiobooks."));
+            callback.onError(new IllegalStateException(signedOutMessage));
             return false;
         }
         return true;

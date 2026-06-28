@@ -234,7 +234,7 @@ public class MyUploadsActivity extends AppCompatActivity {
 
     private TextView createStatusChip(AudiobookGenerationStatus status) {
         TextView chip = new TextView(this);
-        chip.setText(status.getValue());
+        chip.setText(status.getDisplayLabel());
         chip.setTextSize(12);
         chip.setTypeface(null, Typeface.BOLD);
         chip.setGravity(Gravity.CENTER);
@@ -257,6 +257,18 @@ public class MyUploadsActivity extends AppCompatActivity {
     }
 
     private View createActionButton(UserGeneratedAudiobook upload) {
+        if (upload.getGenerationStatus() == AudiobookGenerationStatus.DRAFT) {
+            MaterialButton button = new MaterialButton(this);
+            button.setAllCaps(false);
+            button.setText("Edit Draft");
+            button.setTextColor(getColor(R.color.white));
+            button.setTextSize(15);
+            button.setEnabled(!loadingBookIdActive());
+            button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.accent)));
+            button.setOnClickListener(v -> openDraftEditor(upload));
+            return button;
+        }
+
         if (upload.canRequestGeneration()) {
             MaterialButton button = new MaterialButton(this);
             boolean failed = upload.getGenerationStatus() == AudiobookGenerationStatus.FAILED;
@@ -328,6 +340,12 @@ public class MyUploadsActivity extends AppCompatActivity {
         Intent intent = new Intent(this, BookDetailActivity.class);
         intent.putExtra(BookDetailActivity.EXTRA_BOOK_ID, upload.getId());
         intent.putExtra(BookDetailActivity.EXTRA_CREATOR_PREVIEW, creatorPreview);
+        startActivity(intent);
+    }
+
+    private void openDraftEditor(UserGeneratedAudiobook upload) {
+        Intent intent = new Intent(this, CreateAudiobookActivity.class);
+        intent.putExtra(CreateAudiobookActivity.EXTRA_EDIT_BOOK_ID, upload.getId());
         startActivity(intent);
     }
 

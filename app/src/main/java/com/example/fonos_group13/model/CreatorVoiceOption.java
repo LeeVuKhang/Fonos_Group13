@@ -24,6 +24,17 @@ public class CreatorVoiceOption {
         return voiceId + " - " + gender;
     }
 
+    public static CreatorVoiceOption fromVoiceId(String voiceId) {
+        String safeVoiceId = valueOrDefault(voiceId, PATRICK.voiceId);
+        if (RUTH.voiceId.equalsIgnoreCase(safeVoiceId)) {
+            return RUTH;
+        }
+        if (PATRICK.voiceId.equalsIgnoreCase(safeVoiceId)) {
+            return PATRICK;
+        }
+        return PATRICK;
+    }
+
     private static String valueOrDefault(String value, String fallback) {
         if (value == null) {
             return fallback;

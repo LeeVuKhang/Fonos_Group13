@@ -29,6 +29,7 @@
             app:tint="@color/text_main" />
 
         <TextView
+            android:id="@+id/create_audiobook_header_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
