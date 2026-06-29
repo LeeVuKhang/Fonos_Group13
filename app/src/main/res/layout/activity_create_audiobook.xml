@@ -230,6 +230,25 @@
                     android:padding="16dp"
                     android:textColor="@color/text_main"
                     android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/chapter_text_word_counter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="end"
+                    android:text="0 / 3500 words"
+                    android:textColor="@color/text_muted"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/chapter_text_feedback"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/error_text"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <com.google.android.material.button.MaterialButton

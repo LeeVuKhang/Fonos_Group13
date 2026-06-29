@@ -3,6 +3,8 @@ package com.example.fonos_group13;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -15,12 +17,14 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.example.fonos_group13.data.AuthRepository;
+import com.example.fonos_group13.data.BackendApiException;
 import com.example.fonos_group13.data.CreatorAudiobookRepository;
 import com.example.fonos_group13.data.DraftSavedGenerationRequestException;
 import com.example.fonos_group13.data.RepositoryCallback;
 import com.example.fonos_group13.model.CreateAudiobookDraftInput;
 import com.example.fonos_group13.model.CreatorVoiceOption;
 import com.example.fonos_group13.model.EditableAudiobookDraft;
+import com.example.fonos_group13.ui.ChapterTextCounterState;
 import com.google.android.material.button.MaterialButton;
 
 public class CreateAudiobookActivity extends AppCompatActivity {
@@ -32,6 +36,8 @@ public class CreateAudiobookActivity extends AppCompatActivity {
     private EditText inputAuthor;
     private EditText inputCoverUrl;
     private EditText inputChapterText;
+    private TextView chapterTextCounter;
+    private TextView chapterTextFeedback;
     private TextView voicePatrick;
     private TextView voiceRuth;
     private MaterialButton saveDraftButton;
@@ -64,6 +70,8 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         inputAuthor = findViewById(R.id.input_audiobook_author);
         inputCoverUrl = findViewById(R.id.input_cover_url);
         inputChapterText = findViewById(R.id.input_chapter_text);
+        chapterTextCounter = findViewById(R.id.chapter_text_word_counter);
+        chapterTextFeedback = findViewById(R.id.chapter_text_feedback);
         voicePatrick = findViewById(R.id.voice_patrick);
         voiceRuth = findViewById(R.id.voice_ruth);
         saveDraftButton = findViewById(R.id.btn_save_draft);
@@ -98,6 +106,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         if (requestGenerationButton != null) {
             requestGenerationButton.setOnClickListener(v -> saveDraft(true));
         }
+        setupChapterTextCounter();
     }
 
     private void configureMode() {
@@ -152,6 +161,16 @@ public class CreateAudiobookActivity extends AppCompatActivity {
             @Override
             public void onError(Exception exception) {
                 setLoading(false, requestGeneration);
+                String chapterTextError = chapterTextBackendValidationMessage(exception);
+                if (chapterTextError != null) {
+                    showChapterTextValidationError(chapterTextError);
+                    Toast.makeText(
+                            CreateAudiobookActivity.this,
+                            "Please update the chapter text and try again.",
+                            Toast.LENGTH_LONG
+                    ).show();
+                    return;
+                }
                 if (exception instanceof DraftSavedGenerationRequestException) {
                     Toast.makeText(
                             CreateAudiobookActivity.this,
@@ -220,6 +239,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         if (inputChapterText != null) {
             inputChapterText.setText(draft.getChapterText());
         }
+        bindChapterTextCounter(null);
         selectVoice(draft.getVoiceOption());
     }
 
@@ -240,8 +260,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
             return null;
         }
         if (chapterText.isEmpty()) {
-            inputChapterText.setError("Chapter text is required");
-            inputChapterText.requestFocus();
+            showChapterTextValidationError("Chapter text is required");
             return null;
         }
         if (title.length() > CreateAudiobookDraftInput.MAX_TITLE_CHARS) {
@@ -254,11 +273,12 @@ public class CreateAudiobookActivity extends AppCompatActivity {
             inputAuthor.requestFocus();
             return null;
         }
-        if (CreateAudiobookDraftInput.countWords(chapterText) > CreateAudiobookDraftInput.MAX_CHAPTER_TEXT_WORDS) {
-            inputChapterText.setError("Chapter text must be 3500 words or fewer");
-            inputChapterText.requestFocus();
+        ChapterTextCounterState chapterTextState = ChapterTextCounterState.from(chapterText);
+        if (chapterTextState.getSeverity() == ChapterTextCounterState.Severity.ERROR) {
+            showChapterTextValidationError(ChapterTextCounterState.maxWordsErrorMessage());
             return null;
         }
+        bindChapterTextCounter(null);
 
         return new CreateAudiobookDraftInput(
                 title,
@@ -342,6 +362,100 @@ public class CreateAudiobookActivity extends AppCompatActivity {
             return "Requesting...";
         }
         return isEditMode() ? "Save & Request Generation" : "Request Generation";
+    }
+
+    private void setupChapterTextCounter() {
+        if (inputChapterText == null) {
+            bindChapterTextCounter(null);
+            return;
+        }
+        inputChapterText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence text, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence text, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                inputChapterText.setError(null);
+                bindChapterTextCounter(null);
+            }
+        });
+        bindChapterTextCounter(null);
+    }
+
+    private void bindChapterTextCounter(String fieldErrorMessage) {
+        ChapterTextCounterState state = ChapterTextCounterState.from(textFrom(inputChapterText));
+        if (chapterTextCounter != null) {
+            chapterTextCounter.setText(state.getCounterText());
+            chapterTextCounter.setTextColor(getColor(chapterTextCounterColor(state, fieldErrorMessage != null)));
+        }
+
+        if (fieldErrorMessage != null) {
+            showChapterTextFeedback(fieldErrorMessage, R.color.error_text);
+            return;
+        }
+        if (state.getSeverity() == ChapterTextCounterState.Severity.ERROR) {
+            showChapterTextFeedback(state.getMessage(), R.color.error_text);
+            return;
+        }
+        if (state.getSeverity() == ChapterTextCounterState.Severity.WARNING) {
+            showChapterTextFeedback(state.getMessage(), R.color.warning_text);
+            return;
+        }
+        hideChapterTextFeedback();
+    }
+
+    private int chapterTextCounterColor(ChapterTextCounterState state, boolean hasFieldError) {
+        if (hasFieldError || state.getSeverity() == ChapterTextCounterState.Severity.ERROR) {
+            return R.color.error_text;
+        }
+        if (state.getSeverity() == ChapterTextCounterState.Severity.WARNING) {
+            return R.color.warning_text;
+        }
+        return R.color.text_muted;
+    }
+
+    private void showChapterTextValidationError(String message) {
+        if (inputChapterText != null) {
+            inputChapterText.setError(message);
+            inputChapterText.requestFocus();
+        }
+        bindChapterTextCounter(message);
+    }
+
+    private void showChapterTextFeedback(String message, int colorRes) {
+        if (chapterTextFeedback == null) {
+            return;
+        }
+        chapterTextFeedback.setText(message);
+        chapterTextFeedback.setTextColor(getColor(colorRes));
+        chapterTextFeedback.setVisibility(View.VISIBLE);
+    }
+
+    private void hideChapterTextFeedback() {
+        if (chapterTextFeedback == null) {
+            return;
+        }
+        chapterTextFeedback.setText("");
+        chapterTextFeedback.setVisibility(View.GONE);
+    }
+
+    private String chapterTextBackendValidationMessage(Exception exception) {
+        Throwable current = exception;
+        while (current != null) {
+            if (current instanceof BackendApiException) {
+                String message = ((BackendApiException) current).getValidationMessageForField("chapterText");
+                if (message != null) {
+                    return message;
+                }
+            }
+            current = current.getCause();
+        }
+        return null;
     }
 
     private String textFrom(EditText input) {
