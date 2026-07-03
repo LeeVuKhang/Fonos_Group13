@@ -34,6 +34,7 @@
         <activity android:name=".LibraryActivity" />
         <activity android:name=".ProfileActivity" />
         <activity android:name=".CreateAudiobookActivity" />
+        <activity android:name=".ManageChapterActivity" />
         <activity android:name=".MyUploadsActivity" />
         <activity android:name=".AudioPreferencesActivity" />
         <activity android:name=".BookDetailActivity" />

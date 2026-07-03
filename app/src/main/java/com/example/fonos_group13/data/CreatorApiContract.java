@@ -2,8 +2,10 @@ package com.example.fonos_group13.data;
 
 import com.example.fonos_group13.model.CreateAudiobookDraftInput;
 import com.example.fonos_group13.model.AudiobookGenerationStatus;
+import com.example.fonos_group13.model.CreateChapterDraftInput;
 import com.example.fonos_group13.model.CreatorVoiceOption;
 import com.example.fonos_group13.model.EditableAudiobookDraft;
+import com.example.fonos_group13.model.EditableChapterDraft;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -27,6 +29,15 @@ final class CreatorApiContract {
         return json.toString();
     }
 
+    static String createChapterDraftJson(CreateChapterDraftInput input) throws JSONException {
+        JSONObject json = new JSONObject();
+        json.put("chapterTitle", input.getChapterTitle());
+        json.put("chapterText", input.getChapterText());
+        json.put("languageCode", input.getLanguageCode());
+        json.put("voiceId", input.getVoiceOption().getVoiceId());
+        return json.toString();
+    }
+
     static String parseBookId(int statusCode, String responseBody) throws BackendApiException {
         if (statusCode >= 200 && statusCode < 300) {
             try {
@@ -36,6 +47,22 @@ final class CreatorApiContract {
                     throw new JSONException("Missing bookId");
                 }
                 return bookId;
+            } catch (JSONException exception) {
+                throw new BackendApiException(statusCode, "invalid_response", "Backend returned an invalid response.", null);
+            }
+        }
+        throw parseError(statusCode, responseBody);
+    }
+
+    static String parseChapterId(int statusCode, String responseBody) throws BackendApiException {
+        if (statusCode >= 200 && statusCode < 300) {
+            try {
+                JSONObject root = new JSONObject(valueOrEmptyJson(responseBody));
+                String chapterId = root.getJSONObject("data").getString("chapterId");
+                if (chapterId == null || chapterId.trim().isEmpty()) {
+                    throw new JSONException("Missing chapterId");
+                }
+                return chapterId;
             } catch (JSONException exception) {
                 throw new BackendApiException(statusCode, "invalid_response", "Backend returned an invalid response.", null);
             }
@@ -56,6 +83,28 @@ final class CreatorApiContract {
                         data.optString("chapterTitle", CreateAudiobookDraftInput.DEFAULT_CHAPTER_TITLE),
                         data.optString("chapterText", ""),
                         data.optString("languageCode", CreateAudiobookDraftInput.DEFAULT_LANGUAGE_CODE),
+                        CreatorVoiceOption.fromVoiceId(data.optString("voiceId", CreatorVoiceOption.PATRICK.getVoiceId())),
+                        AudiobookGenerationStatus.fromValue(data.optString("generationStatus", "draft"))
+                );
+            } catch (JSONException exception) {
+                throw new BackendApiException(statusCode, "invalid_response", "Backend returned an invalid response.", null);
+            }
+        }
+        throw parseError(statusCode, responseBody);
+    }
+
+    static EditableChapterDraft parseEditableChapterDraft(int statusCode, String responseBody) throws BackendApiException {
+        if (statusCode >= 200 && statusCode < 300) {
+            try {
+                JSONObject root = new JSONObject(valueOrEmptyJson(responseBody));
+                JSONObject data = root.getJSONObject("data");
+                return new EditableChapterDraft(
+                        data.getString("bookId"),
+                        data.getString("chapterId"),
+                        data.optString("bookTitle", ""),
+                        data.optString("chapterTitle", CreateChapterDraftInput.DEFAULT_CHAPTER_TITLE),
+                        data.optString("chapterText", ""),
+                        data.optString("languageCode", CreateChapterDraftInput.DEFAULT_LANGUAGE_CODE),
                         CreatorVoiceOption.fromVoiceId(data.optString("voiceId", CreatorVoiceOption.PATRICK.getVoiceId())),
                         AudiobookGenerationStatus.fromValue(data.optString("generationStatus", "draft"))
                 );

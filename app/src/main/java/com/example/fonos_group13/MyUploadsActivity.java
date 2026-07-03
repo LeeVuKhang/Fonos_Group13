@@ -260,12 +260,20 @@ public class MyUploadsActivity extends AppCompatActivity {
         if (upload.getGenerationStatus() == AudiobookGenerationStatus.DRAFT) {
             MaterialButton button = new MaterialButton(this);
             button.setAllCaps(false);
-            button.setText("Edit Draft");
+            button.setText(upload.hasChapterUpdate() && !upload.activeChapterIsInitialChapter()
+                    ? "Edit Chapter Draft"
+                    : "Edit Draft");
             button.setTextColor(getColor(R.color.white));
             button.setTextSize(15);
             button.setEnabled(!loadingBookIdActive());
             button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.accent)));
-            button.setOnClickListener(v -> openDraftEditor(upload));
+            button.setOnClickListener(v -> {
+                if (upload.hasChapterUpdate() && !upload.activeChapterIsInitialChapter()) {
+                    openChapterEditor(upload);
+                } else {
+                    openDraftEditor(upload);
+                }
+            });
             return button;
         }
 
@@ -286,7 +294,7 @@ public class MyUploadsActivity extends AppCompatActivity {
         if (upload.getGenerationStatus() == AudiobookGenerationStatus.READY_FOR_REVIEW) {
             MaterialButton button = new MaterialButton(this);
             button.setAllCaps(false);
-            button.setText("Preview Audiobook");
+            button.setText(upload.isPublished() ? "Preview Updates" : "Preview Audiobook");
             button.setTextColor(getColor(R.color.accent));
             button.setTextSize(15);
             button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.accent_soft)));
@@ -297,11 +305,11 @@ public class MyUploadsActivity extends AppCompatActivity {
         if (upload.getGenerationStatus() == AudiobookGenerationStatus.PUBLISHED) {
             MaterialButton button = new MaterialButton(this);
             button.setAllCaps(false);
-            button.setText("View Audiobook");
+            button.setText("Add Chapter");
             button.setTextColor(getColor(R.color.accent));
             button.setTextSize(15);
             button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.accent_soft)));
-            button.setOnClickListener(v -> openBookDetail(upload, false));
+            button.setOnClickListener(v -> openAddChapter(upload));
             return button;
         }
 
@@ -315,7 +323,7 @@ public class MyUploadsActivity extends AppCompatActivity {
         ensureGenerationNotifications();
         loadingBookId = upload.getId();
         renderUploads(currentUploads);
-        repository.requestGeneration(upload.getId(), new RepositoryCallback<Void>() {
+        RepositoryCallback<Void> callback = new RepositoryCallback<Void>() {
             @Override
             public void onSuccess(Void data) {
                 loadingBookId = null;
@@ -333,7 +341,12 @@ public class MyUploadsActivity extends AppCompatActivity {
                 ).show();
                 renderUploads(currentUploads);
             }
-        });
+        };
+        if (upload.hasChapterUpdate() && !upload.activeChapterIsInitialChapter()) {
+            repository.requestChapterGeneration(upload.getId(), upload.getActiveChapterId(), callback);
+        } else {
+            repository.requestGeneration(upload.getId(), callback);
+        }
     }
 
     private void openBookDetail(UserGeneratedAudiobook upload, boolean creatorPreview) {
@@ -346,6 +359,19 @@ public class MyUploadsActivity extends AppCompatActivity {
     private void openDraftEditor(UserGeneratedAudiobook upload) {
         Intent intent = new Intent(this, CreateAudiobookActivity.class);
         intent.putExtra(CreateAudiobookActivity.EXTRA_EDIT_BOOK_ID, upload.getId());
+        startActivity(intent);
+    }
+
+    private void openAddChapter(UserGeneratedAudiobook upload) {
+        Intent intent = new Intent(this, ManageChapterActivity.class);
+        intent.putExtra(ManageChapterActivity.EXTRA_BOOK_ID, upload.getId());
+        startActivity(intent);
+    }
+
+    private void openChapterEditor(UserGeneratedAudiobook upload) {
+        Intent intent = new Intent(this, ManageChapterActivity.class);
+        intent.putExtra(ManageChapterActivity.EXTRA_BOOK_ID, upload.getId());
+        intent.putExtra(ManageChapterActivity.EXTRA_CHAPTER_ID, upload.getActiveChapterId());
         startActivity(intent);
     }
 

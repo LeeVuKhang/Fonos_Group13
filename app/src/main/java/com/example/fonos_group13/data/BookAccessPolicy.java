@@ -26,7 +26,21 @@ final class BookAccessPolicy {
             boolean creatorPreviewAuthorized,
             boolean chapterPublished
     ) {
-        return bookPublished ? chapterPublished : creatorPreviewAuthorized;
+        if (creatorPreviewAuthorized) {
+            return true;
+        }
+        return bookPublished && chapterPublished;
+    }
+
+    static boolean canPreviewUnpublishedChapters(
+            String creatorUid,
+            AudiobookGenerationStatus generationStatus,
+            String currentUid,
+            BookAccessMode accessMode
+    ) {
+        return accessMode == BookAccessMode.CREATOR_REVIEW_PREVIEW
+                && generationStatus == AudiobookGenerationStatus.READY_FOR_REVIEW
+                && sameNonBlankValue(creatorUid, currentUid);
     }
 
     private static boolean sameNonBlankValue(String left, String right) {

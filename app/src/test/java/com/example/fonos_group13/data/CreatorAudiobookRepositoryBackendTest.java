@@ -4,8 +4,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.example.fonos_group13.model.CreateAudiobookDraftInput;
+import com.example.fonos_group13.model.CreateChapterDraftInput;
 import com.example.fonos_group13.model.CreatorVoiceOption;
 import com.example.fonos_group13.model.EditableAudiobookDraft;
+import com.example.fonos_group13.model.EditableChapterDraft;
 
 import org.junit.Test;
 
@@ -102,6 +104,46 @@ public class CreatorAudiobookRepositoryBackendTest {
     }
 
     @Test
+    public void createChapterDraftDelegatesToBackendApi() {
+        FakeBackendApi backendApi = new FakeBackendApi();
+        CreatorAudiobookRepository repository = repositoryWith(backendApi, "user-1");
+        CapturingCallback<String> callback = new CapturingCallback<>();
+
+        repository.createChapterDraft("book-1", validChapterInput(), callback);
+
+        assertEquals("chapter_2", callback.value);
+        assertEquals("book-1", backendApi.createdChapterBookId);
+        assertEquals("Chapter 2", backendApi.createdChapterInput.getChapterTitle());
+    }
+
+    @Test
+    public void updateChapterDraftAndRequestGenerationUsesExistingChapterId() {
+        FakeBackendApi backendApi = new FakeBackendApi();
+        CreatorAudiobookRepository repository = repositoryWith(backendApi, "user-1");
+        CapturingCallback<String> callback = new CapturingCallback<>();
+
+        repository.updateChapterDraftAndRequestGeneration("book-1", "chapter_2", validChapterInput(), callback);
+
+        assertEquals("book-1", backendApi.updatedChapterBookId);
+        assertEquals("chapter_2", backendApi.updatedChapterId);
+        assertEquals("chapter_2", backendApi.requestedChapterId);
+        assertEquals("chapter_2", callback.value);
+    }
+
+    @Test
+    public void requestChapterGenerationDelegatesToBackendApi() {
+        FakeBackendApi backendApi = new FakeBackendApi();
+        CreatorAudiobookRepository repository = repositoryWith(backendApi, "user-1");
+        CapturingCallback<Void> callback = new CapturingCallback<>();
+
+        repository.requestChapterGeneration("book-1", "chapter_2", callback);
+
+        assertEquals("book-1", backendApi.requestedChapterBookId);
+        assertEquals("chapter_2", backendApi.requestedChapterId);
+        assertEquals(null, callback.error);
+    }
+
+    @Test
     public void writeMethodsRequireSignedInUserBeforeCallingBackend() {
         FakeBackendApi backendApi = new FakeBackendApi();
         CreatorAudiobookRepository repository = repositoryWith(backendApi, null);
@@ -175,6 +217,15 @@ public class CreatorAudiobookRepositoryBackendTest {
         return inputWithChapterText("Hello");
     }
 
+    private CreateChapterDraftInput validChapterInput() {
+        return new CreateChapterDraftInput(
+                "Chapter 2",
+                "Hello again",
+                "en-US",
+                CreatorVoiceOption.RUTH
+        );
+    }
+
     private CreateAudiobookDraftInput inputWithChapterText(String chapterText) {
         return new CreateAudiobookDraftInput(
                 "Title",
@@ -201,11 +252,21 @@ public class CreatorAudiobookRepositoryBackendTest {
     private static class FakeBackendApi implements CreatorBackendDataSource {
         CreateAudiobookDraftInput createdInput;
         CreateAudiobookDraftInput updatedInput;
+        CreateChapterDraftInput createdChapterInput;
+        CreateChapterDraftInput updatedChapterInput;
         String createdBookId = "book-1";
+        String createdChapterId = "chapter_2";
         String loadedBookId;
         String updatedBookId;
         String requestedBookId;
         String publishedBookId;
+        String createdChapterBookId;
+        String loadedChapterBookId;
+        String loadedChapterId;
+        String updatedChapterBookId;
+        String updatedChapterId;
+        String requestedChapterBookId;
+        String requestedChapterId;
         Exception generationError;
 
         @Override
@@ -238,8 +299,55 @@ public class CreatorAudiobookRepositoryBackendTest {
         }
 
         @Override
+        public void createChapterDraft(String bookId, CreateChapterDraftInput input, RepositoryCallback<String> callback) {
+            createdChapterBookId = bookId;
+            createdChapterInput = input;
+            callback.onSuccess(createdChapterId);
+        }
+
+        @Override
+        public void getChapterDraftForEdit(String bookId, String chapterId, RepositoryCallback<EditableChapterDraft> callback) {
+            loadedChapterBookId = bookId;
+            loadedChapterId = chapterId;
+            callback.onSuccess(new EditableChapterDraft(
+                    bookId,
+                    chapterId,
+                    "Title",
+                    "Chapter 2",
+                    "Hello again",
+                    "en-US",
+                    CreatorVoiceOption.RUTH,
+                    null
+            ));
+        }
+
+        @Override
+        public void updateChapterDraft(
+                String bookId,
+                String chapterId,
+                CreateChapterDraftInput input,
+                RepositoryCallback<String> callback
+        ) {
+            updatedChapterBookId = bookId;
+            updatedChapterId = chapterId;
+            updatedChapterInput = input;
+            callback.onSuccess(chapterId);
+        }
+
+        @Override
         public void requestGeneration(String bookId, RepositoryCallback<Void> callback) {
             requestedBookId = bookId;
+            if (generationError != null) {
+                callback.onError(generationError);
+            } else {
+                callback.onSuccess(null);
+            }
+        }
+
+        @Override
+        public void requestChapterGeneration(String bookId, String chapterId, RepositoryCallback<Void> callback) {
+            requestedChapterBookId = bookId;
+            requestedChapterId = chapterId;
             if (generationError != null) {
                 callback.onError(generationError);
             } else {

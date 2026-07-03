@@ -29,6 +29,7 @@ import com.example.fonos_group13.data.RepositoryCallback;
 import com.example.fonos_group13.data.SavedBookRepository;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
+import com.example.fonos_group13.model.AudiobookGenerationStatus;
 import com.example.fonos_group13.model.UserProgress;
 import com.example.fonos_group13.ui.BookCoverLoader;
 import com.google.android.material.button.MaterialButton;
@@ -71,6 +72,7 @@ public class BookDetailActivity extends AppCompatActivity {
     private ImageView saveBookButton;
     private ImageView downloadAllButton;
     private MaterialButton publishButton;
+    private MaterialButton addChapterButton;
     private LinearLayout chaptersContainer;
 
     @Override
@@ -108,6 +110,7 @@ public class BookDetailActivity extends AppCompatActivity {
         saveBookButton = findViewById(R.id.btn_save_book);
         downloadAllButton = findViewById(R.id.btn_download_all);
         publishButton = findViewById(R.id.btn_publish_audiobook);
+        addChapterButton = findViewById(R.id.btn_add_chapter);
         chaptersContainer = findViewById(R.id.chapters_container);
     }
 
@@ -147,6 +150,10 @@ public class BookDetailActivity extends AppCompatActivity {
             publishButton.setOnClickListener(v -> publishCurrentBook());
             updatePublishButton();
         }
+        if (addChapterButton != null) {
+            addChapterButton.setOnClickListener(v -> openAddChapter());
+            updateAddChapterButton();
+        }
     }
 
     private void handleIntent(Intent intent) {
@@ -162,6 +169,7 @@ public class BookDetailActivity extends AppCompatActivity {
         requestedBookId = bookId;
         updateSaveBookButton();
         updatePublishButton();
+        updateAddChapterButton();
         loadBook(bookId);
     }
 
@@ -177,7 +185,8 @@ public class BookDetailActivity extends AppCompatActivity {
                     return;
                 }
                 currentBook = book;
-                creatorPreviewActive = creatorPreviewRequested && !book.isPublished();
+                creatorPreviewActive = creatorPreviewRequested
+                        && book.getGenerationStatus() == AudiobookGenerationStatus.READY_FOR_REVIEW;
                 bindBookHeader(book);
                 if (creatorPreviewActive) {
                     currentBookSaved = false;
@@ -187,6 +196,7 @@ public class BookDetailActivity extends AppCompatActivity {
                     loadSavedState(bookId);
                 }
                 updatePublishButton();
+                updateAddChapterButton();
                 loadChapters(bookId);
             }
 
@@ -200,6 +210,7 @@ public class BookDetailActivity extends AppCompatActivity {
                 creatorPreviewActive = false;
                 publishLoading = false;
                 updatePublishButton();
+                updateAddChapterButton();
                 Toast.makeText(BookDetailActivity.this, "This audiobook is unavailable.", Toast.LENGTH_SHORT).show();
             }
         });
@@ -390,6 +401,7 @@ public class BookDetailActivity extends AppCompatActivity {
                 creatorPreviewActive = false;
                 Toast.makeText(BookDetailActivity.this, "Audiobook published.", Toast.LENGTH_SHORT).show();
                 updatePublishButton();
+                updateAddChapterButton();
                 loadBook(bookId);
             }
 
@@ -397,6 +409,7 @@ public class BookDetailActivity extends AppCompatActivity {
             public void onError(Exception exception) {
                 publishLoading = false;
                 updatePublishButton();
+                updateAddChapterButton();
                 Toast.makeText(
                         BookDetailActivity.this,
                         AuthRepository.friendlyError(exception),
@@ -438,6 +451,28 @@ public class BookDetailActivity extends AppCompatActivity {
         publishButton.setEnabled(!publishLoading);
         publishButton.setAlpha(publishLoading ? 0.65f : 1f);
         publishButton.setText(publishLoading ? "Publishing..." : "Publish Audiobook");
+    }
+
+    private void updateAddChapterButton() {
+        if (addChapterButton == null) {
+            return;
+        }
+        boolean visible = creatorPreviewActive && currentBook != null;
+        addChapterButton.setVisibility(visible ? View.VISIBLE : View.GONE);
+        if (!visible) {
+            return;
+        }
+        addChapterButton.setEnabled(!publishLoading);
+        addChapterButton.setAlpha(publishLoading ? 0.65f : 1f);
+    }
+
+    private void openAddChapter() {
+        if (currentBook == null) {
+            return;
+        }
+        Intent intent = new Intent(this, ManageChapterActivity.class);
+        intent.putExtra(ManageChapterActivity.EXTRA_BOOK_ID, currentBook.getId());
+        startActivity(intent);
     }
 
     private void updatePlayButtonState() {

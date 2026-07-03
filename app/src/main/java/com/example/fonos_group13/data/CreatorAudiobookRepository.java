@@ -4,7 +4,9 @@ import android.content.Context;
 
 import com.example.fonos_group13.BuildConfig;
 import com.example.fonos_group13.model.CreateAudiobookDraftInput;
+import com.example.fonos_group13.model.CreateChapterDraftInput;
 import com.example.fonos_group13.model.EditableAudiobookDraft;
+import com.example.fonos_group13.model.EditableChapterDraft;
 import com.example.fonos_group13.model.UserGeneratedAudiobook;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -153,6 +155,135 @@ public class CreatorAudiobookRepository {
         });
     }
 
+    public void createChapterDraft(String bookId, CreateChapterDraftInput input, RepositoryCallback<String> callback) {
+        if (!canWrite(callback)) {
+            return;
+        }
+        String safeBookId = trimToNull(bookId);
+        if (safeBookId == null) {
+            callback.onError(new IllegalArgumentException("Missing audiobook id."));
+            return;
+        }
+        if (!isValidChapterInput(input, callback)) {
+            return;
+        }
+        backendApi.createChapterDraft(safeBookId, input, callback);
+    }
+
+    public void createChapterDraftAndRequestGeneration(String bookId, CreateChapterDraftInput input, RepositoryCallback<String> callback) {
+        if (!canWrite(callback)) {
+            return;
+        }
+        String safeBookId = trimToNull(bookId);
+        if (safeBookId == null) {
+            callback.onError(new IllegalArgumentException("Missing audiobook id."));
+            return;
+        }
+        if (!isValidChapterInput(input, callback)) {
+            return;
+        }
+        backendApi.createChapterDraft(safeBookId, input, new RepositoryCallback<String>() {
+            @Override
+            public void onSuccess(String chapterId) {
+                backendApi.requestChapterGeneration(safeBookId, chapterId, new RepositoryCallback<Void>() {
+                    @Override
+                    public void onSuccess(Void data) {
+                        callback.onSuccess(chapterId);
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        callback.onError(new DraftSavedGenerationRequestException(safeBookId, exception));
+                    }
+                });
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                callback.onError(exception);
+            }
+        });
+    }
+
+    public void getChapterDraftForEdit(
+            String bookId,
+            String chapterId,
+            RepositoryCallback<EditableChapterDraft> callback
+    ) {
+        if (!canUseBackend(callback, "Please sign in to edit audiobooks.")) {
+            return;
+        }
+        String safeBookId = trimToNull(bookId);
+        String safeChapterId = trimToNull(chapterId);
+        if (safeBookId == null || safeChapterId == null) {
+            callback.onError(new IllegalArgumentException("Missing chapter id."));
+            return;
+        }
+        backendApi.getChapterDraftForEdit(safeBookId, safeChapterId, callback);
+    }
+
+    public void updateChapterDraft(
+            String bookId,
+            String chapterId,
+            CreateChapterDraftInput input,
+            RepositoryCallback<String> callback
+    ) {
+        if (!canWrite(callback)) {
+            return;
+        }
+        String safeBookId = trimToNull(bookId);
+        String safeChapterId = trimToNull(chapterId);
+        if (safeBookId == null || safeChapterId == null) {
+            callback.onError(new IllegalArgumentException("Missing chapter id."));
+            return;
+        }
+        if (!isValidChapterInput(input, callback)) {
+            return;
+        }
+        backendApi.updateChapterDraft(safeBookId, safeChapterId, input, callback);
+    }
+
+    public void updateChapterDraftAndRequestGeneration(
+            String bookId,
+            String chapterId,
+            CreateChapterDraftInput input,
+            RepositoryCallback<String> callback
+    ) {
+        if (!canWrite(callback)) {
+            return;
+        }
+        String safeBookId = trimToNull(bookId);
+        String safeChapterId = trimToNull(chapterId);
+        if (safeBookId == null || safeChapterId == null) {
+            callback.onError(new IllegalArgumentException("Missing chapter id."));
+            return;
+        }
+        if (!isValidChapterInput(input, callback)) {
+            return;
+        }
+        backendApi.updateChapterDraft(safeBookId, safeChapterId, input, new RepositoryCallback<String>() {
+            @Override
+            public void onSuccess(String updatedChapterId) {
+                backendApi.requestChapterGeneration(safeBookId, safeChapterId, new RepositoryCallback<Void>() {
+                    @Override
+                    public void onSuccess(Void data) {
+                        callback.onSuccess(updatedChapterId);
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        callback.onError(new DraftSavedGenerationRequestException(safeBookId, exception));
+                    }
+                });
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                callback.onError(exception);
+            }
+        });
+    }
+
     public void getMyUploads(RepositoryCallback<List<UserGeneratedAudiobook>> callback) {
         String uid = currentUserUid();
         if (!configured || firestore == null) {
@@ -207,6 +338,19 @@ public class CreatorAudiobookRepository {
             return;
         }
         backendApi.requestGeneration(safeBookId, callback);
+    }
+
+    public void requestChapterGeneration(String bookId, String chapterId, RepositoryCallback<Void> callback) {
+        if (!canWrite(callback)) {
+            return;
+        }
+        String safeBookId = trimToNull(bookId);
+        String safeChapterId = trimToNull(chapterId);
+        if (safeBookId == null || safeChapterId == null) {
+            callback.onError(new IllegalArgumentException("Missing chapter id."));
+            return;
+        }
+        backendApi.requestChapterGeneration(safeBookId, safeChapterId, callback);
     }
 
     public void publishAudiobook(String bookId, RepositoryCallback<Void> callback) {
@@ -275,6 +419,26 @@ public class CreatorAudiobookRepository {
             return false;
         }
         if (CreateAudiobookDraftInput.countWords(input.getChapterText()) > CreateAudiobookDraftInput.MAX_CHAPTER_TEXT_WORDS) {
+            callback.onError(new IllegalArgumentException("Chapter text must be 3500 words or fewer."));
+            return false;
+        }
+        return true;
+    }
+
+    private boolean isValidChapterInput(CreateChapterDraftInput input, RepositoryCallback<?> callback) {
+        if (input == null) {
+            callback.onError(new IllegalArgumentException("Missing chapter draft."));
+            return false;
+        }
+        if (isBlank(input.getChapterTitle())) {
+            callback.onError(new IllegalArgumentException("Chapter title is required."));
+            return false;
+        }
+        if (isBlank(input.getChapterText())) {
+            callback.onError(new IllegalArgumentException("Chapter text is required."));
+            return false;
+        }
+        if (CreateChapterDraftInput.countWords(input.getChapterText()) > CreateChapterDraftInput.MAX_CHAPTER_TEXT_WORDS) {
             callback.onError(new IllegalArgumentException("Chapter text must be 3500 words or fewer."));
             return false;
         }

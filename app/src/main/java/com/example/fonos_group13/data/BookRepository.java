@@ -104,7 +104,7 @@ public class BookRepository {
         getBook(bookId, resolvedAccessMode, new RepositoryCallback<Book>() {
             @Override
             public void onSuccess(Book book) {
-                loadAuthorizedChapters(book, callback);
+                loadAuthorizedChapters(book, resolvedAccessMode, callback);
             }
 
             @Override
@@ -114,9 +114,18 @@ public class BookRepository {
         });
     }
 
-    private void loadAuthorizedChapters(Book book, RepositoryCallback<List<BookChapter>> callback) {
+    private void loadAuthorizedChapters(
+            Book book,
+            BookAccessMode accessMode,
+            RepositoryCallback<List<BookChapter>> callback
+    ) {
         String bookId = book.getId();
-        boolean creatorPreviewAuthorized = !book.isPublished();
+        boolean creatorPreviewAuthorized = BookAccessPolicy.canPreviewUnpublishedChapters(
+                book.getCreatorUid(),
+                book.getGenerationStatus(),
+                currentUserUid(),
+                accessMode
+        );
         firestore.collection("books")
                 .document(bookId)
                 .collection("chapters")
