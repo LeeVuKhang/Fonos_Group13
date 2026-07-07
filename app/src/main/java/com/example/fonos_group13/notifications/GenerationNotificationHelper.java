@@ -119,7 +119,7 @@ public final class GenerationNotificationHelper {
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
                 context.getString(R.string.generation_notification_channel_name),
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
         );
         notificationManager.createNotificationChannel(channel);
     }

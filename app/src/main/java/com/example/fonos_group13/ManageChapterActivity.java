@@ -24,6 +24,7 @@ import com.example.fonos_group13.data.RepositoryCallback;
 import com.example.fonos_group13.model.CreateChapterDraftInput;
 import com.example.fonos_group13.model.CreatorVoiceOption;
 import com.example.fonos_group13.model.EditableChapterDraft;
+import com.example.fonos_group13.notifications.GenerationNotificationSetup;
 import com.example.fonos_group13.ui.ChapterTextCounterState;
 import com.google.android.material.button.MaterialButton;
 
@@ -32,6 +33,7 @@ public class ManageChapterActivity extends AppCompatActivity {
     public static final String EXTRA_CHAPTER_ID = "com.example.fonos_group13.EXTRA_CHAPTER_ID";
 
     private CreatorAudiobookRepository repository;
+    private GenerationNotificationSetup notificationSetup;
     private TextView headerTitle;
     private EditText inputChapterTitle;
     private EditText inputChapterText;
@@ -53,6 +55,7 @@ public class ManageChapterActivity extends AppCompatActivity {
         setContentView(R.layout.activity_manage_chapter);
 
         repository = new CreatorAudiobookRepository(this);
+        notificationSetup = new GenerationNotificationSetup(this);
         bookId = trimToNull(getIntent().getStringExtra(EXTRA_BOOK_ID));
         chapterId = trimToNull(getIntent().getStringExtra(EXTRA_CHAPTER_ID));
         if (bookId == null) {
@@ -193,6 +196,7 @@ public class ManageChapterActivity extends AppCompatActivity {
         };
 
         if (requestGeneration) {
+            ensureGenerationNotifications();
             if (isEditMode()) {
                 repository.updateChapterDraftAndRequestGeneration(bookId, chapterId, input, callback);
             } else {
@@ -202,6 +206,12 @@ public class ManageChapterActivity extends AppCompatActivity {
             repository.updateChapterDraft(bookId, chapterId, input, callback);
         } else {
             repository.createChapterDraft(bookId, input, callback);
+        }
+    }
+
+    private void ensureGenerationNotifications() {
+        if (notificationSetup != null) {
+            notificationSetup.ensureReady();
         }
     }
 

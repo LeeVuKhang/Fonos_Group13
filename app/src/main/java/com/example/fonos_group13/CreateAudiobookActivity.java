@@ -24,6 +24,7 @@ import com.example.fonos_group13.data.RepositoryCallback;
 import com.example.fonos_group13.model.CreateAudiobookDraftInput;
 import com.example.fonos_group13.model.CreatorVoiceOption;
 import com.example.fonos_group13.model.EditableAudiobookDraft;
+import com.example.fonos_group13.notifications.GenerationNotificationSetup;
 import com.example.fonos_group13.ui.ChapterTextCounterState;
 import com.google.android.material.button.MaterialButton;
 
@@ -31,6 +32,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
     public static final String EXTRA_EDIT_BOOK_ID = "com.example.fonos_group13.EXTRA_EDIT_BOOK_ID";
 
     private CreatorAudiobookRepository repository;
+    private GenerationNotificationSetup notificationSetup;
     private TextView headerTitle;
     private EditText inputTitle;
     private EditText inputAuthor;
@@ -53,6 +55,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         setContentView(R.layout.activity_create_audiobook);
 
         repository = new CreatorAudiobookRepository(this);
+        notificationSetup = new GenerationNotificationSetup(this);
         editingBookId = trimToNull(getIntent().getStringExtra(EXTRA_EDIT_BOOK_ID));
         bindViews();
         setupInsets();
@@ -189,6 +192,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         };
 
         if (requestGeneration) {
+            ensureGenerationNotifications();
             if (isEditMode()) {
                 repository.updateDraftAndRequestGeneration(editingBookId, input, callback);
             } else {
@@ -198,6 +202,12 @@ public class CreateAudiobookActivity extends AppCompatActivity {
             repository.updateDraft(editingBookId, input, callback);
         } else {
             repository.createDraft(input, callback);
+        }
+    }
+
+    private void ensureGenerationNotifications() {
+        if (notificationSetup != null) {
+            notificationSetup.ensureReady();
         }
     }
 
