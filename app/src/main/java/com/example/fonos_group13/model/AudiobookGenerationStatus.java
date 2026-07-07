@@ -6,7 +6,8 @@ public enum AudiobookGenerationStatus {
     FAILED("failed"),
     READY_FOR_REVIEW("ready_for_review"),
     PUBLISHED("published"),
-    REJECTED("rejected");
+    REJECTED("rejected"),
+    DELETED("deleted");
 
     private final String value;
 
@@ -28,6 +29,8 @@ public enum AudiobookGenerationStatus {
                 return "Published";
             case REJECTED:
                 return "Rejected";
+            case DELETED:
+                return "Deleted";
             case FAILED:
                 return "Failed";
             case DRAFT:

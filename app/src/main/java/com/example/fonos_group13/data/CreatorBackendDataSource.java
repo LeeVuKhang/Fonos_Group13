@@ -23,4 +23,8 @@ interface CreatorBackendDataSource {
     void requestChapterGeneration(String bookId, String chapterId, RepositoryCallback<Void> callback);
 
     void publishAudiobook(String bookId, RepositoryCallback<Void> callback);
+
+    void setAudiobookVisibility(String bookId, boolean hiddenByCreator, RepositoryCallback<Void> callback);
+
+    void deleteChapter(String bookId, String chapterId, RepositoryCallback<Void> callback);
 }

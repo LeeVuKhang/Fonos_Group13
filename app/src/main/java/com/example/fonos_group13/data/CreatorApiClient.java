@@ -202,6 +202,56 @@ class CreatorApiClient implements CreatorBackendDataSource {
         ));
     }
 
+    @Override
+    public void setAudiobookVisibility(String bookId, boolean hiddenByCreator, RepositoryCallback<Void> callback) {
+        try {
+            String encodedBookId = encodePathSegment(bookId);
+            String body = CreatorApiContract.visibilityJson(hiddenByCreator);
+            withToken(callback, token -> sendJson(
+                    "PATCH",
+                    "/api/v1/audiobooks/" + encodedBookId + "/visibility",
+                    token,
+                    body,
+                    new RepositoryCallback<String>() {
+                        @Override
+                        public void onSuccess(String data) {
+                            callback.onSuccess(null);
+                        }
+
+                        @Override
+                        public void onError(Exception exception) {
+                            callback.onError(exception);
+                        }
+                    }
+            ));
+        } catch (JSONException exception) {
+            callback.onError(exception);
+        }
+    }
+
+    @Override
+    public void deleteChapter(String bookId, String chapterId, RepositoryCallback<Void> callback) {
+        String encodedBookId = encodePathSegment(bookId);
+        String encodedChapterId = encodePathSegment(chapterId);
+        withToken(callback, token -> sendJsonForChapter(
+                "DELETE",
+                "/api/v1/audiobooks/" + encodedBookId + "/chapters/" + encodedChapterId,
+                token,
+                "{}",
+                new RepositoryCallback<String>() {
+                    @Override
+                    public void onSuccess(String data) {
+                        callback.onSuccess(null);
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        callback.onError(exception);
+                    }
+                }
+        ));
+    }
+
     private void withToken(RepositoryCallback<?> callback, TokenCallback tokenCallback) {
         if (baseUrl == null || baseUrl.isEmpty()) {
             callback.onError(new IllegalStateException("Backend base URL is not configured."));

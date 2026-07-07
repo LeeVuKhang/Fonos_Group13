@@ -65,6 +65,32 @@ public class CreatorAudiobookRepositoryBackendTest {
     }
 
     @Test
+    public void setAudiobookVisibilityDelegatesToBackendApi() {
+        FakeBackendApi backendApi = new FakeBackendApi();
+        CreatorAudiobookRepository repository = repositoryWith(backendApi, "user-1");
+        CapturingCallback<Void> callback = new CapturingCallback<>();
+
+        repository.setAudiobookVisibility("book-1", true, callback);
+
+        assertEquals("book-1", backendApi.visibilityBookId);
+        assertEquals(true, backendApi.hiddenByCreator);
+        assertEquals(null, callback.error);
+    }
+
+    @Test
+    public void deleteChapterDelegatesToBackendApi() {
+        FakeBackendApi backendApi = new FakeBackendApi();
+        CreatorAudiobookRepository repository = repositoryWith(backendApi, "user-1");
+        CapturingCallback<Void> callback = new CapturingCallback<>();
+
+        repository.deleteChapter("book-1", "chapter_2", callback);
+
+        assertEquals("book-1", backendApi.deletedChapterBookId);
+        assertEquals("chapter_2", backendApi.deletedChapterId);
+        assertEquals(null, callback.error);
+    }
+
+    @Test
     public void getDraftForEditDelegatesToBackendApi() {
         FakeBackendApi backendApi = new FakeBackendApi();
         CreatorAudiobookRepository repository = repositoryWith(backendApi, "user-1");
@@ -180,6 +206,54 @@ public class CreatorAudiobookRepositoryBackendTest {
     }
 
     @Test
+    public void visibilityRequiresSignedInUserBeforeCallingBackend() {
+        FakeBackendApi backendApi = new FakeBackendApi();
+        CreatorAudiobookRepository repository = repositoryWith(backendApi, null);
+        CapturingCallback<Void> callback = new CapturingCallback<>();
+
+        repository.setAudiobookVisibility("book-1", true, callback);
+
+        assertTrue(callback.error instanceof IllegalStateException);
+        assertEquals(null, backendApi.visibilityBookId);
+    }
+
+    @Test
+    public void deleteChapterRequiresSignedInUserBeforeCallingBackend() {
+        FakeBackendApi backendApi = new FakeBackendApi();
+        CreatorAudiobookRepository repository = repositoryWith(backendApi, null);
+        CapturingCallback<Void> callback = new CapturingCallback<>();
+
+        repository.deleteChapter("book-1", "chapter_2", callback);
+
+        assertTrue(callback.error instanceof IllegalStateException);
+        assertEquals(null, backendApi.deletedChapterBookId);
+    }
+
+    @Test
+    public void visibilityRequiresAudiobookIdBeforeCallingBackend() {
+        FakeBackendApi backendApi = new FakeBackendApi();
+        CreatorAudiobookRepository repository = repositoryWith(backendApi, "user-1");
+        CapturingCallback<Void> callback = new CapturingCallback<>();
+
+        repository.setAudiobookVisibility(" ", true, callback);
+
+        assertTrue(callback.error instanceof IllegalArgumentException);
+        assertEquals(null, backendApi.visibilityBookId);
+    }
+
+    @Test
+    public void deleteChapterRequiresIdsBeforeCallingBackend() {
+        FakeBackendApi backendApi = new FakeBackendApi();
+        CreatorAudiobookRepository repository = repositoryWith(backendApi, "user-1");
+        CapturingCallback<Void> callback = new CapturingCallback<>();
+
+        repository.deleteChapter("book-1", " ", callback);
+
+        assertTrue(callback.error instanceof IllegalArgumentException);
+        assertEquals(null, backendApi.deletedChapterBookId);
+    }
+
+    @Test
     public void acceptsThreeThousandFiveHundredWordChapterText() {
         FakeBackendApi backendApi = new FakeBackendApi();
         CreatorAudiobookRepository repository = repositoryWith(backendApi, "user-1");
@@ -267,6 +341,10 @@ public class CreatorAudiobookRepositoryBackendTest {
         String updatedChapterId;
         String requestedChapterBookId;
         String requestedChapterId;
+        String visibilityBookId;
+        boolean hiddenByCreator;
+        String deletedChapterBookId;
+        String deletedChapterId;
         Exception generationError;
 
         @Override
@@ -358,6 +436,20 @@ public class CreatorAudiobookRepositoryBackendTest {
         @Override
         public void publishAudiobook(String bookId, RepositoryCallback<Void> callback) {
             publishedBookId = bookId;
+            callback.onSuccess(null);
+        }
+
+        @Override
+        public void setAudiobookVisibility(String bookId, boolean hiddenByCreator, RepositoryCallback<Void> callback) {
+            visibilityBookId = bookId;
+            this.hiddenByCreator = hiddenByCreator;
+            callback.onSuccess(null);
+        }
+
+        @Override
+        public void deleteChapter(String bookId, String chapterId, RepositoryCallback<Void> callback) {
+            deletedChapterBookId = bookId;
+            deletedChapterId = chapterId;
             callback.onSuccess(null);
         }
     }

@@ -103,6 +103,15 @@ public class CreatorApiContractTest {
     }
 
     @Test
+    public void visibilityJsonUsesBooleanOnly() throws Exception {
+        JSONObject json = new JSONObject(CreatorApiContract.visibilityJson(true));
+
+        assertTrue(json.getBoolean("hiddenByCreator"));
+        assertFalse(json.has("bookId"));
+        assertFalse(json.has("creatorUid"));
+    }
+
+    @Test
     public void parsesEditableDraftEnvelope() throws Exception {
         String response = "{"
                 + "\"data\":{"
@@ -167,6 +176,30 @@ public class CreatorApiContractTest {
             assertEquals(422, exception.getStatusCode());
             assertEquals("validation_error", exception.getErrorCode());
             assertTrue(exception.getDetails().contains("chapterText"));
+            return;
+        }
+
+        throw new AssertionError("Expected BackendApiException");
+    }
+
+    @Test
+    public void parsesVisibilityAndChapterDeleteEnvelopes() throws Exception {
+        String success = "{\"data\":{\"bookId\":\"book-1\",\"hiddenByCreator\":true}}";
+        assertEquals("book-1", CreatorApiContract.parseBookId(200, success));
+
+        String deleted = "{\"data\":{\"bookId\":\"book-1\",\"chapterId\":\"chapter_2\",\"deleted\":true,\"generationStatus\":\"deleted\"}}";
+        assertEquals("chapter_2", CreatorApiContract.parseChapterId(200, deleted));
+
+        String error = "{\"error\":{\"code\":\"invalid_chapter_delete_state\",\"message\":\"Published chapters cannot be deleted in this version\"}}";
+        try {
+            CreatorApiContract.parseChapterId(409, error);
+        } catch (BackendApiException exception) {
+            assertEquals(409, exception.getStatusCode());
+            assertEquals("invalid_chapter_delete_state", exception.getErrorCode());
+            assertEquals(
+                    "Published chapters cannot be deleted in this version",
+                    exception.getMessage()
+            );
             return;
         }
 

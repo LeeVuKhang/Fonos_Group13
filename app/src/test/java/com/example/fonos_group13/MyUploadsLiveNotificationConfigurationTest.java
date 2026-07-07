@@ -34,13 +34,29 @@ public class MyUploadsLiveNotificationConfigurationTest {
     @Test
     public void myUploadsRegistersFcmAndDeclaresNotificationSupport() throws Exception {
         String activity = readFile("src/main/java/com/example/fonos_group13/MyUploadsActivity.java");
+        String createActivity = readFile("src/main/java/com/example/fonos_group13/CreateAudiobookActivity.java");
+        String manageActivity = readFile("src/main/java/com/example/fonos_group13/ManageChapterActivity.java");
         String manifest = readFile("src/main/AndroidManifest.xml");
+        String setup = readFile(
+                "src/main/java/com/example/fonos_group13/notifications/GenerationNotificationSetup.java"
+        );
+        String notificationHelper = readFile(
+                "src/main/java/com/example/fonos_group13/notifications/GenerationNotificationHelper.java"
+        );
         String tokenRepository = readFile(
                 "src/main/java/com/example/fonos_group13/data/UploadNotificationTokenRepository.java"
         );
 
-        assertTrue(activity.contains("registerCurrentDevice"));
-        assertTrue(activity.contains("Manifest.permission.POST_NOTIFICATIONS"));
+        assertTrue(activity.contains("GenerationNotificationSetup"));
+        assertTrue(activity.contains("notificationSetup.ensureReady()"));
+        assertTrue(createActivity.contains("GenerationNotificationSetup"));
+        assertTrue(createActivity.contains("ensureGenerationNotifications();"));
+        assertTrue(manageActivity.contains("GenerationNotificationSetup"));
+        assertTrue(manageActivity.contains("ensureGenerationNotifications();"));
+        assertTrue(setup.contains("registerCurrentDevice"));
+        assertTrue(setup.contains("Manifest.permission.POST_NOTIFICATIONS"));
+        assertTrue(setup.contains("requestPermissions"));
+        assertTrue(notificationHelper.contains("NotificationManager.IMPORTANCE_HIGH"));
         assertTrue(activity.contains("AudiobookGenerationStatus.PENDING_GENERATION"));
         assertTrue(manifest.contains("android.permission.POST_NOTIFICATIONS"));
         assertTrue(manifest.contains(".notifications.GenerationNotificationMessagingService"));
@@ -59,6 +75,21 @@ public class MyUploadsLiveNotificationConfigurationTest {
         assertTrue(createActivity.contains("updateDraft("));
         assertTrue(createActivity.contains("updateDraftAndRequestGeneration("));
         assertTrue(createActivity.contains("Save Changes"));
+    }
+
+    @Test
+    public void myUploadsSupportsChapterManagementAndVisibilityToggle() throws Exception {
+        String activity = readFile("src/main/java/com/example/fonos_group13/MyUploadsActivity.java");
+        String repository = readFile("src/main/java/com/example/fonos_group13/data/CreatorAudiobookRepository.java");
+
+        assertTrue(repository.contains("observeUploadChapters"));
+        assertTrue(repository.contains("UserGeneratedChapter.isDeletedDocument"));
+        assertTrue(repository.contains("setAudiobookVisibility"));
+        assertTrue(repository.contains("deleteChapter"));
+        assertTrue(activity.contains("Hide from Public"));
+        assertTrue(activity.contains("Show Publicly"));
+        assertTrue(activity.contains("Cancel Chapter"));
+        assertTrue(activity.contains("repository.deleteChapter"));
     }
 
     @Test

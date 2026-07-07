@@ -38,6 +38,12 @@ final class CreatorApiContract {
         return json.toString();
     }
 
+    static String visibilityJson(boolean hiddenByCreator) throws JSONException {
+        JSONObject json = new JSONObject();
+        json.put("hiddenByCreator", hiddenByCreator);
+        return json.toString();
+    }
+
     static String parseBookId(int statusCode, String responseBody) throws BackendApiException {
         if (statusCode >= 200 && statusCode < 300) {
             try {

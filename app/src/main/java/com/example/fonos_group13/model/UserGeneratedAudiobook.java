@@ -15,6 +15,7 @@ public class UserGeneratedAudiobook {
     private final String activeChapterId;
     private final String reviewStatus;
     private final boolean published;
+    private final boolean hiddenByCreator;
     private final Timestamp createdAt;
     private final Timestamp updatedAt;
     private final String generationError;
@@ -31,6 +32,7 @@ public class UserGeneratedAudiobook {
             String activeChapterId,
             String reviewStatus,
             boolean published,
+            boolean hiddenByCreator,
             Timestamp createdAt,
             Timestamp updatedAt,
             String generationError
@@ -46,6 +48,7 @@ public class UserGeneratedAudiobook {
         this.activeChapterId = optionalString(activeChapterId);
         this.reviewStatus = valueOrDefault(reviewStatus, "pending");
         this.published = published;
+        this.hiddenByCreator = hiddenByCreator;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.generationError = optionalString(generationError);
@@ -76,6 +79,7 @@ public class UserGeneratedAudiobook {
                 activeChapterId,
                 FirestoreValueReader.string(document, "reviewStatus"),
                 published,
+                FirestoreValueReader.booleanValue(document, "hiddenByCreator", false),
                 FirestoreValueReader.timestamp(document, "createdAt"),
                 FirestoreValueReader.timestamp(document, "updatedAt"),
                 FirestoreValueReader.string(document, "generationError")
@@ -149,6 +153,10 @@ public class UserGeneratedAudiobook {
 
     public boolean isPublished() {
         return published;
+    }
+
+    public boolean isHiddenByCreator() {
+        return hiddenByCreator;
     }
 
     public Timestamp getCreatedAt() {

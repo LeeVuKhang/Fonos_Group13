@@ -14,6 +14,7 @@ public class BookAccessPolicyTest {
     public void publishedBookIsReadableWithoutPreviewMode() {
         assertTrue(BookAccessPolicy.canReadBook(
                 true,
+                false,
                 null,
                 AudiobookGenerationStatus.DRAFT,
                 null,
@@ -24,6 +25,7 @@ public class BookAccessPolicyTest {
     @Test
     public void unpublishedBookIsNotReadableInPublishedOnlyMode() {
         assertFalse(BookAccessPolicy.canReadBook(
+                false,
                 false,
                 CREATOR_UID,
                 AudiobookGenerationStatus.READY_FOR_REVIEW,
@@ -36,6 +38,7 @@ public class BookAccessPolicyTest {
     public void readyForReviewBookIsReadableByItsCreatorInPreviewMode() {
         assertTrue(BookAccessPolicy.canReadBook(
                 false,
+                false,
                 CREATOR_UID,
                 AudiobookGenerationStatus.READY_FOR_REVIEW,
                 CREATOR_UID,
@@ -46,6 +49,7 @@ public class BookAccessPolicyTest {
     @Test
     public void previewModeDoesNotAuthorizeAnotherUser() {
         assertFalse(BookAccessPolicy.canReadBook(
+                false,
                 false,
                 CREATOR_UID,
                 AudiobookGenerationStatus.READY_FOR_REVIEW,
@@ -58,6 +62,7 @@ public class BookAccessPolicyTest {
     public void previewModeRequiresAuthentication() {
         assertFalse(BookAccessPolicy.canReadBook(
                 false,
+                false,
                 CREATOR_UID,
                 AudiobookGenerationStatus.READY_FOR_REVIEW,
                 null,
@@ -69,8 +74,33 @@ public class BookAccessPolicyTest {
     public void previewModeRejectsOtherGenerationStatuses() {
         assertFalse(BookAccessPolicy.canReadBook(
                 false,
+                false,
                 CREATOR_UID,
                 AudiobookGenerationStatus.PENDING_GENERATION,
+                CREATOR_UID,
+                BookAccessMode.CREATOR_REVIEW_PREVIEW
+        ));
+    }
+
+    @Test
+    public void hiddenPublishedBookIsNotReadablePublicly() {
+        assertFalse(BookAccessPolicy.canReadBook(
+                true,
+                true,
+                CREATOR_UID,
+                AudiobookGenerationStatus.PUBLISHED,
+                null,
+                BookAccessMode.PUBLISHED_ONLY
+        ));
+    }
+
+    @Test
+    public void hiddenBookIsReadableByItsCreatorInPreviewMode() {
+        assertTrue(BookAccessPolicy.canReadBook(
+                true,
+                true,
+                CREATOR_UID,
+                AudiobookGenerationStatus.PUBLISHED,
                 CREATOR_UID,
                 BookAccessMode.CREATOR_REVIEW_PREVIEW
         ));
