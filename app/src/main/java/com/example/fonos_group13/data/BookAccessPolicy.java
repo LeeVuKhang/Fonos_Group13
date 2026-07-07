@@ -8,17 +8,22 @@ final class BookAccessPolicy {
 
     static boolean canReadBook(
             boolean published,
+            boolean hiddenByCreator,
             String creatorUid,
             AudiobookGenerationStatus generationStatus,
             String currentUid,
             BookAccessMode accessMode
     ) {
+        boolean ownerPreview = accessMode == BookAccessMode.CREATOR_REVIEW_PREVIEW
+                && sameNonBlankValue(creatorUid, currentUid);
+        if (hiddenByCreator) {
+            return ownerPreview;
+        }
         if (published) {
             return true;
         }
-        return accessMode == BookAccessMode.CREATOR_REVIEW_PREVIEW
-                && generationStatus == AudiobookGenerationStatus.READY_FOR_REVIEW
-                && sameNonBlankValue(creatorUid, currentUid);
+        return ownerPreview
+                && generationStatus == AudiobookGenerationStatus.READY_FOR_REVIEW;
     }
 
     static boolean shouldIncludeChapter(
@@ -26,7 +31,21 @@ final class BookAccessPolicy {
             boolean creatorPreviewAuthorized,
             boolean chapterPublished
     ) {
-        return bookPublished ? chapterPublished : creatorPreviewAuthorized;
+        if (creatorPreviewAuthorized) {
+            return true;
+        }
+        return bookPublished && chapterPublished;
+    }
+
+    static boolean canPreviewUnpublishedChapters(
+            String creatorUid,
+            AudiobookGenerationStatus generationStatus,
+            String currentUid,
+            BookAccessMode accessMode
+    ) {
+        return accessMode == BookAccessMode.CREATOR_REVIEW_PREVIEW
+                && generationStatus == AudiobookGenerationStatus.READY_FOR_REVIEW
+                && sameNonBlankValue(creatorUid, currentUid);
     }
 
     private static boolean sameNonBlankValue(String left, String right) {

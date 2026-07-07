@@ -8,6 +8,8 @@
     <color name="accent">#5E7C66</color>
     <color name="accent_soft">#DCE8DD</color>
     <color name="stroke_soft">#D8E0D5</color>
+    <color name="warning_text">#946200</color>
+    <color name="error_text">#B3261E</color>
 
     <!-- Reader Colors -->
     <color name="reader_bg">#F7F8F4</color>

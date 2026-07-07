@@ -81,6 +81,7 @@ dependencies {
     implementation(libs.androidx.media3.common)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.messaging)
     implementation(libs.material)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)

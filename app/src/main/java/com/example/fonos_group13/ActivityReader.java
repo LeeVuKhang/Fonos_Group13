@@ -37,6 +37,7 @@ import com.example.fonos_group13.data.BookAccessMode;
 import com.example.fonos_group13.data.DownloadedAudioRepository;
 import com.example.fonos_group13.data.ProgressRepository;
 import com.example.fonos_group13.data.RepositoryCallback;
+import com.example.fonos_group13.model.AudiobookGenerationStatus;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
 import com.example.fonos_group13.model.UserProgress;
@@ -301,7 +302,7 @@ public class ActivityReader extends AppCompatActivity {
                 && currentChapter != null
                 && bookId.equals(currentBook.getId())
                 && (chapterId == null || chapterId.equals(currentChapter.getId()))
-                && (currentBook.isPublished() || creatorPreview == creatorPreviewActive)) {
+                && creatorPreview == creatorPreviewActive) {
             requestedBookId = bookId;
             requestedChapterId = currentChapter.getId();
             requestedAutoPlay = autoPlay;
@@ -348,7 +349,8 @@ public class ActivityReader extends AppCompatActivity {
                         || loadingCreatorPreview != requestedCreatorPreview) {
                     return;
                 }
-                creatorPreviewActive = loadingCreatorPreview && !book.isPublished();
+                creatorPreviewActive = loadingCreatorPreview
+                        && book.getGenerationStatus() == AudiobookGenerationStatus.READY_FOR_REVIEW;
                 loadChapter(book, chapterId);
             }
 

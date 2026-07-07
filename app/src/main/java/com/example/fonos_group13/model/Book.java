@@ -15,6 +15,8 @@ public class Book {
     private final long durationSec;
     private final String languageCode;
     private final String voiceGender;
+    private final String creatorUid;
+    private final AudiobookGenerationStatus generationStatus;
     private final boolean featured;
     private final boolean published;
     private final int order;
@@ -32,6 +34,8 @@ public class Book {
             long durationSec,
             String languageCode,
             String voiceGender,
+            String creatorUid,
+            AudiobookGenerationStatus generationStatus,
             boolean featured,
             boolean published,
             int order
@@ -48,6 +52,8 @@ public class Book {
         this.durationSec = durationSec;
         this.languageCode = languageCode;
         this.voiceGender = voiceGender;
+        this.creatorUid = optionalString(creatorUid);
+        this.generationStatus = generationStatus == null ? AudiobookGenerationStatus.DRAFT : generationStatus;
         this.featured = featured;
         this.published = published;
         this.order = order;
@@ -75,6 +81,8 @@ public class Book {
                 FirestoreValueReader.longValue(document, "durationSec"),
                 valueOrDefault(FirestoreValueReader.string(document, "languageCode"), "en-US"),
                 valueOrDefault(FirestoreValueReader.string(document, "voiceGender"), "female"),
+                FirestoreValueReader.string(document, "creatorUid"),
+                AudiobookGenerationStatus.fromValue(FirestoreValueReader.string(document, "generationStatus")),
                 FirestoreValueReader.booleanValue(document, "featured", false),
                 FirestoreValueReader.booleanValue(document, "published", false),
                 (int) FirestoreValueReader.longValue(document, "order")
@@ -166,6 +174,14 @@ public class Book {
 
     public String getVoiceGender() {
         return voiceGender;
+    }
+
+    public String getCreatorUid() {
+        return creatorUid;
+    }
+
+    public AudiobookGenerationStatus getGenerationStatus() {
+        return generationStatus;
     }
 
     public boolean isFeatured() {

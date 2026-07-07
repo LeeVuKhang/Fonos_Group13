@@ -12,8 +12,10 @@ public class UserGeneratedAudiobook {
     private final String voiceGender;
     private final String pollyVoiceId;
     private final AudiobookGenerationStatus generationStatus;
+    private final String activeChapterId;
     private final String reviewStatus;
     private final boolean published;
+    private final boolean hiddenByCreator;
     private final Timestamp createdAt;
     private final Timestamp updatedAt;
     private final String generationError;
@@ -27,8 +29,10 @@ public class UserGeneratedAudiobook {
             String voiceGender,
             String pollyVoiceId,
             AudiobookGenerationStatus generationStatus,
+            String activeChapterId,
             String reviewStatus,
             boolean published,
+            boolean hiddenByCreator,
             Timestamp createdAt,
             Timestamp updatedAt,
             String generationError
@@ -41,19 +45,21 @@ public class UserGeneratedAudiobook {
         this.voiceGender = valueOrDefault(voiceGender, "male");
         this.pollyVoiceId = optionalString(pollyVoiceId);
         this.generationStatus = generationStatus == null ? AudiobookGenerationStatus.DRAFT : generationStatus;
+        this.activeChapterId = optionalString(activeChapterId);
         this.reviewStatus = valueOrDefault(reviewStatus, "pending");
         this.published = published;
+        this.hiddenByCreator = hiddenByCreator;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.generationError = optionalString(generationError);
     }
 
     public static UserGeneratedAudiobook fromDocument(DocumentSnapshot document) {
-        AudiobookGenerationStatus status = AudiobookGenerationStatus.fromValue(
-                FirestoreValueReader.string(document, "generationStatus")
-        );
+        String rawStatus = FirestoreValueReader.string(document, "generationStatus");
+        AudiobookGenerationStatus status = AudiobookGenerationStatus.fromValue(rawStatus);
         boolean published = FirestoreValueReader.booleanValue(document, "published", false);
-        if (published) {
+        String activeChapterId = optionalString(FirestoreValueReader.string(document, "activeChapterId"));
+        if (published && (optionalString(rawStatus) == null || activeChapterId == null || status == AudiobookGenerationStatus.PUBLISHED)) {
             status = AudiobookGenerationStatus.PUBLISHED;
         }
         return new UserGeneratedAudiobook(
@@ -70,8 +76,10 @@ public class UserGeneratedAudiobook {
                 FirestoreValueReader.string(document, "voiceGender"),
                 FirestoreValueReader.string(document, "pollyVoiceId"),
                 status,
+                activeChapterId,
                 FirestoreValueReader.string(document, "reviewStatus"),
                 published,
+                FirestoreValueReader.booleanValue(document, "hiddenByCreator", false),
                 FirestoreValueReader.timestamp(document, "createdAt"),
                 FirestoreValueReader.timestamp(document, "updatedAt"),
                 FirestoreValueReader.string(document, "generationError")
@@ -86,6 +94,14 @@ public class UserGeneratedAudiobook {
     public boolean canRequestGeneration() {
         return generationStatus == AudiobookGenerationStatus.DRAFT
                 || generationStatus == AudiobookGenerationStatus.FAILED;
+    }
+
+    public boolean hasChapterUpdate() {
+        return activeChapterId != null;
+    }
+
+    public boolean activeChapterIsInitialChapter() {
+        return BookChapter.LEGACY_CHAPTER_ID.equals(activeChapterId);
     }
 
     public String getVoiceLabel() {
@@ -127,12 +143,20 @@ public class UserGeneratedAudiobook {
         return generationStatus;
     }
 
+    public String getActiveChapterId() {
+        return activeChapterId;
+    }
+
     public String getReviewStatus() {
         return reviewStatus;
     }
 
     public boolean isPublished() {
         return published;
+    }
+
+    public boolean isHiddenByCreator() {
+        return hiddenByCreator;
     }
 
     public Timestamp getCreatedAt() {

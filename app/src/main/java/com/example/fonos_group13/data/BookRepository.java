@@ -8,6 +8,7 @@ import com.example.fonos_group13.model.BookChapter;
 import com.example.fonos_group13.model.FirestoreValueReader;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
@@ -38,7 +39,11 @@ public class BookRepository {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<Book> books = new ArrayList<>();
-                    querySnapshot.getDocuments().forEach(document -> books.add(Book.fromDocument(document)));
+                    querySnapshot.getDocuments().forEach(document -> {
+                        if (!isPubliclyHidden(document)) {
+                            books.add(Book.fromDocument(document));
+                        }
+                    });
                     Collections.sort(books, (left, right) -> Integer.compare(left.getOrder(), right.getOrder()));
                     callback.onSuccess(books);
                 })
@@ -69,8 +74,10 @@ public class BookRepository {
                     AudiobookGenerationStatus generationStatus = AudiobookGenerationStatus.fromValue(
                             FirestoreValueReader.string(document, "generationStatus")
                     );
-                    if (document.exists() && BookAccessPolicy.canReadBook(
+                    if (document.exists()
+                            && BookAccessPolicy.canReadBook(
                             FirestoreValueReader.booleanValue(document, "published", false),
+                            isPubliclyHidden(document),
                             FirestoreValueReader.string(document, "creatorUid"),
                             generationStatus,
                             currentUserUid(),
@@ -104,7 +111,7 @@ public class BookRepository {
         getBook(bookId, resolvedAccessMode, new RepositoryCallback<Book>() {
             @Override
             public void onSuccess(Book book) {
-                loadAuthorizedChapters(book, callback);
+                loadAuthorizedChapters(book, resolvedAccessMode, callback);
             }
 
             @Override
@@ -114,9 +121,18 @@ public class BookRepository {
         });
     }
 
-    private void loadAuthorizedChapters(Book book, RepositoryCallback<List<BookChapter>> callback) {
+    private void loadAuthorizedChapters(
+            Book book,
+            BookAccessMode accessMode,
+            RepositoryCallback<List<BookChapter>> callback
+    ) {
         String bookId = book.getId();
-        boolean creatorPreviewAuthorized = !book.isPublished();
+        boolean creatorPreviewAuthorized = BookAccessPolicy.canPreviewUnpublishedChapters(
+                book.getCreatorUid(),
+                book.getGenerationStatus(),
+                currentUserUid(),
+                accessMode
+        );
         firestore.collection("books")
                 .document(bookId)
                 .collection("chapters")
@@ -125,6 +141,9 @@ public class BookRepository {
                     List<BookChapter> chapters = new ArrayList<>();
                     boolean hasChapterDocuments = !querySnapshot.isEmpty();
                     querySnapshot.getDocuments().forEach(document -> {
+                        if (isDeletedChapter(document)) {
+                            return;
+                        }
                         BookChapter chapter = BookChapter.fromDocument(bookId, document);
                         if (BookAccessPolicy.shouldIncludeChapter(
                                 book.isPublished(),
@@ -155,6 +174,20 @@ public class BookRepository {
     private String currentUserUid() {
         FirebaseUser user = auth == null ? null : auth.getCurrentUser();
         return user == null ? null : user.getUid();
+    }
+
+    private boolean isPubliclyHidden(DocumentSnapshot document) {
+        return FirestoreValueReader.booleanValue(document, "hiddenByCreator", false)
+                || FirestoreValueReader.booleanValue(document, "archivedByCreator", false)
+                || FirestoreValueReader.timestamp(document, "archivedAt") != null;
+    }
+
+    private boolean isDeletedChapter(DocumentSnapshot document) {
+        return FirestoreValueReader.booleanValue(document, "deletedByCreator", false)
+                || FirestoreValueReader.timestamp(document, "deletedAt") != null
+                || AudiobookGenerationStatus.DELETED == AudiobookGenerationStatus.fromValue(
+                FirestoreValueReader.string(document, "generationStatus")
+        );
     }
 
     private Exception unavailableBookException() {

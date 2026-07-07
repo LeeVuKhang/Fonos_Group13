@@ -6,7 +6,8 @@ public enum AudiobookGenerationStatus {
     FAILED("failed"),
     READY_FOR_REVIEW("ready_for_review"),
     PUBLISHED("published"),
-    REJECTED("rejected");
+    REJECTED("rejected"),
+    DELETED("deleted");
 
     private final String value;
 
@@ -16,6 +17,26 @@ public enum AudiobookGenerationStatus {
 
     public String getValue() {
         return value;
+    }
+
+    public String getDisplayLabel() {
+        switch (this) {
+            case PENDING_GENERATION:
+                return "Pending Generation";
+            case READY_FOR_REVIEW:
+                return "Ready for Review";
+            case PUBLISHED:
+                return "Published";
+            case REJECTED:
+                return "Rejected";
+            case DELETED:
+                return "Deleted";
+            case FAILED:
+                return "Failed";
+            case DRAFT:
+            default:
+                return "Draft";
+        }
     }
 
     public static AudiobookGenerationStatus fromValue(String value) {

@@ -29,13 +29,13 @@
             app:tint="@color/text_main" />
 
         <TextView
-            android:id="@+id/create_audiobook_header_title"
+            android:id="@+id/manage_chapter_header_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
             android:fontFamily="serif"
-            android:text="Create Audiobook"
+            android:text="Add Chapter"
             android:textColor="@color/text_dark"
             android:textSize="28sp"
             android:textStyle="bold" />
@@ -66,7 +66,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Book Details"
+                    android:text="Chapter Details"
                     android:textColor="@color/text_dark"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -76,57 +76,17 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:layout_marginBottom="8dp"
-                    android:text="Title"
+                    android:text="Chapter Title"
                     android:textColor="@color/text_main"
                     android:textStyle="bold" />
 
                 <EditText
-                    android:id="@+id/input_audiobook_title"
+                    android:id="@+id/input_chapter_title"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:background="@drawable/edittext_bg_new"
-                    android:hint="Name your audiobook"
+                    android:hint="Chapter 2"
                     android:inputType="textCapWords"
-                    android:paddingHorizontal="16dp"
-                    android:textColor="@color/text_main"
-                    android:textSize="16sp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:layout_marginBottom="8dp"
-                    android:text="Author"
-                    android:textColor="@color/text_main"
-                    android:textStyle="bold" />
-
-                <EditText
-                    android:id="@+id/input_audiobook_author"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:background="@drawable/edittext_bg_new"
-                    android:hint="Author or creator name"
-                    android:inputType="textCapWords"
-                    android:paddingHorizontal="16dp"
-                    android:textColor="@color/text_main"
-                    android:textSize="16sp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:layout_marginBottom="8dp"
-                    android:text="Cover URL"
-                    android:textColor="@color/text_main"
-                    android:textStyle="bold" />
-
-                <EditText
-                    android:id="@+id/input_cover_url"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:background="@drawable/edittext_bg_new"
-                    android:hint="Optional image URL"
-                    android:inputType="textUri"
                     android:paddingHorizontal="16dp"
                     android:textColor="@color/text_main"
                     android:textSize="16sp" />
@@ -147,14 +107,6 @@
                     android:textColor="@color/text_dark"
                     android:textSize="18sp"
                     android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="The backend will use this voice when generation is available."
-                    android:textColor="@color/text_muted"
-                    android:textSize="14sp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -204,18 +156,10 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Chapter 1"
+                    android:text="Chapter Text"
                     android:textColor="@color/text_dark"
                     android:textSize="18sp"
                     android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="Paste the text that will become the first generated audio chapter."
-                    android:textColor="@color/text_muted"
-                    android:textSize="14sp" />
 
                 <EditText
                     android:id="@+id/input_chapter_text"

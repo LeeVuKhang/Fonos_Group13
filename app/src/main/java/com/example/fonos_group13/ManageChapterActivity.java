@@ -21,22 +21,21 @@ import com.example.fonos_group13.data.BackendApiException;
 import com.example.fonos_group13.data.CreatorAudiobookRepository;
 import com.example.fonos_group13.data.DraftSavedGenerationRequestException;
 import com.example.fonos_group13.data.RepositoryCallback;
-import com.example.fonos_group13.model.CreateAudiobookDraftInput;
+import com.example.fonos_group13.model.CreateChapterDraftInput;
 import com.example.fonos_group13.model.CreatorVoiceOption;
-import com.example.fonos_group13.model.EditableAudiobookDraft;
+import com.example.fonos_group13.model.EditableChapterDraft;
 import com.example.fonos_group13.notifications.GenerationNotificationSetup;
 import com.example.fonos_group13.ui.ChapterTextCounterState;
 import com.google.android.material.button.MaterialButton;
 
-public class CreateAudiobookActivity extends AppCompatActivity {
-    public static final String EXTRA_EDIT_BOOK_ID = "com.example.fonos_group13.EXTRA_EDIT_BOOK_ID";
+public class ManageChapterActivity extends AppCompatActivity {
+    public static final String EXTRA_BOOK_ID = "com.example.fonos_group13.EXTRA_BOOK_ID";
+    public static final String EXTRA_CHAPTER_ID = "com.example.fonos_group13.EXTRA_CHAPTER_ID";
 
     private CreatorAudiobookRepository repository;
     private GenerationNotificationSetup notificationSetup;
     private TextView headerTitle;
-    private EditText inputTitle;
-    private EditText inputAuthor;
-    private EditText inputCoverUrl;
+    private EditText inputChapterTitle;
     private EditText inputChapterText;
     private TextView chapterTextCounter;
     private TextView chapterTextFeedback;
@@ -45,18 +44,25 @@ public class CreateAudiobookActivity extends AppCompatActivity {
     private MaterialButton saveDraftButton;
     private MaterialButton requestGenerationButton;
     private CreatorVoiceOption selectedVoice = CreatorVoiceOption.PATRICK;
-    private String editingBookId;
+    private String bookId;
+    private String chapterId;
     private boolean loadingDraft;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-        setContentView(R.layout.activity_create_audiobook);
+        setContentView(R.layout.activity_manage_chapter);
 
         repository = new CreatorAudiobookRepository(this);
         notificationSetup = new GenerationNotificationSetup(this);
-        editingBookId = trimToNull(getIntent().getStringExtra(EXTRA_EDIT_BOOK_ID));
+        bookId = trimToNull(getIntent().getStringExtra(EXTRA_BOOK_ID));
+        chapterId = trimToNull(getIntent().getStringExtra(EXTRA_CHAPTER_ID));
+        if (bookId == null) {
+            Toast.makeText(this, "Missing audiobook id.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
         bindViews();
         setupInsets();
         setupControls();
@@ -68,10 +74,8 @@ public class CreateAudiobookActivity extends AppCompatActivity {
     }
 
     private void bindViews() {
-        headerTitle = findViewById(R.id.create_audiobook_header_title);
-        inputTitle = findViewById(R.id.input_audiobook_title);
-        inputAuthor = findViewById(R.id.input_audiobook_author);
-        inputCoverUrl = findViewById(R.id.input_cover_url);
+        headerTitle = findViewById(R.id.manage_chapter_header_title);
+        inputChapterTitle = findViewById(R.id.input_chapter_title);
         inputChapterText = findViewById(R.id.input_chapter_text);
         chapterTextCounter = findViewById(R.id.chapter_text_word_counter);
         chapterTextFeedback = findViewById(R.id.chapter_text_feedback);
@@ -114,7 +118,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
 
     private void configureMode() {
         if (headerTitle != null) {
-            headerTitle.setText(isEditMode() ? "Edit Draft" : "Create Audiobook");
+            headerTitle.setText(isEditMode() ? "Edit Chapter" : "Add Chapter");
         }
         if (saveDraftButton != null) {
             saveDraftButton.setText(saveButtonText(false, false));
@@ -143,7 +147,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         if (loadingDraft) {
             return;
         }
-        CreateAudiobookDraftInput input = readAndValidateInput();
+        CreateChapterDraftInput input = readAndValidateInput();
         if (input == null) {
             return;
         }
@@ -151,10 +155,10 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         setLoading(true, requestGeneration);
         RepositoryCallback<String> callback = new RepositoryCallback<String>() {
             @Override
-            public void onSuccess(String bookId) {
+            public void onSuccess(String savedChapterId) {
                 setLoading(false, requestGeneration);
                 Toast.makeText(
-                        CreateAudiobookActivity.this,
+                        ManageChapterActivity.this,
                         successMessage(requestGeneration),
                         Toast.LENGTH_SHORT
                 ).show();
@@ -168,7 +172,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
                 if (chapterTextError != null) {
                     showChapterTextValidationError(chapterTextError);
                     Toast.makeText(
-                            CreateAudiobookActivity.this,
+                            ManageChapterActivity.this,
                             "Please update the chapter text and try again.",
                             Toast.LENGTH_LONG
                     ).show();
@@ -176,7 +180,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
                 }
                 if (exception instanceof DraftSavedGenerationRequestException) {
                     Toast.makeText(
-                            CreateAudiobookActivity.this,
+                            ManageChapterActivity.this,
                             exception.getMessage(),
                             Toast.LENGTH_LONG
                     ).show();
@@ -184,7 +188,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
                     return;
                 }
                 Toast.makeText(
-                        CreateAudiobookActivity.this,
+                        ManageChapterActivity.this,
                         AuthRepository.friendlyError(exception),
                         Toast.LENGTH_LONG
                 ).show();
@@ -194,14 +198,14 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         if (requestGeneration) {
             ensureGenerationNotifications();
             if (isEditMode()) {
-                repository.updateDraftAndRequestGeneration(editingBookId, input, callback);
+                repository.updateChapterDraftAndRequestGeneration(bookId, chapterId, input, callback);
             } else {
-                repository.createDraftAndRequestGeneration(input, callback);
+                repository.createChapterDraftAndRequestGeneration(bookId, input, callback);
             }
         } else if (isEditMode()) {
-            repository.updateDraft(editingBookId, input, callback);
+            repository.updateChapterDraft(bookId, chapterId, input, callback);
         } else {
-            repository.createDraft(input, callback);
+            repository.createChapterDraft(bookId, input, callback);
         }
     }
 
@@ -213,9 +217,9 @@ public class CreateAudiobookActivity extends AppCompatActivity {
 
     private void loadDraftForEdit() {
         setDraftLoading(true);
-        repository.getDraftForEdit(editingBookId, new RepositoryCallback<EditableAudiobookDraft>() {
+        repository.getChapterDraftForEdit(bookId, chapterId, new RepositoryCallback<EditableChapterDraft>() {
             @Override
-            public void onSuccess(EditableAudiobookDraft draft) {
+            public void onSuccess(EditableChapterDraft draft) {
                 setDraftLoading(false);
                 bindDraft(draft);
             }
@@ -224,7 +228,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
             public void onError(Exception exception) {
                 setDraftLoading(false);
                 Toast.makeText(
-                        CreateAudiobookActivity.this,
+                        ManageChapterActivity.this,
                         AuthRepository.friendlyError(exception),
                         Toast.LENGTH_LONG
                 ).show();
@@ -233,18 +237,12 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         });
     }
 
-    private void bindDraft(EditableAudiobookDraft draft) {
+    private void bindDraft(EditableChapterDraft draft) {
         if (draft == null) {
             return;
         }
-        if (inputTitle != null) {
-            inputTitle.setText(draft.getTitle());
-        }
-        if (inputAuthor != null) {
-            inputAuthor.setText(draft.getAuthor());
-        }
-        if (inputCoverUrl != null) {
-            inputCoverUrl.setText(draft.getCoverUrl() == null ? "" : draft.getCoverUrl());
+        if (inputChapterTitle != null) {
+            inputChapterTitle.setText(draft.getChapterTitle());
         }
         if (inputChapterText != null) {
             inputChapterText.setText(draft.getChapterText());
@@ -253,34 +251,17 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         selectVoice(draft.getVoiceOption());
     }
 
-    private CreateAudiobookDraftInput readAndValidateInput() {
-        String title = textFrom(inputTitle);
-        String author = textFrom(inputAuthor);
-        String coverUrl = textFrom(inputCoverUrl);
+    private CreateChapterDraftInput readAndValidateInput() {
+        String chapterTitle = textFrom(inputChapterTitle);
         String chapterText = textFrom(inputChapterText);
 
-        if (title.isEmpty()) {
-            inputTitle.setError("Title is required");
-            inputTitle.requestFocus();
-            return null;
-        }
-        if (author.isEmpty()) {
-            inputAuthor.setError("Author is required");
-            inputAuthor.requestFocus();
+        if (chapterTitle.isEmpty()) {
+            inputChapterTitle.setError("Chapter title is required");
+            inputChapterTitle.requestFocus();
             return null;
         }
         if (chapterText.isEmpty()) {
             showChapterTextValidationError("Chapter text is required");
-            return null;
-        }
-        if (title.length() > CreateAudiobookDraftInput.MAX_TITLE_CHARS) {
-            inputTitle.setError("Title must be 120 characters or fewer");
-            inputTitle.requestFocus();
-            return null;
-        }
-        if (author.length() > CreateAudiobookDraftInput.MAX_AUTHOR_CHARS) {
-            inputAuthor.setError("Author must be 120 characters or fewer");
-            inputAuthor.requestFocus();
             return null;
         }
         ChapterTextCounterState chapterTextState = ChapterTextCounterState.from(chapterText);
@@ -290,13 +271,10 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         }
         bindChapterTextCounter(null);
 
-        return new CreateAudiobookDraftInput(
-                title,
-                author,
-                coverUrl,
-                CreateAudiobookDraftInput.DEFAULT_CHAPTER_TITLE,
+        return new CreateChapterDraftInput(
+                chapterTitle,
                 chapterText,
-                CreateAudiobookDraftInput.DEFAULT_LANGUAGE_CODE,
+                CreateChapterDraftInput.DEFAULT_LANGUAGE_CODE,
                 selectedVoice
         );
     }
@@ -310,12 +288,6 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         if (requestGenerationButton != null) {
             requestGenerationButton.setEnabled(!loading);
             requestGenerationButton.setText(requestButtonText(loading, requestGeneration));
-        }
-        if (voicePatrick != null) {
-            voicePatrick.setEnabled(!loading);
-        }
-        if (voiceRuth != null) {
-            voiceRuth.setEnabled(!loading);
         }
     }
 
@@ -333,14 +305,8 @@ public class CreateAudiobookActivity extends AppCompatActivity {
     }
 
     private void setInputsEnabled(boolean enabled) {
-        if (inputTitle != null) {
-            inputTitle.setEnabled(enabled);
-        }
-        if (inputAuthor != null) {
-            inputAuthor.setEnabled(enabled);
-        }
-        if (inputCoverUrl != null) {
-            inputCoverUrl.setEnabled(enabled);
+        if (inputChapterTitle != null) {
+            inputChapterTitle.setEnabled(enabled);
         }
         if (inputChapterText != null) {
             inputChapterText.setEnabled(enabled);
@@ -355,9 +321,9 @@ public class CreateAudiobookActivity extends AppCompatActivity {
 
     private String successMessage(boolean requestGeneration) {
         if (requestGeneration) {
-            return "Generation request queued.";
+            return "Chapter generation request queued.";
         }
-        return isEditMode() ? "Audiobook draft updated." : "Audiobook draft saved.";
+        return isEditMode() ? "Chapter draft updated." : "Chapter draft saved.";
     }
 
     private String saveButtonText(boolean loading, boolean requestGeneration) {
@@ -473,7 +439,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
     }
 
     private boolean isEditMode() {
-        return editingBookId != null;
+        return chapterId != null;
     }
 
     private String trimToNull(String value) {
@@ -485,7 +451,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
     }
 
     private void openMyUploadsAndFinish() {
-        Intent intent = new Intent(CreateAudiobookActivity.this, MyUploadsActivity.class);
+        Intent intent = new Intent(ManageChapterActivity.this, MyUploadsActivity.class);
         startActivity(intent);
         finish();
     }

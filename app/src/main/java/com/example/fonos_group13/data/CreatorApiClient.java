@@ -4,6 +4,9 @@ import android.os.Handler;
 import android.os.Looper;
 
 import com.example.fonos_group13.model.CreateAudiobookDraftInput;
+import com.example.fonos_group13.model.CreateChapterDraftInput;
+import com.example.fonos_group13.model.EditableAudiobookDraft;
+import com.example.fonos_group13.model.EditableChapterDraft;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
@@ -44,7 +47,89 @@ class CreatorApiClient implements CreatorBackendDataSource {
     public void createDraft(CreateAudiobookDraftInput input, RepositoryCallback<String> callback) {
         try {
             String body = CreatorApiContract.createDraftJson(input);
-            withToken(callback, token -> post("/api/v1/audiobooks", token, body, callback));
+            withToken(callback, token -> sendJson("POST", "/api/v1/audiobooks", token, body, callback));
+        } catch (JSONException exception) {
+            callback.onError(exception);
+        }
+    }
+
+    @Override
+    public void getDraftForEdit(String bookId, RepositoryCallback<EditableAudiobookDraft> callback) {
+        String encodedBookId = encodePathSegment(bookId);
+        withToken(callback, token -> getEditableDraft(
+                "/api/v1/audiobooks/" + encodedBookId + "/draft",
+                token,
+                callback
+        ));
+    }
+
+    @Override
+    public void updateDraft(String bookId, CreateAudiobookDraftInput input, RepositoryCallback<String> callback) {
+        try {
+            String encodedBookId = encodePathSegment(bookId);
+            String body = CreatorApiContract.createDraftJson(input);
+            withToken(callback, token -> sendJson(
+                    "PUT",
+                    "/api/v1/audiobooks/" + encodedBookId + "/draft",
+                    token,
+                    body,
+                    callback
+            ));
+        } catch (JSONException exception) {
+            callback.onError(exception);
+        }
+    }
+
+    @Override
+    public void createChapterDraft(String bookId, CreateChapterDraftInput input, RepositoryCallback<String> callback) {
+        try {
+            String encodedBookId = encodePathSegment(bookId);
+            String body = CreatorApiContract.createChapterDraftJson(input);
+            withToken(callback, token -> sendJsonForChapter(
+                    "POST",
+                    "/api/v1/audiobooks/" + encodedBookId + "/chapters",
+                    token,
+                    body,
+                    callback
+            ));
+        } catch (JSONException exception) {
+            callback.onError(exception);
+        }
+    }
+
+    @Override
+    public void getChapterDraftForEdit(
+            String bookId,
+            String chapterId,
+            RepositoryCallback<EditableChapterDraft> callback
+    ) {
+        String encodedBookId = encodePathSegment(bookId);
+        String encodedChapterId = encodePathSegment(chapterId);
+        withToken(callback, token -> getEditableChapterDraft(
+                "/api/v1/audiobooks/" + encodedBookId + "/chapters/" + encodedChapterId + "/draft",
+                token,
+                callback
+        ));
+    }
+
+    @Override
+    public void updateChapterDraft(
+            String bookId,
+            String chapterId,
+            CreateChapterDraftInput input,
+            RepositoryCallback<String> callback
+    ) {
+        try {
+            String encodedBookId = encodePathSegment(bookId);
+            String encodedChapterId = encodePathSegment(chapterId);
+            String body = CreatorApiContract.createChapterDraftJson(input);
+            withToken(callback, token -> sendJsonForChapter(
+                    "PUT",
+                    "/api/v1/audiobooks/" + encodedBookId + "/chapters/" + encodedChapterId + "/draft",
+                    token,
+                    body,
+                    callback
+            ));
         } catch (JSONException exception) {
             callback.onError(exception);
         }
@@ -53,8 +138,104 @@ class CreatorApiClient implements CreatorBackendDataSource {
     @Override
     public void requestGeneration(String bookId, RepositoryCallback<Void> callback) {
         String encodedBookId = encodePathSegment(bookId);
-        withToken(callback, token -> post(
+        withToken(callback, token -> sendJson(
+                "POST",
                 "/api/v1/audiobooks/" + encodedBookId + "/generation-jobs",
+                token,
+                "{}",
+                new RepositoryCallback<String>() {
+                    @Override
+                    public void onSuccess(String data) {
+                        callback.onSuccess(null);
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        callback.onError(exception);
+                    }
+                }
+        ));
+    }
+
+    @Override
+    public void requestChapterGeneration(String bookId, String chapterId, RepositoryCallback<Void> callback) {
+        String encodedBookId = encodePathSegment(bookId);
+        String encodedChapterId = encodePathSegment(chapterId);
+        withToken(callback, token -> sendJsonForChapter(
+                "POST",
+                "/api/v1/audiobooks/" + encodedBookId + "/chapters/" + encodedChapterId + "/generation-jobs",
+                token,
+                "{}",
+                new RepositoryCallback<String>() {
+                    @Override
+                    public void onSuccess(String data) {
+                        callback.onSuccess(null);
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        callback.onError(exception);
+                    }
+                }
+        ));
+    }
+
+    @Override
+    public void publishAudiobook(String bookId, RepositoryCallback<Void> callback) {
+        String encodedBookId = encodePathSegment(bookId);
+        withToken(callback, token -> sendJson(
+                "POST",
+                "/api/v1/audiobooks/" + encodedBookId + "/publications",
+                token,
+                "{}",
+                new RepositoryCallback<String>() {
+                    @Override
+                    public void onSuccess(String data) {
+                        callback.onSuccess(null);
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        callback.onError(exception);
+                    }
+                }
+        ));
+    }
+
+    @Override
+    public void setAudiobookVisibility(String bookId, boolean hiddenByCreator, RepositoryCallback<Void> callback) {
+        try {
+            String encodedBookId = encodePathSegment(bookId);
+            String body = CreatorApiContract.visibilityJson(hiddenByCreator);
+            withToken(callback, token -> sendJson(
+                    "PATCH",
+                    "/api/v1/audiobooks/" + encodedBookId + "/visibility",
+                    token,
+                    body,
+                    new RepositoryCallback<String>() {
+                        @Override
+                        public void onSuccess(String data) {
+                            callback.onSuccess(null);
+                        }
+
+                        @Override
+                        public void onError(Exception exception) {
+                            callback.onError(exception);
+                        }
+                    }
+            ));
+        } catch (JSONException exception) {
+            callback.onError(exception);
+        }
+    }
+
+    @Override
+    public void deleteChapter(String bookId, String chapterId, RepositoryCallback<Void> callback) {
+        String encodedBookId = encodePathSegment(bookId);
+        String encodedChapterId = encodePathSegment(chapterId);
+        withToken(callback, token -> sendJsonForChapter(
+                "DELETE",
+                "/api/v1/audiobooks/" + encodedBookId + "/chapters/" + encodedChapterId,
                 token,
                 "{}",
                 new RepositoryCallback<String>() {
@@ -93,12 +274,12 @@ class CreatorApiClient implements CreatorBackendDataSource {
                 .addOnFailureListener(callback::onError);
     }
 
-    private void post(String path, String token, String body, RepositoryCallback<String> callback) {
+    private void sendJson(String method, String path, String token, String body, RepositoryCallback<String> callback) {
         executorService.execute(() -> {
             HttpURLConnection connection = null;
             try {
                 connection = (HttpURLConnection) new URL(baseUrl + path).openConnection();
-                connection.setRequestMethod("POST");
+                connection.setRequestMethod(method);
                 connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
                 connection.setReadTimeout(READ_TIMEOUT_MS);
                 connection.setDoOutput(true);
@@ -112,6 +293,81 @@ class CreatorApiClient implements CreatorBackendDataSource {
                 String responseBody = readResponseBody(connection, statusCode);
                 String bookId = CreatorApiContract.parseBookId(statusCode, responseBody);
                 postSuccess(callback, bookId);
+            } catch (Exception exception) {
+                postError(callback, exception);
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            }
+        });
+    }
+
+    private void sendJsonForChapter(String method, String path, String token, String body, RepositoryCallback<String> callback) {
+        executorService.execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                connection = (HttpURLConnection) new URL(baseUrl + path).openConnection();
+                connection.setRequestMethod(method);
+                connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
+                connection.setReadTimeout(READ_TIMEOUT_MS);
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Authorization", "Bearer " + token);
+                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                byte[] requestBody = body.getBytes(StandardCharsets.UTF_8);
+                try (OutputStream outputStream = connection.getOutputStream()) {
+                    outputStream.write(requestBody);
+                }
+                int statusCode = connection.getResponseCode();
+                String responseBody = readResponseBody(connection, statusCode);
+                String chapterId = CreatorApiContract.parseChapterId(statusCode, responseBody);
+                postSuccess(callback, chapterId);
+            } catch (Exception exception) {
+                postError(callback, exception);
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            }
+        });
+    }
+
+    private void getEditableDraft(String path, String token, RepositoryCallback<EditableAudiobookDraft> callback) {
+        executorService.execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                connection = (HttpURLConnection) new URL(baseUrl + path).openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
+                connection.setReadTimeout(READ_TIMEOUT_MS);
+                connection.setRequestProperty("Authorization", "Bearer " + token);
+                int statusCode = connection.getResponseCode();
+                String responseBody = readResponseBody(connection, statusCode);
+                EditableAudiobookDraft draft = CreatorApiContract.parseEditableDraft(statusCode, responseBody);
+                postSuccess(callback, draft);
+            } catch (Exception exception) {
+                postError(callback, exception);
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            }
+        });
+    }
+
+    private void getEditableChapterDraft(String path, String token, RepositoryCallback<EditableChapterDraft> callback) {
+        executorService.execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                connection = (HttpURLConnection) new URL(baseUrl + path).openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
+                connection.setReadTimeout(READ_TIMEOUT_MS);
+                connection.setRequestProperty("Authorization", "Bearer " + token);
+                int statusCode = connection.getResponseCode();
+                String responseBody = readResponseBody(connection, statusCode);
+                EditableChapterDraft draft = CreatorApiContract.parseEditableChapterDraft(statusCode, responseBody);
+                postSuccess(callback, draft);
             } catch (Exception exception) {
                 postError(callback, exception);
             } finally {
@@ -137,7 +393,7 @@ class CreatorApiClient implements CreatorBackendDataSource {
         }
     }
 
-    private void postSuccess(RepositoryCallback<String> callback, String value) {
+    private <T> void postSuccess(RepositoryCallback<T> callback, T value) {
         mainHandler.post(() -> callback.onSuccess(value));
     }
 
