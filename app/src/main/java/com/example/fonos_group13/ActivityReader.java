@@ -57,6 +57,7 @@ public class ActivityReader extends AppCompatActivity {
     public static final String EXTRA_CHAPTER_ID = "chapter_id";
     public static final String EXTRA_AUTO_PLAY = "auto_play";
     public static final String EXTRA_CREATOR_PREVIEW = "creator_review_preview";
+    public static final String EXTRA_SINGLE_CHAPTER_PREVIEW = "single_chapter_preview";
     public static final String METADATA_BOOK_ID = "metadata_book_id";
     public static final String METADATA_CHAPTER_ID = "metadata_chapter_id";
     public static final String METADATA_CREATOR_PREVIEW = "metadata_creator_review_preview";
@@ -112,6 +113,7 @@ public class ActivityReader extends AppCompatActivity {
     private String requestedChapterId;
     private boolean requestedAutoPlay;
     private boolean requestedCreatorPreview;
+    private boolean requestedSingleChapterPreview;
     private boolean creatorPreviewActive;
     private boolean userSeeking;
     private boolean downloadingAudio;
@@ -297,16 +299,20 @@ public class ActivityReader extends AppCompatActivity {
         String chapterId = intent == null ? null : trimToNull(intent.getStringExtra(EXTRA_CHAPTER_ID));
         boolean autoPlay = intent != null && intent.getBooleanExtra(EXTRA_AUTO_PLAY, false);
         boolean creatorPreview = intent != null && intent.getBooleanExtra(EXTRA_CREATOR_PREVIEW, false);
+        boolean singleChapterPreview = intent != null
+                && intent.getBooleanExtra(EXTRA_SINGLE_CHAPTER_PREVIEW, false);
 
         if (currentBook != null
                 && currentChapter != null
                 && bookId.equals(currentBook.getId())
                 && (chapterId == null || chapterId.equals(currentChapter.getId()))
-                && creatorPreview == creatorPreviewActive) {
+                && creatorPreview == creatorPreviewActive
+                && singleChapterPreview == requestedSingleChapterPreview) {
             requestedBookId = bookId;
             requestedChapterId = currentChapter.getId();
             requestedAutoPlay = autoPlay;
             requestedCreatorPreview = creatorPreview;
+            requestedSingleChapterPreview = singleChapterPreview;
             refreshCurrentChapter();
             return;
         }
@@ -315,7 +321,8 @@ public class ActivityReader extends AppCompatActivity {
                 && bookId.equals(requestedBookId)
                 && ((chapterId == null && requestedChapterId == null)
                 || (chapterId != null && chapterId.equals(requestedChapterId)))
-                && creatorPreview == requestedCreatorPreview) {
+                && creatorPreview == requestedCreatorPreview
+                && singleChapterPreview == requestedSingleChapterPreview) {
             return;
         }
 
@@ -323,6 +330,7 @@ public class ActivityReader extends AppCompatActivity {
         requestedChapterId = chapterId;
         requestedAutoPlay = autoPlay;
         requestedCreatorPreview = creatorPreview;
+        requestedSingleChapterPreview = singleChapterPreview;
         loadBookAndChapter(bookId, chapterId);
     }
 
@@ -386,6 +394,10 @@ public class ActivityReader extends AppCompatActivity {
                     Toast.makeText(ActivityReader.this, "Could not load this chapter.", Toast.LENGTH_LONG).show();
                     finish();
                     return;
+                }
+                if (requestedSingleChapterPreview) {
+                    currentChapters.clear();
+                    currentChapters.add(selectedChapter);
                 }
                 bindBook(book, selectedChapter);
                 prepareAudio(book, selectedChapter, false, C.TIME_UNSET, requestedAutoPlay);

@@ -98,6 +98,36 @@ public class MyUploadsLiveNotificationConfigurationTest {
     }
 
     @Test
+    public void chapterPreviewOpensSingleChapterReaderInsteadOfDetailList() throws Exception {
+        String activity = readFile("src/main/java/com/example/fonos_group13/MyUploadsActivity.java");
+        String reader = readFile("src/main/java/com/example/fonos_group13/ActivityReader.java");
+        String chapterActions = sectionBetween(
+                activity,
+                "private View createChapterActions",
+                "private View createChapterOverflowButton"
+        );
+        String previewHelper = sectionBetween(
+                activity,
+                "private void openChapterPreview",
+                "private void openDraftEditor"
+        );
+
+        assertTrue(chapterActions.contains("\"Preview\""));
+        assertTrue(chapterActions.contains("openChapterPreview(upload, chapter)"));
+        assertFalse(chapterActions.contains("openBookDetail(upload, true)"));
+        assertFalse(chapterActions.contains("BookDetailActivity.class"));
+        assertTrue(previewHelper.contains("new Intent(this, ActivityReader.class)"));
+        assertTrue(previewHelper.contains("ActivityReader.EXTRA_BOOK_ID"));
+        assertTrue(previewHelper.contains("upload.getId()"));
+        assertTrue(previewHelper.contains("ActivityReader.EXTRA_CHAPTER_ID"));
+        assertTrue(previewHelper.contains("chapter.getId()"));
+        assertTrue(previewHelper.contains("ActivityReader.EXTRA_SINGLE_CHAPTER_PREVIEW"));
+        assertTrue(reader.contains("EXTRA_SINGLE_CHAPTER_PREVIEW"));
+        assertTrue(reader.contains("if (requestedSingleChapterPreview)"));
+        assertTrue(reader.contains("currentChapters.add(selectedChapter);"));
+    }
+
+    @Test
     public void uploadStatusChipsUseDisplayLabels() throws Exception {
         String activity = readFile("src/main/java/com/example/fonos_group13/MyUploadsActivity.java");
         String status = readFile("src/main/java/com/example/fonos_group13/model/AudiobookGenerationStatus.java");
@@ -176,5 +206,13 @@ public class MyUploadsLiveNotificationConfigurationTest {
 
     private String readFile(String path) throws Exception {
         return new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.UTF_8);
+    }
+
+    private String sectionBetween(String source, String startMarker, String endMarker) {
+        int start = source.indexOf(startMarker);
+        assertTrue("Missing start marker: " + startMarker, start >= 0);
+        int end = source.indexOf(endMarker, start + startMarker.length());
+        assertTrue("Missing end marker: " + endMarker, end > start);
+        return source.substring(start, end);
     }
 }

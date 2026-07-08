@@ -592,7 +592,7 @@ public class MyUploadsActivity extends AppCompatActivity {
                     "Preview",
                     getColor(R.color.accent),
                     getColor(R.color.accent_soft),
-                    v -> openBookDetail(upload, true)
+                    v -> openChapterPreview(upload, chapter)
             ));
         }
 
@@ -1064,6 +1064,19 @@ public class MyUploadsActivity extends AppCompatActivity {
         Intent intent = new Intent(this, BookDetailActivity.class);
         intent.putExtra(BookDetailActivity.EXTRA_BOOK_ID, upload.getId());
         intent.putExtra(BookDetailActivity.EXTRA_CREATOR_PREVIEW, creatorPreview);
+        startActivity(intent);
+    }
+
+    private void openChapterPreview(UserGeneratedAudiobook upload, UserGeneratedChapter chapter) {
+        if (upload == null || chapter == null) {
+            return;
+        }
+        Intent intent = new Intent(this, ActivityReader.class);
+        intent.putExtra(ActivityReader.EXTRA_BOOK_ID, upload.getId());
+        intent.putExtra(ActivityReader.EXTRA_CHAPTER_ID, chapter.getId());
+        intent.putExtra(ActivityReader.EXTRA_AUTO_PLAY, true);
+        intent.putExtra(ActivityReader.EXTRA_CREATOR_PREVIEW, true);
+        intent.putExtra(ActivityReader.EXTRA_SINGLE_CHAPTER_PREVIEW, true);
         startActivity(intent);
     }
 
