@@ -64,6 +64,7 @@ public class MyUploadsActivity extends AppCompatActivity {
     private String loadingChapterKey;
     private String visibilityBookId;
     private String deletingChapterKey;
+    private String publishingBookId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -470,7 +471,7 @@ public class MyUploadsActivity extends AppCompatActivity {
 
         TextView heading = new TextView(this);
         heading.setText("Chapters");
-        heading.setTextColor(getColor(R.color.text_dark));
+        heading.setTextColor(getColor(R.color.text_main));
         heading.setTextSize(15);
         heading.setTypeface(null, Typeface.BOLD);
         heading.setIncludeFontPadding(false);
@@ -480,14 +481,12 @@ public class MyUploadsActivity extends AppCompatActivity {
                 1f
         ));
 
-        if (chapters != null) {
-            TextView count = new TextView(this);
-            count.setText(formatChapterProgress(chapters));
-            count.setTextColor(getColor(R.color.text_muted));
-            count.setTextSize(12);
-            count.setIncludeFontPadding(false);
-            headingRow.addView(count);
-        }
+        LinearLayout.LayoutParams addChapterParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                dp(36)
+        );
+        addChapterParams.setMargins(dp(12), 0, 0, 0);
+        headingRow.addView(createAddChapterButton(upload), addChapterParams);
         panel.addView(headingRow);
 
         if (chapters == null) {
@@ -496,7 +495,6 @@ public class MyUploadsActivity extends AppCompatActivity {
         }
         if (chapters.isEmpty()) {
             panel.addView(createMutedText("No active chapters."));
-            panel.addView(createAddChapterButton(upload), fullWidthButtonParams(dp(8), dp(44)));
             return panel;
         }
 
@@ -525,7 +523,7 @@ public class MyUploadsActivity extends AppCompatActivity {
 
         TextView title = new TextView(this);
         title.setText(chapter.getTitle());
-        title.setTextColor(getColor(R.color.text_dark));
+        title.setTextColor(getColor(R.color.text_main));
         title.setTextSize(14);
         title.setTypeface(null, Typeface.BOLD);
         title.setMaxLines(2);
@@ -588,11 +586,15 @@ public class MyUploadsActivity extends AppCompatActivity {
             ));
         }
         if (chapter.canPreview()) {
+            buttons.add(createChapterPreviewButton(upload, chapter));
+        }
+        if (canPublishChapter(chapter)) {
+            boolean loading = upload.getId().equals(publishingBookId);
             buttons.add(createSmallActionButton(
-                    "Preview",
+                    loading ? "Publishing..." : "Publish",
+                    getColor(R.color.white),
                     getColor(R.color.accent),
-                    getColor(R.color.accent_soft),
-                    v -> openChapterPreview(upload, chapter)
+                    v -> publishUploadUpdate(upload)
             ));
         }
 
@@ -608,13 +610,34 @@ public class MyUploadsActivity extends AppCompatActivity {
             actions.addView(buttons.get(i), chapterActionButtonParams(i > 0, buttons.size()));
         }
         if (hasOverflow) {
-            if (buttons.isEmpty()) {
-                View spacer = new View(this);
-                actions.addView(spacer, new LinearLayout.LayoutParams(0, dp(40), 1f));
-            }
-            actions.addView(createChapterOverflowButton(upload, chapter), overflowButtonParams(!buttons.isEmpty()));
+            View spacer = new View(this);
+            actions.addView(spacer, new LinearLayout.LayoutParams(0, dp(40), 1f));
+            actions.addView(createChapterOverflowButton(upload, chapter), overflowButtonParams(false));
         }
         return actions;
+    }
+
+    private MaterialButton createChapterPreviewButton(
+            UserGeneratedAudiobook upload,
+            UserGeneratedChapter chapter
+    ) {
+        MaterialButton button = createOutlineActionButton(
+                "Preview",
+                13,
+                12,
+                v -> openChapterPreview(upload, chapter)
+        );
+        button.setIconResource(R.drawable.ic_play);
+        button.setIconTint(ColorStateList.valueOf(getColor(R.color.accent)));
+        button.setIconSize(dp(16));
+        button.setIconPadding(dp(4));
+        return button;
+    }
+
+    private boolean canPublishChapter(UserGeneratedChapter chapter) {
+        return chapter != null
+                && chapter.getGenerationStatus() == AudiobookGenerationStatus.READY_FOR_REVIEW
+                && chapter.canPreview();
     }
 
     private View createChapterOverflowButton(UserGeneratedAudiobook upload, UserGeneratedChapter chapter) {
@@ -677,7 +700,7 @@ public class MyUploadsActivity extends AppCompatActivity {
         appendCount(parts, statusCount(chapters, AudiobookGenerationStatus.PENDING_GENERATION), "pending");
         appendCount(parts, statusCount(chapters, AudiobookGenerationStatus.DRAFT), "draft");
         appendCount(parts, statusCount(chapters, AudiobookGenerationStatus.FAILED), "failed");
-        return TextUtils.join(" - ", parts);
+        return TextUtils.join(" \u00B7 ", parts);
     }
 
     private void appendCount(List<String> parts, int count, String label) {
@@ -771,29 +794,17 @@ public class MyUploadsActivity extends AppCompatActivity {
             return button;
         }
 
-        if (upload.getGenerationStatus() == AudiobookGenerationStatus.READY_FOR_REVIEW) {
+        if (upload.getGenerationStatus() == AudiobookGenerationStatus.READY_FOR_REVIEW
+                && !upload.isPublished()) {
             MaterialButton button = new MaterialButton(this);
             button.setAllCaps(false);
-            button.setText(upload.isPublished() ? "Review Updates" : "Preview Audiobook");
+            button.setText("Preview Audiobook");
             button.setTextColor(getColor(R.color.accent));
             button.setTextSize(15);
             button.setEnabled(!requestInProgress());
             button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.accent_soft)));
             configureActionButton(button, 15, 14);
             button.setOnClickListener(v -> openBookDetail(upload, true));
-            return button;
-        }
-
-        if (upload.getGenerationStatus() == AudiobookGenerationStatus.PUBLISHED) {
-            MaterialButton button = new MaterialButton(this);
-            button.setAllCaps(false);
-            button.setText("Add Chapter");
-            button.setTextColor(getColor(R.color.accent));
-            button.setTextSize(15);
-            button.setEnabled(!requestInProgress());
-            button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.accent_soft)));
-            configureActionButton(button, 15, 14);
-            button.setOnClickListener(v -> openAddChapter(upload));
             return button;
         }
 
@@ -821,15 +832,31 @@ public class MyUploadsActivity extends AppCompatActivity {
     }
 
     private MaterialButton createAddChapterButton(UserGeneratedAudiobook upload) {
+        return createOutlineActionButton(
+                getString(R.string.my_uploads_add_chapter),
+                13,
+                14,
+                v -> openAddChapter(upload)
+        );
+    }
+
+    private MaterialButton createOutlineActionButton(
+            String text,
+            int textSize,
+            int cornerRadius,
+            View.OnClickListener listener
+    ) {
         MaterialButton button = new MaterialButton(this);
         button.setAllCaps(false);
-        button.setText("Add Chapter");
+        button.setText(text);
         button.setTextColor(getColor(R.color.accent));
-        button.setTextSize(14);
         button.setEnabled(!requestInProgress());
-        button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.accent_soft)));
-        configureActionButton(button, 14, 14);
-        button.setOnClickListener(v -> openAddChapter(upload));
+        button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.surface)));
+        button.setStrokeColor(ColorStateList.valueOf(getColor(R.color.stroke_soft)));
+        button.setStrokeWidth(dp(1));
+        button.setPadding(dp(12), 0, dp(12), 0);
+        configureActionButton(button, textSize, cornerRadius);
+        button.setOnClickListener(listener);
         return button;
     }
 
@@ -878,9 +905,8 @@ public class MyUploadsActivity extends AppCompatActivity {
 
     private LinearLayout.LayoutParams chapterActionButtonParams(boolean hasStartMargin, int visibleActionCount) {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                0,
-                dp(40),
-                visibleActionCount == 1 ? 1.2f : 1f
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                dp(40)
         );
         if (hasStartMargin) {
             params.setMargins(dp(8), 0, 0, 0);
@@ -893,15 +919,6 @@ public class MyUploadsActivity extends AppCompatActivity {
         if (hasStartMargin) {
             params.setMargins(dp(8), 0, 0, 0);
         }
-        return params;
-    }
-
-    private LinearLayout.LayoutParams fullWidthButtonParams(int topMargin, int height) {
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                height
-        );
-        params.setMargins(0, topMargin, 0, 0);
         return params;
     }
 
@@ -976,6 +993,33 @@ public class MyUploadsActivity extends AppCompatActivity {
             @Override
             public void onError(Exception exception) {
                 visibilityBookId = null;
+                Toast.makeText(
+                        MyUploadsActivity.this,
+                        AuthRepository.friendlyError(exception),
+                        Toast.LENGTH_LONG
+                ).show();
+                renderUploads(currentUploads);
+            }
+        });
+    }
+
+    private void publishUploadUpdate(UserGeneratedAudiobook upload) {
+        if (upload == null || requestInProgress()) {
+            return;
+        }
+        publishingBookId = upload.getId();
+        renderUploads(currentUploads);
+        repository.publishAudiobook(upload.getId(), new RepositoryCallback<Void>() {
+            @Override
+            public void onSuccess(Void data) {
+                publishingBookId = null;
+                Toast.makeText(MyUploadsActivity.this, "Updates published.", Toast.LENGTH_SHORT).show();
+                renderUploads(currentUploads);
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                publishingBookId = null;
                 Toast.makeText(
                         MyUploadsActivity.this,
                         AuthRepository.friendlyError(exception),
@@ -1122,11 +1166,16 @@ public class MyUploadsActivity extends AppCompatActivity {
         return deletingChapterKey != null && !deletingChapterKey.trim().isEmpty();
     }
 
+    private boolean publishingBookIdActive() {
+        return publishingBookId != null && !publishingBookId.trim().isEmpty();
+    }
+
     private boolean requestInProgress() {
         return loadingBookIdActive()
                 || loadingChapterKeyActive()
                 || visibilityBookIdActive()
-                || deletingChapterKeyActive();
+                || deletingChapterKeyActive()
+                || publishingBookIdActive();
     }
 
     private String chapterKey(String bookId, String chapterId) {

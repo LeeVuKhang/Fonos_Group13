@@ -128,6 +128,79 @@ public class MyUploadsLiveNotificationConfigurationTest {
     }
 
     @Test
+    public void myUploadsPlacesAddChapterInChapterHeaderAndUsesLighterChapterUi() throws Exception {
+        String activity = readFile("src/main/java/com/example/fonos_group13/MyUploadsActivity.java");
+        String chapterRow = readFile("src/main/res/drawable/bg_upload_chapter_row.xml");
+        String strings = readFile("src/main/res/values/strings.xml");
+        String chapterPanel = sectionBetween(
+                activity,
+                "private View createChapterPanel",
+                "private View createChapterRow"
+        );
+        String previewButton = sectionBetween(
+                activity,
+                "private MaterialButton createChapterPreviewButton",
+                "private View createChapterOverflowButton"
+        );
+        String addChapterButton = sectionBetween(
+                activity,
+                "private MaterialButton createAddChapterButton",
+                "private MaterialButton createOutlineActionButton"
+        );
+
+        assertTrue(chapterPanel.contains("headingRow.addView(createAddChapterButton(upload), addChapterParams)"));
+        assertTrue(chapterPanel.contains("formatChapterSummary(chapters)"));
+        assertFalse(chapterPanel.contains("fullWidthButtonParams"));
+        assertTrue(addChapterButton.contains("R.string.my_uploads_add_chapter"));
+        assertTrue(addChapterButton.contains("openAddChapter(upload)"));
+        assertTrue(previewButton.contains("\"Preview\""));
+        assertTrue(previewButton.contains("R.drawable.ic_play"));
+        assertTrue(previewButton.contains("createOutlineActionButton"));
+        assertTrue(chapterRow.contains("@color/surface_card") || chapterRow.contains("@color/surface"));
+        assertTrue(chapterRow.contains("@color/stroke_soft"));
+        assertFalse(chapterRow.contains("@color/surface_panel"));
+        assertTrue(strings.contains("name=\"my_uploads_add_chapter\""));
+    }
+
+    @Test
+    public void myUploadsPublishesReadyChapterUpdatesInline() throws Exception {
+        String activity = readFile("src/main/java/com/example/fonos_group13/MyUploadsActivity.java");
+        String chapterActions = sectionBetween(
+                activity,
+                "private View createChapterActions",
+                "private MaterialButton createChapterPreviewButton"
+        );
+        String publishGate = sectionBetween(
+                activity,
+                "private boolean canPublishChapter",
+                "private View createChapterOverflowButton"
+        );
+        String publishHelper = sectionBetween(
+                activity,
+                "private void publishUploadUpdate",
+                "private void requestChapterGeneration"
+        );
+        String primaryAction = sectionBetween(
+                activity,
+                "private View createPrimaryActionButton",
+                "private View createVisibilityButton"
+        );
+
+        assertTrue(chapterActions.contains("canPublishChapter(chapter)"));
+        assertTrue(chapterActions.contains("\"Publish\""));
+        assertTrue(chapterActions.contains("\"Publishing...\""));
+        assertTrue(chapterActions.contains("publishUploadUpdate(upload)"));
+        assertTrue(publishGate.contains("AudiobookGenerationStatus.READY_FOR_REVIEW"));
+        assertTrue(publishGate.contains("chapter.canPreview()"));
+        assertTrue(publishHelper.contains("publishingBookId = upload.getId()"));
+        assertTrue(publishHelper.contains("repository.publishAudiobook(upload.getId()"));
+        assertTrue(publishHelper.contains("\"Updates published.\""));
+        assertFalse(primaryAction.contains("\"Review Updates\""));
+        assertTrue(primaryAction.contains("\"Preview Audiobook\""));
+        assertTrue(activity.contains("publishingBookIdActive()"));
+    }
+
+    @Test
     public void uploadStatusChipsUseDisplayLabels() throws Exception {
         String activity = readFile("src/main/java/com/example/fonos_group13/MyUploadsActivity.java");
         String status = readFile("src/main/java/com/example/fonos_group13/model/AudiobookGenerationStatus.java");
@@ -160,7 +233,6 @@ public class MyUploadsLiveNotificationConfigurationTest {
         String activity = readFile("src/main/java/com/example/fonos_group13/MyUploadsActivity.java");
 
         assertTrue(activity.contains("Preview Audiobook"));
-        assertTrue(activity.contains("Review Updates"));
         assertTrue(activity.contains("Make Public"));
         assertTrue(activity.contains("Make Private"));
         assertTrue(activity.contains("formatVisibilityLabel"));
@@ -168,6 +240,7 @@ public class MyUploadsLiveNotificationConfigurationTest {
         assertTrue(activity.contains("formatChapterProgress"));
         assertTrue(activity.contains("formatChapterSummary"));
         assertTrue(activity.contains("ic_more_vert"));
+        assertFalse(activity.contains("Review Updates"));
         assertFalse(activity.contains("Preview Updates"));
         assertFalse(activity.contains("Show Publicly"));
         assertFalse(activity.contains("Hidden from public"));

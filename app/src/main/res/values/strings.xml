@@ -24,6 +24,7 @@
     <string name="profile">Profile</string>
     <string name="subtitle_handpicked">Handpicked selections based on your taste</string>
     <string name="book_content_sample">Sample content</string>
+    <string name="my_uploads_add_chapter">+ Add Chapter</string>
     <string name="playback_notification_channel_name">Audiobook playback</string>
     <string name="generation_notification_channel_name">Audiobook generation</string>
 </resources>
