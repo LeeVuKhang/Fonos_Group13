@@ -9,8 +9,9 @@ published audiobooks, search by title or author, open a book-detail playlist,
 choose chapters, play chapter audio, download chapter MP3 files for local
 playback, manage downloaded audio, choose a default playback speed, track
 listening progress, review or edit basic profile information, create
-user-generated audiobook drafts, view My Uploads, request generation, and
-preview ready-for-review uploads as the creator.
+user-generated audiobook drafts, manage chapters in My Uploads, request or
+retry AWS Polly generation, preview ready audio as the creator, publish
+approved uploads, and toggle published uploads between Public and Private.
 
 The core problem addressed by the app is the fragmentation of reading,
 listening, and progress tracking. Instead of requiring separate tools for book
@@ -35,10 +36,16 @@ experience:
   reader chapter from the playback notification.
 - Internal app storage supports downloaded chapter MP3 files.
 - SharedPreferences stores the user's default playback speed.
+- The sibling `Fonos_Audiobook_Backend` service owns trusted user-generated
+  audiobook writes, AWS Polly generation, S3 output metadata, publication, and
+  visibility changes.
+- Firebase Cloud Messaging supports best-effort generation completion or
+  failure notifications for My Uploads.
 - XML layouts provide a familiar Android interface for discovery, search,
   library, profile, audio preferences, login, registration, creator upload,
-  My Uploads, book detail, and reader screens.
-- User-generated audiobook backend implementation details https://github.com/LeeVuKhang/Fonos_Backend.
+  chapter management, My Uploads, book detail, and reader screens.
+- User-generated audiobook backend implementation details are documented in
+  the sibling `Fonos_Audiobook_Backend/README.md`.
 
 ## 2. Scope of the Application
 
@@ -50,8 +57,10 @@ experience:
 - Featured and regular audiobook presentation on the Discover screen.
 - Search by audiobook title or author.
 - Book detail playlist with cover art, summary actions, and chapter rows.
-- Library filtering by Listening, Downloaded, and Finished using chapter
-  progress and downloaded chapter state.
+- Saving and unsaving published audiobooks into the authenticated user's
+  library.
+- Library filtering over saved audiobooks by Listening, Downloaded, and
+  Finished using chapter progress and downloaded chapter state.
 - Profile display-name editing.
 - Reader screen with selected chapter content, duration, seek bar,
   previous/next chapter navigation, play/pause, playback speed, and chapter
@@ -69,10 +78,18 @@ experience:
 - Saving and restoring user listening progress per chapter.
 - Profile display with email, display name fallback, completed book count, and
   listened-hours statistic.
-- Creating user-generated audiobook drafts from one chapter of text.
-- Viewing My Uploads with live generation states, retry/view actions, and
-  generation completion/failure notifications.
-- Creator-only preview for ready-for-review unpublished uploads.
+- Creating and editing user-generated audiobook drafts from text.
+- Adding and editing chapter drafts for user-generated audiobooks.
+- Requesting and retrying generation for full audiobook drafts and individual
+  chapter drafts through the authenticated backend.
+- Viewing My Uploads with live book and chapter generation states, retry,
+  preview, publish, visibility, delete, and cancel actions.
+- Creator-only preview for ready-for-review unpublished uploads and individual
+  ready chapters.
+- Publishing ready-for-review uploads and making published uploads Public or
+  Private.
+- Generation completion/failure notifications through FCM when permissions and
+  device token registration are available.
 
 ### Out of Scope
 
@@ -90,8 +107,6 @@ shipped feature set:
 
 ### Planned Future Capabilities
 
-- A separate Node.js + Express backend for user-generated audiobook generation,
-  with AWS Polly text-to-speech and generated MP3 files stored in S3.
 - Book-level ratings and short text reviews for published audiobooks.
 - A future moderation workflow for user-created books before they become
   visible through `published=true`.
@@ -104,6 +119,9 @@ shipped feature set:
 - Downloaded chapter MP3 files are stored only on the device where they were
   downloaded.
 - Audio preference values are local to the device.
+- User-generated audiobook generation requires the sibling
+  `Fonos_Audiobook_Backend` service plus Firebase Admin credentials, AWS
+  credentials, and an S3 bucket configured for the demo playback policy.
 - A chapter is considered completed when the saved playback position reaches at
   least 95 percent of the chapter duration; a book is finished when all
   published chapters are completed.
@@ -118,9 +136,10 @@ shipped feature set:
 - Minimum SDK: 24.
 - Target SDK: 36.
 - Compile SDK: Android release 36 with minor API level 1.
-- Gradle Android plugin: 9.2.0.
+- Gradle Android plugin: 9.2.1.
 - Java compatibility: Java 11.
-- Network dependency: Firebase and remote MP3 URLs require internet access.
+- Network dependency: Firebase, the creator backend, FCM, and remote MP3 URLs
+  require internet access.
 - Playback lifecycle: `PlaybackService` owns ExoPlayer and the `MediaSession`;
   `ActivityReader` controls it through a Media3 `MediaController`.
 
@@ -136,7 +155,7 @@ shipped feature set:
 | FR-06 | Display published books | The app shall load books where `published` is true from Firestore and sort them by `order`. | High | `DiscoverActivity`, `BookRepository` |
 | FR-07 | Open book detail | The app shall open a book-detail playlist for a selected book using the `book_id` intent extra. | High | Discover, Search, Library, `BookDetailActivity` |
 | FR-08 | Search catalog | The app shall filter loaded books by title or author as the user types. | Medium | `SearchActivity` |
-| FR-09 | Filter library | The app shall filter library rows by listening, downloaded, and finished status using chapter-level progress and downloads. | Medium | `LibraryActivity`, `ProgressRepository`, `DownloadedAudioRepository` |
+| FR-09 | Filter saved library | The app shall load saved audiobook IDs from `users/{uid}/savedBooks`, intersect them with currently published and visible books, and filter the result by listening, downloaded, and finished status using chapter-level progress and downloads. | Medium | `LibraryActivity`, `SavedBookRepository`, `ProgressRepository`, `DownloadedAudioRepository` |
 | FR-10 | Play chapter audio | The app shall resolve playable chapter audio sources, build a Media3 chapter playlist, and play it through ExoPlayer owned by `PlaybackService`. | High | `ActivityReader`, `PlaybackService`, `AudioSourceResolver` |
 | FR-11 | Control playback | The app shall support play/pause, seek bar control, previous/next chapter navigation, speed cycling, default speed preference, and notification media controls. | High | `ActivityReader`, `AudioPreferencesActivity`, `PlaybackService` |
 | FR-12 | Save progress | The app shall save current chapter playback position, duration, completion state, and update timestamp. | High | `ProgressRepository`, Firestore |
@@ -147,13 +166,17 @@ shipped feature set:
 | FR-17 | Display profile stats | The app shall display completed books and approximate listened hours aggregated from chapter progress. | Medium | `ProfileActivity`, `ProgressRepository` |
 | FR-18 | Show empty/error states | The app shall show clear messages when books, search results, library rows, downloads, or audio sources are unavailable. | Medium | Discover, Search, Library, Reader, Audio Preferences |
 | FR-19 | Continue playback in background | The app shall keep audio playing when the user leaves `ActivityReader`, expose system media controls, and reopen the active reader chapter from the media notification when available. | High | `PlaybackService`, Android Manifest |
-| FR-20 | Create user-generated audiobook drafts | The app shall let signed-in users enter title, author, optional cover URL, chapter text, and voice choice for a user-generated audiobook. | Medium | CreateAudiobookActivity, CreatorAudiobookRepository |
-| FR-21 | View creator uploads | The app shall list the signed-in user's generated audiobook uploads and show draft, pending, failed, ready-for-review, and published states. | Medium | MyUploadsActivity, CreatorAudiobookRepository |
-| FR-22 | Creator-only preview | The app shall allow the creator to open and play ready-for-review unpublished audiobooks without exposing them in Discover/Search. | High | MyUploadsActivity, BookRepository, BookDetailActivity, ActivityReader |
+| FR-20 | Save published audiobooks | The app shall let signed-in users save or unsave a published audiobook from Book Detail and use saved records as the Library source. | Medium | `BookDetailActivity`, `LibraryActivity`, `SavedBookRepository` |
+| FR-21 | Create and edit user-generated audiobook drafts | The app shall let signed-in users enter or edit title, author, optional cover URL, first-chapter text, and Patrick/Ruth voice choice for a user-generated audiobook. | Medium | `CreateAudiobookActivity`, `CreatorAudiobookRepository`, creator backend |
+| FR-22 | Manage upload chapters | The app shall let creators add chapter drafts, edit draft chapters, request or retry chapter generation, preview ready chapters, and delete or cancel non-published chapters. | Medium | `ManageChapterActivity`, `MyUploadsActivity`, `CreatorAudiobookRepository` |
+| FR-23 | View creator uploads live | The app shall list the signed-in user's generated audiobook uploads and observe book and chapter changes in Firestore for `draft`, `pending_generation`, `failed`, `ready_for_review`, `published`, `rejected`, and `deleted` states. | Medium | `MyUploadsActivity`, `UserGeneratedAudiobook`, `UserGeneratedChapter` |
+| FR-24 | Creator-only preview and publish | The app shall allow the creator to open and play ready-for-review unpublished audiobooks, publish ready uploads, and keep unpublished content out of Discover/Search. | High | `MyUploadsActivity`, `BookRepository`, `BookDetailActivity`, `ActivityReader`, creator backend |
+| FR-25 | Manage creator visibility | The app shall let creators make a published user-generated audiobook private or public without deleting it from My Uploads. | Medium | `MyUploadsActivity`, `BookRepository`, creator backend |
+| FR-26 | Generation notifications | The app shall register FCM device tokens for signed-in creators and show generation completion/failure notifications that reopen My Uploads. | Medium | `GenerationNotificationSetup`, `GenerationNotificationMessagingService`, `UploadNotificationTokenRepository` |
 
-Backend Polly/S3 generation and book-level reviews remain outside the current
-Android-only MVP. The backend handoff is documented in
-[USER_GENERATED_AUDIOBOOK_BACKEND_HANDOFF.md](USER_GENERATED_AUDIOBOOK_BACKEND_HANDOFF.md).
+Book-level reviews remain outside the current Android client feature set. The
+backend handoff is documented in the workspace-level
+`USER_GENERATED_AUDIOBOOK_BACKEND_HANDOFF.md`.
 
 ## 4. Non-Functional Requirements
 
@@ -162,7 +185,7 @@ Android-only MVP. The backend handoff is documented in
 | Usability | The app should provide direct bottom navigation between Discover, Search, Library, and Profile. Form errors should appear close to the relevant input field. |
 | Performance | Firestore reads should load a small MVP catalog quickly. Audio playback runs in `PlaybackService`, while MP3 downloads already run on a background thread. |
 | Reliability | Missing Firebase configuration, missing book IDs, missing Firestore documents, empty search results, and missing audio URLs should produce controlled UI feedback instead of crashes. |
-| Security | Authentication should be handled by Firebase Auth. User chapter progress should be stored under the authenticated user's `users/{uid}` document. Downloaded files should remain in app-private internal storage. |
+| Security | Authentication should be handled by Firebase Auth. User chapter progress, saved-library entries, and upload notification tokens should be stored under the authenticated user's `users/{uid}` document. The creator backend derives ownership from the Firebase ID token and ignores client-supplied identity fields. Downloaded files should remain in app-private internal storage. |
 | Maintainability | Models, repositories, and UI resources should remain separated. Activities currently coordinate controller logic and should avoid growing unrelated responsibilities. |
 | Compatibility | The app targets modern Android while supporting minSdk 24. Edge-to-edge handling is implemented with AndroidX insets APIs. |
 | Offline Support | Downloaded chapter MP3 playback is supported for files already saved locally. Catalog and progress features still depend on Firebase connectivity. |
@@ -173,17 +196,22 @@ The project uses a practical Android MVC structure. The requested MVC pattern is
 mapped to the existing package layout as follows:
 
 - Model: `model/*` and `data/*`. These classes represent domain objects,
-  Firebase access, chapter progress persistence, and local audio download
+  Firebase access, saved-library metadata, chapter progress persistence,
+  creator backend access, upload notification tokens, and local audio download
   storage.
 - View: XML layouts and UI resources under `app/src/main/res`, including
   `activity_login.xml`, `activity_register.xml`, `activity_discover.xml`,
   `activity_search.xml`, `activity_library.xml`, `activity_profile.xml`,
   `activity_book_detail.xml`, `activity_audio_preferences.xml`,
-  `dialog_edit_display_name.xml`, and `activity_reader.xml`.
+  `activity_create_audiobook.xml`, `activity_manage_chapter.xml`,
+  `activity_my_uploads.xml`, `dialog_edit_display_name.xml`, and
+  `activity_reader.xml`.
 - Controller: Activities such as `LoginActivity`, `DiscoverActivity`,
   `LibraryActivity`, `BookDetailActivity`, `ProfileActivity`,
+  `CreateAudiobookActivity`, `ManageChapterActivity`, `MyUploadsActivity`,
   `AudioPreferencesActivity`, and `ActivityReader`. They bind XML views,
-  validate user input, handle clicks, call repositories, and update the UI.
+  validate user input, handle clicks, call repositories or backend clients,
+  and update the UI.
 
 MVC is appropriate for this app because the prototype is Activity-centered,
 uses XML views, and has a small number of workflows. The pattern is easy for a
@@ -192,18 +220,20 @@ without introducing ViewModel, UseCase, or dependency-injection layers.
 
 The main tradeoff is that Activities can become large because they handle both
 controller logic and Android lifecycle work. `BookDetailActivity` now
-coordinates the playlist-style chapter selection surface, while
-`ActivityReader` coordinates selected-chapter playback controls,
-MediaController connection, progress persistence, and chapter download actions.
-Playback ownership has been moved into `PlaybackService`, which keeps ExoPlayer
-outside the Activity lifecycle. For the MVP this is acceptable, but a larger
-version should consider moving reader and playlist UI state into a ViewModel or
-dedicated controller.
+coordinates the playlist-style chapter selection surface, creator preview
+publishing, and saved-library actions, while `ActivityReader` coordinates
+selected-chapter playback controls, MediaController connection, progress
+persistence, and chapter download actions. `MyUploadsActivity` owns a larger
+creator-management surface because it observes both upload documents and their
+chapter subcollections. Playback ownership has been moved into
+`PlaybackService`, which keeps ExoPlayer outside the Activity lifecycle. For
+the MVP this is acceptable, but a larger version should consider moving reader,
+playlist, and creator upload UI state into a ViewModel or dedicated controller.
 
 ```mermaid
 flowchart TB
     subgraph View["View Layer - XML and Resources"]
-        Layouts["XML layouts: login, register, discover, search, library, profile, book detail, audio preferences, reader"]
+        Layouts["XML layouts: login, register, discover, search, library, profile, book detail, create audiobook, manage chapter, My Uploads, audio preferences, reader"]
         Resources["Drawables, colors, themes, strings, icons"]
     end
 
@@ -211,16 +241,22 @@ flowchart TB
         Main["MainActivity"]
         AuthScreens["LoginActivity and RegisterActivity"]
         BrowseScreens["DiscoverActivity, SearchActivity, LibraryActivity, BookDetailActivity, ProfileActivity, AudioPreferencesActivity"]
+        CreatorScreens["CreateAudiobookActivity, ManageChapterActivity, MyUploadsActivity"]
         Reader["ActivityReader"]
     end
 
     subgraph Model["Model and Data Layer"]
         BookModel["Book and BookChapter"]
+        UploadModel["UserGeneratedAudiobook, UserGeneratedChapter, AudiobookGenerationStatus"]
         ProgressModel["UserProgress"]
         AuthRepo["AuthRepository"]
         BookRepo["BookRepository"]
+        SavedRepo["SavedBookRepository"]
         ProgressRepo["ProgressRepository"]
         DownloadRepo["DownloadedAudioRepository"]
+        CreatorRepo["CreatorAudiobookRepository"]
+        CreatorApi["CreatorApiClient and CreatorApiContract"]
+        NotificationTokenRepo["UploadNotificationTokenRepository"]
         AudioPrefs["AudioPreferences"]
         Resolver["AudioSourceResolver"]
         FirebaseConfig["FirebaseConfig"]
@@ -233,23 +269,31 @@ flowchart TB
         InternalFiles["Internal files/audiobooks/*__*.mp3"]
         LocalPrefs["SharedPreferences audio_preferences"]
         PlaybackService["PlaybackService MediaSessionService"]
+        CreatorBackend["Fonos_Audiobook_Backend Express API"]
+        FirebaseMessaging["Firebase Cloud Messaging"]
+        S3Audio["Generated S3 audioUrl"]
         ExoPlayer["Media3 ExoPlayer"]
         MediaNotification["Media notification and lock-screen controls"]
+        UploadNotification["Upload generation status notification"]
         Glide["Glide image loading"]
     end
 
     Layouts --> Main
     Layouts --> AuthScreens
     Layouts --> BrowseScreens
+    Layouts --> CreatorScreens
     Layouts --> Reader
     Resources --> Layouts
 
     Main --> AuthRepo
     AuthScreens --> AuthRepo
     BrowseScreens --> BookRepo
+    BrowseScreens --> SavedRepo
     BrowseScreens --> ProgressRepo
     BrowseScreens --> DownloadRepo
     BrowseScreens --> AudioPrefs
+    CreatorScreens --> CreatorRepo
+    CreatorScreens --> NotificationTokenRepo
     Reader --> BookRepo
     Reader --> ProgressRepo
     Reader --> DownloadRepo
@@ -260,12 +304,26 @@ flowchart TB
     AuthRepo --> FirebaseAuth
     AuthRepo --> Firestore
     BookRepo --> Firestore
+    SavedRepo --> FirebaseAuth
+    SavedRepo --> Firestore
+    CreatorRepo --> Firestore
+    CreatorRepo --> CreatorApi
+    CreatorApi --> FirebaseAuth
+    CreatorApi --> CreatorBackend
+    CreatorBackend --> Firestore
+    CreatorBackend --> S3Audio
+    CreatorBackend --> FirebaseMessaging
+    NotificationTokenRepo --> FirebaseAuth
+    NotificationTokenRepo --> Firestore
+    NotificationTokenRepo --> FirebaseMessaging
     ProgressRepo --> FirebaseAuth
     ProgressRepo --> Firestore
     PlaybackService --> ExoPlayer
     PlaybackService --> ProgressRepo
     PlaybackService --> MediaNotification
     MediaNotification --> Reader
+    FirebaseMessaging --> UploadNotification
+    UploadNotification --> CreatorScreens
     DownloadRepo --> RemoteAudio
     DownloadRepo --> InternalFiles
     AudioPrefs --> LocalPrefs
@@ -273,6 +331,7 @@ flowchart TB
     Resolver --> RemoteAudio
     Resolver --> InternalFiles
     BookRepo --> BookModel
+    CreatorRepo --> UploadModel
     ProgressRepo --> ProgressModel
     BookModel --> Glide
 ```
@@ -317,6 +376,9 @@ app/
       LibraryActivity.java
       BookDetailActivity.java
       ProfileActivity.java
+      CreateAudiobookActivity.java
+      ManageChapterActivity.java
+      MyUploadsActivity.java
       AudioPreferencesActivity.java
       ActivityReader.java
       audio/
@@ -326,20 +388,43 @@ app/
       data/
         AuthRepository.java
         BookRepository.java
+        BookAccessMode.java
+        BookAccessPolicy.java
+        CreatorAudiobookRepository.java
+        CreatorApiClient.java
+        CreatorApiContract.java
+        CreatorBackendDataSource.java
         ProgressRepository.java
         DownloadedAudioRepository.java
+        SavedBookRepository.java
+        UploadNotificationTokenRepository.java
         FirebaseConfig.java
         RepositoryCallback.java
       model/
+        AudiobookGenerationStatus.java
         Book.java
         BookChapter.java
+        CreateAudiobookDraftInput.java
+        CreateChapterDraftInput.java
+        CreatorVoiceOption.java
+        EditableAudiobookDraft.java
+        EditableChapterDraft.java
+        UserGeneratedAudiobook.java
+        UserGeneratedChapter.java
         UserProgress.java
+      notifications/
+        GenerationNotificationHelper.java
+        GenerationNotificationMessagingService.java
+        GenerationNotificationSetup.java
       ui/
         BookCoverLoader.java
     res/
       layout/
         activity_audio_preferences.xml
         activity_book_detail.xml
+        activity_create_audiobook.xml
+        activity_manage_chapter.xml
+        activity_my_uploads.xml
         dialog_edit_display_name.xml
       layout-land/
       layout-port/
@@ -353,9 +438,10 @@ app/
 | Folder/File | MVC Role | Purpose |
 |---|---|---|
 | `java/com/example/fonos_group13/*.java` | Controller | Activity classes handle screen lifecycle, event handling, navigation, validation, and repository calls. |
-| `model/` | Model | `Book`, `BookChapter`, and `UserProgress` represent application data. |
-| `data/` | Model/Data access | Repository classes communicate with Firebase, chapter subcollections, progress documents, and local files. |
+| `model/` | Model | `Book`, `BookChapter`, `UserProgress`, creator draft inputs, generated-upload models, and `AudiobookGenerationStatus` represent application data. |
+| `data/` | Model/Data access | Repository and backend client classes communicate with Firebase, chapter subcollections, saved-library documents, progress documents, notification token documents, local files, and the creator backend. |
 | `audio/` | Playback/helper | Stores audio preferences, resolves the correct playback URI from local downloads or remote URLs, and hosts the Media3 playback service. |
+| `notifications/` | Platform/helper | Registers FCM tokens, requests notification permission, receives generation messages, and opens My Uploads from status notifications. |
 | `ui/` | View helper | `BookCoverLoader` centralizes cover image loading logic. |
 | `res/layout*` | View | XML screen definitions for portrait, landscape, and localized variants. |
 | `res/drawable` | View | Icons, cards, progress backgrounds, buttons, and placeholders. |
@@ -370,6 +456,7 @@ unless the team is ready to update package references and Android declarations.
 ```mermaid
 flowchart LR
     User["Actor: Reader"]
+    Creator["Actor: Creator"]
 
     UC1(("Register account"))
     UC2(("Log in"))
@@ -384,6 +471,13 @@ flowchart LR
     UC11(("Manage audio preferences"))
     UC12(("View profile statistics"))
     UC13(("Log out"))
+    UC14(("Save or unsave audiobook"))
+    UC15(("Create or edit audiobook draft"))
+    UC16(("Add or edit chapter draft"))
+    UC17(("Request or retry generation"))
+    UC18(("Preview ready upload"))
+    UC19(("Publish upload"))
+    UC20(("Make published upload public or private"))
 
     User --> UC1
     User --> UC2
@@ -397,14 +491,27 @@ flowchart LR
     User --> UC11
     User --> UC12
     User --> UC13
+    User --> UC14
+    Creator --> UC15
+    Creator --> UC16
+    Creator --> UC17
+    Creator --> UC18
+    Creator --> UC19
+    Creator --> UC20
 
     UC3 -. "includes" .-> UC5
     UC4 -. "includes" .-> UC5
     UC9 -. "includes" .-> UC5
+    UC14 -. "feeds" .-> UC9
     UC6 -. "includes" .-> UC7
     UC8 -. "extends playback source" .-> UC6
     UC11 -. "sets default speed for" .-> UC6
     UC11 -. "deletes local files used by" .-> UC8
+    UC15 -. "opens" .-> UC17
+    UC16 -. "opens" .-> UC17
+    UC17 -. "updates" .-> UC18
+    UC18 -. "enables" .-> UC19
+    UC19 -. "enables" .-> UC20
 ```
 
 Use case explanations:
@@ -423,7 +530,10 @@ Use case explanations:
   timestamp.
 - Download chapter audio: the reader saves a selected chapter MP3 into
   app-private storage.
-- Filter library: the reader views listening, downloaded, or finished books.
+- Save or unsave audiobook: the reader adds or removes a published audiobook
+  from `users/{uid}/savedBooks`.
+- Filter library: the reader views saved books that are listening,
+  downloaded, or finished.
 - Edit display name: the reader updates the Firebase profile display name from
   Profile.
 - Manage audio preferences: the reader chooses the default playback speed and
@@ -431,6 +541,17 @@ Use case explanations:
 - View profile statistics: the reader checks email, completed count, and
   listened hours.
 - Log out: the reader ends the Firebase session and returns to Login.
+- Create or edit audiobook draft: the creator enters title, author, optional
+  cover URL, first-chapter text, and Patrick/Ruth voice choice.
+- Add or edit chapter draft: the creator manages follow-up chapter text and
+  voice choice for an existing upload.
+- Request or retry generation: the creator queues book-level or chapter-level
+  generation through the authenticated backend.
+- Preview ready upload: the creator opens a ready-for-review audiobook or
+  individual ready chapter without exposing it in Discover/Search.
+- Publish upload: the creator publishes ready-for-review generated audio.
+- Make published upload public or private: the creator hides or restores a
+  published user-generated audiobook from the public catalog.
 
 ## 8. Activity Diagram / User Flow
 
@@ -509,6 +630,29 @@ flowchart TD
     N --> O[Rebuild chapter playlist with local audio source]
     O --> P[PlaybackService prepares local file in the playlist]
     P --> Q([End])
+```
+
+### User Flow 4: Create, Generate, and Publish a User Upload
+
+```mermaid
+flowchart TD
+    A([Start in Profile or My Uploads]) --> B[Open CreateAudiobookActivity]
+    B --> C[Enter title, author, optional cover URL, chapter text, and voice]
+    C --> D{Save draft only?}
+    D -- Yes --> E[Backend creates or updates draft]
+    D -- No --> F[Backend saves draft and queues generation]
+    E --> G[Open MyUploadsActivity]
+    F --> G
+    G --> H[Observe creator books and chapter subcollections]
+    H --> I{Generation status}
+    I -- draft or failed --> J[Edit, request, or retry generation]
+    I -- pending_generation --> K[Show pending state and register FCM token]
+    I -- ready_for_review --> L[Preview audiobook or ready chapter]
+    L --> M[Publish ready audio]
+    M --> N[Book and ready chapters become published]
+    N --> O[Toggle Make Private or Make Public when needed]
+    G --> P[Add, edit, delete, or cancel non-published chapters]
+    K --> Q[FCM notification opens My Uploads on completion or failure]
 ```
 
 ## 9. Sequence Diagrams By User Flow
@@ -778,6 +922,35 @@ classDiagram
         -releaseController()
     }
 
+    class CreateAudiobookActivity {
+        +EXTRA_EDIT_BOOK_ID String
+        -CreatorAudiobookRepository repository
+        -GenerationNotificationSetup notificationSetup
+        -saveDraft(boolean requestGeneration)
+        -loadDraftForEdit()
+    }
+
+    class ManageChapterActivity {
+        +EXTRA_BOOK_ID String
+        +EXTRA_CHAPTER_ID String
+        -CreatorAudiobookRepository repository
+        -GenerationNotificationSetup notificationSetup
+        -saveDraft(boolean requestGeneration)
+        -loadDraftForEdit()
+    }
+
+    class MyUploadsActivity {
+        -CreatorAudiobookRepository repository
+        -GenerationNotificationSetup notificationSetup
+        -Map chaptersByBookId
+        -startObservingUploads()
+        -requestGeneration(UserGeneratedAudiobook)
+        -requestChapterGeneration(UserGeneratedAudiobook, UserGeneratedChapter)
+        -publishUploadUpdate(UserGeneratedAudiobook)
+        -setAudiobookVisibility(UserGeneratedAudiobook, boolean)
+        -deleteChapter(UserGeneratedAudiobook, UserGeneratedChapter)
+    }
+
     class PlaybackService {
         -ExoPlayer player
         -MediaSession mediaSession
@@ -830,6 +1003,40 @@ classDiagram
         +fromDocument(String, DocumentSnapshot) UserProgress
     }
 
+    class UserGeneratedAudiobook {
+        -String id
+        -String title
+        -AudiobookGenerationStatus generationStatus
+        -String activeChapterId
+        -boolean published
+        -boolean hiddenByCreator
+        +fromDocument(DocumentSnapshot) UserGeneratedAudiobook
+    }
+
+    class UserGeneratedChapter {
+        -String id
+        -String title
+        -AudiobookGenerationStatus generationStatus
+        -boolean published
+        -boolean hasAudio
+        +fromDocument(String, DocumentSnapshot) UserGeneratedChapter
+        +canEdit() boolean
+        +canRequestGeneration() boolean
+        +canPreview() boolean
+        +canDelete() boolean
+    }
+
+    class AudiobookGenerationStatus {
+        <<enum>>
+        DRAFT
+        PENDING_GENERATION
+        FAILED
+        READY_FOR_REVIEW
+        PUBLISHED
+        REJECTED
+        DELETED
+    }
+
     class AuthRepository {
         -boolean configured
         -FirebaseAuth auth
@@ -848,6 +1055,54 @@ classDiagram
         +getPublishedBooks(RepositoryCallback)
         +getBook(String, RepositoryCallback)
         +getChapters(String, RepositoryCallback)
+    }
+
+    class SavedBookRepository {
+        +isSaved(String, RepositoryCallback)
+        +saveBook(String, RepositoryCallback)
+        +unsaveBook(String, RepositoryCallback)
+        +getSavedBookIds(RepositoryCallback)
+    }
+
+    class CreatorAudiobookRepository {
+        -CreatorBackendDataSource backendApi
+        +createDraft(CreateAudiobookDraftInput, RepositoryCallback)
+        +updateDraft(String, CreateAudiobookDraftInput, RepositoryCallback)
+        +createChapterDraft(String, CreateChapterDraftInput, RepositoryCallback)
+        +updateChapterDraft(String, String, CreateChapterDraftInput, RepositoryCallback)
+        +requestGeneration(String, RepositoryCallback)
+        +requestChapterGeneration(String, String, RepositoryCallback)
+        +publishAudiobook(String, RepositoryCallback)
+        +setAudiobookVisibility(String, boolean, RepositoryCallback)
+        +deleteChapter(String, String, RepositoryCallback)
+        +observeMyUploads(RepositoryCallback)
+        +observeUploadChapters(String, RepositoryCallback)
+    }
+
+    class CreatorApiClient {
+        -String baseUrl
+        -FirebaseAuth auth
+        +createDraft(CreateAudiobookDraftInput, RepositoryCallback)
+        +requestGeneration(String, RepositoryCallback)
+        +requestChapterGeneration(String, String, RepositoryCallback)
+        +publishAudiobook(String, RepositoryCallback)
+        +setAudiobookVisibility(String, boolean, RepositoryCallback)
+        +deleteChapter(String, String, RepositoryCallback)
+    }
+
+    class UploadNotificationTokenRepository {
+        +registerCurrentDevice(RepositoryCallback)
+        +saveToken(String, RepositoryCallback)
+        +documentIdForToken(String) String
+    }
+
+    class GenerationNotificationSetup {
+        +ensureReady()
+    }
+
+    class GenerationNotificationMessagingService {
+        +onMessageReceived(RemoteMessage)
+        +onNewToken(String)
     }
 
     class ProgressRepository {
@@ -905,9 +1160,12 @@ classDiagram
     DiscoverActivity --> BookRepository
     SearchActivity --> BookRepository
     LibraryActivity --> BookRepository
+    LibraryActivity --> SavedBookRepository
     LibraryActivity --> ProgressRepository
     LibraryActivity --> DownloadedAudioRepository
     BookDetailActivity --> BookRepository
+    BookDetailActivity --> SavedBookRepository
+    BookDetailActivity --> CreatorAudiobookRepository
     BookDetailActivity --> ProgressRepository
     BookDetailActivity --> DownloadedAudioRepository
     ProfileActivity --> AuthRepository
@@ -917,6 +1175,12 @@ classDiagram
     AudioPreferencesActivity --> AudioPreferences
     AudioPreferencesActivity --> BookRepository
     AudioPreferencesActivity --> DownloadedAudioRepository
+    CreateAudiobookActivity --> CreatorAudiobookRepository
+    CreateAudiobookActivity --> GenerationNotificationSetup
+    ManageChapterActivity --> CreatorAudiobookRepository
+    ManageChapterActivity --> GenerationNotificationSetup
+    MyUploadsActivity --> CreatorAudiobookRepository
+    MyUploadsActivity --> GenerationNotificationSetup
     ActivityReader --> BookRepository
     ActivityReader --> ProgressRepository
     ActivityReader --> DownloadedAudioRepository
@@ -926,6 +1190,13 @@ classDiagram
     PlaybackService --> ProgressRepository
     BookRepository --> Book
     BookRepository --> BookChapter
+    CreatorAudiobookRepository --> CreatorApiClient
+    CreatorAudiobookRepository --> UserGeneratedAudiobook
+    CreatorAudiobookRepository --> UserGeneratedChapter
+    UserGeneratedAudiobook --> AudiobookGenerationStatus
+    UserGeneratedChapter --> AudiobookGenerationStatus
+    GenerationNotificationSetup --> UploadNotificationTokenRepository
+    GenerationNotificationMessagingService --> UploadNotificationTokenRepository
     ProgressRepository --> UserProgress
     AudioSourceResolver --> DownloadedAudioRepository
     DownloadedAudioRepository --> Book
@@ -938,8 +1209,12 @@ Class roles:
 - Activities are MVC controllers and screen lifecycle owners.
 - `PlaybackService` owns ExoPlayer and the Media3 `MediaSession` for
   background playback.
-- `Book` and `UserProgress` are model objects.
-- Repositories provide Firebase and local storage access.
+- `Book`, `BookChapter`, `UserProgress`, `UserGeneratedAudiobook`,
+  `UserGeneratedChapter`, and `AudiobookGenerationStatus` are model objects.
+- Repositories provide Firebase, backend API, notification token, saved
+  library, progress, and local storage access.
+- `CreatorApiClient` and `CreatorApiContract` keep authenticated backend I/O
+  and JSON payload parsing outside Activities.
 - `AudioPreferences` wraps SharedPreferences for the default playback speed.
 - `AudioSourceResolver` selects the best playback source.
 - `BookCoverLoader` keeps cover-loading UI logic reusable.
@@ -974,9 +1249,13 @@ app storage for downloaded MP3 files.
 | `order` | Number | Sort order for display. | Defaults to `0` |
 
 User-generated audiobook documents include `creatorUid`, `sourceType`,
-`generationStatus`, `createdByUser`, `reviewStatus`, and
-`published=false`. Future rating fields may include `ratingAverage` and
-`ratingCount`.
+`generationStatus`, `createdByUser`, `reviewStatus`, `activeChapterId`,
+`hiddenByCreator`, `generationError`, `pollyVoiceId`, `createdAt`, and
+`updatedAt`. Generation status values used by the Android model are `draft`,
+`pending_generation`, `failed`, `ready_for_review`, `published`, `rejected`,
+and `deleted`. Public catalog queries include only `published=true` books that
+are not hidden or archived by the creator. Future rating fields may include
+`ratingAverage` and `ratingCount`.
 
 ### Firestore Subcollection: `books/{bookId}/chapters`
 
@@ -991,12 +1270,20 @@ User-generated audiobook documents include `creatorUid`, `sourceType`,
 | `audioStoragePath` | String | Optional storage path metadata. | Optional |
 | `durationSec` | Number | Expected chapter duration in seconds. | Defaults to `0` |
 | `order` | Number | Chapter sort order. | Must be a Firestore number, not a quoted string |
-| `published` | Boolean | Whether this chapter should appear in the playlist. | Missing value is treated as published by the app |
+| `published` | Boolean | Whether this chapter should appear in the public playlist. | Missing value is treated as published by the app for existing catalog data |
+| `generationStatus` | String | Creator workflow status for generated chapters. | `draft`, `pending_generation`, `failed`, `ready_for_review`, `published`, `rejected`, or `deleted` |
+| `generationError` | String | Sanitized generation failure message. | Optional |
+| `sourceText` | String | Creator-submitted source text for backend generation and draft editing. | Creator/backend only |
+| `pollyVoiceId` | String | AWS Polly voice selected by the creator. | `Patrick` or `Ruth` |
+| `voiceGender` | String | Display metadata derived from the selected voice. | `male` or `female` |
+| `s3Key` | String | Generated S3 object key returned after Polly completion. | Written by backend after generation |
+| `pollyTaskId` | String | AWS Polly task ID for polling or recovery. | Optional while pending |
+| `deletedByCreator` | Boolean | Soft-delete marker for non-published chapters removed by the creator. | Deleted chapters are hidden by Android |
 
 Generated chapters include `sourceText`, `pollyVoiceId`, `voiceGender`,
-`s3Key`, `generationStatus`, and `generationError`. After generation succeeds,
-the backend writes `audioUrl` so the current playback and download flow can
-continue to work.
+`s3Key`, task metadata, `generationStatus`, and `generationError`. After
+generation succeeds, the backend writes `audioUrl` so the current playback and
+download flow can continue to work.
 
 If a book has no `chapters` documents, the app creates a temporary legacy
 `Chapter 1` from the book-level `chapterTitle`, `contentSample`, `audioUrl`,
@@ -1010,13 +1297,14 @@ types: `order` and `durationSec` as numbers, `published` as a boolean.
 
 For creator preview, Android access checks are defense in depth and require
 matching deployed Firestore rules. Book documents may be read publicly only
-when `published=true`; authenticated creators also need access to their own
-book documents for My Uploads. Unpublished chapter documents must be readable
-only when the parent `creatorUid` matches `request.auth.uid` and the parent
-`generationStatus` is `ready_for_review`. Nested chapter rules must inspect the
-parent document with `get()`, and public catalog queries must retain their
-`published=true` constraint because Firestore rules are not result filters.
-S3 public or signed URL access remains a separate backend security policy.
+when `published=true` and the book is not hidden; authenticated creators also
+need access to their own book documents for My Uploads. Unpublished chapter
+documents must be readable only when the parent `creatorUid` matches
+`request.auth.uid` and preview access is allowed for the parent state. Nested
+chapter rules must inspect the parent document with `get()`, and public catalog
+queries must retain their `published=true` constraint because Firestore rules
+are not result filters. S3 public or signed URL access remains a separate
+backend security policy.
 
 ### Firestore Collection: `users`
 
@@ -1042,6 +1330,20 @@ uploads visible. The backend sends data-only FCM messages for
 `ready_for_review` and `failed`, and notification taps reopen My Uploads. Rules
 must restrict this subcollection so users can write and delete only their own
 token documents.
+
+### Firestore Subcollection: `users/{uid}/savedBooks`
+
+| Field | Data Type | Description | Constraints |
+|---|---|---|---|
+| Document ID | String | Saved book ID. | Same value as `bookId` |
+| `bookId` | String | Parent book ID saved to the user's library. | Required for new saved documents |
+| `createdAt` | Timestamp | First save timestamp. | Set by Firestore |
+| `updatedAt` | Timestamp | Last save timestamp. | Set by Firestore |
+
+`BookDetailActivity` writes or deletes these documents when the user taps the
+save icon. `LibraryActivity` reads saved IDs first, then intersects them with
+published, visible books from the catalog before applying Listening,
+Downloaded, or Finished filters.
 
 ### Firestore Subcollection: `users/{uid}/progress`
 
@@ -1172,10 +1474,13 @@ erDiagram
 | Register | Create a new account. | Email field, password field, confirm password field, create account button, sign-in link. | Enter account data, submit registration. | Valid email; password at least 6 characters; confirmation must match. | Login or Discover. |
 | Discover | Present published and featured audiobooks. | Featured cards, regular book cards, cover images, bottom navigation, empty state. | Browse books, open book detail, switch tabs. | Handles empty Firestore result and load failure. | Book Detail, Search, Library, Profile. |
 | Search | Filter the catalog by query. | Search input, result rows, section label, bottom navigation, empty state. | Type query, select result, switch tabs. | Empty query shows all loaded books; no match shows an empty state. | Book Detail, Discover, Library, Profile. |
-| Library | Show progress-based and download-based collections. | Filter chips, library rows, progress bars, bottom navigation, empty state. | Switch filters, open book detail. | Empty states vary by selected filter. | Book Detail, Discover, Search, Profile. |
-| Book Detail | Show a playlist-style view for a selected audiobook. | Cover, title, author, chapter summary, play/resume, save/bookmark, disabled download-all icon, chapter rows, chapter progress/download state. | Resume a chapter, choose a chapter, download a chapter from its row, exit. | Missing book ID, book load failure, chapter load failure, and no-chapter states show messages. | Reader or previous screen. |
+| Library | Show saved audiobooks filtered by progress and download state. | Filter chips, saved library rows, progress bars, bottom navigation, empty state. | Switch filters, open book detail. | Empty states vary by selected filter and saved-library availability. | Book Detail, Discover, Search, Profile. |
+| Book Detail | Show a playlist-style view for a selected audiobook. | Cover, title, author, chapter summary, play/resume, save/bookmark, disabled download-all icon, chapter rows, chapter progress/download state, creator publish/add-chapter actions during preview. | Save or unsave the book, resume a chapter, choose a chapter, download a chapter from its row, publish a ready creator upload, add a creator chapter, exit. | Missing book ID, book load failure, chapter load failure, no-chapter states, and invalid publish states show messages. | Reader, Manage Chapter, or previous screen. |
 | Reader | Read selected chapter text and control audio. | Exit icon, text-format placeholder, chapter download icon, title, chapter content, seek bar, time labels, play/pause, previous/next chapter buttons, speed. | Play, pause, seek within the chapter, move to the previous or next chapter, change speed, download current chapter, exit. | Missing book ID, missing chapter, missing audio URL, and download failure show messages. | Back to previous screen. |
-| Profile | Show account and reading statistics. | Name, email, completed count, listened hours, Account Settings, Audio Preferences, logout, bottom navigation. | Edit display name, open audio preferences, view stats, log out, switch tabs. | Unauthenticated fallback shows generic reader values; display name cannot be empty. | Login, Discover, Search, Library, Audio Preferences. |
+| Profile | Show account and reading statistics plus creator entry points. | Name, email, completed count, listened hours, Account Settings, Audio Preferences, Create Audiobook, My Uploads, logout, bottom navigation. | Edit display name, open audio preferences, create an audiobook, open My Uploads, view stats, log out, switch tabs. | Unauthenticated fallback shows generic reader values; display name cannot be empty. | Login, Discover, Search, Library, Audio Preferences, Create Audiobook, My Uploads. |
+| Create Audiobook | Create or edit a user-generated audiobook draft. | Title, author, optional cover URL, chapter text, word counter, Patrick/Ruth voice chips, save draft, request generation. | Save draft, save and request generation, edit existing draft, return to My Uploads. | Title and author are required and limited to 120 characters; chapter text is required and limited to 3,500 words; backend validation maps field errors back to chapter text. | My Uploads or previous screen. |
+| Manage Chapter | Add or edit a chapter draft on a user-generated audiobook. | Chapter title, chapter text, word counter, Patrick/Ruth voice chips, save draft, request generation. | Save chapter draft, save and request generation, edit existing draft chapter. | Chapter title and text are required; chapter text is limited to 3,500 words. | My Uploads or previous screen. |
+| My Uploads | Manage creator-owned generated audiobooks and chapters. | Upload cards, status chips, visibility chips, chapter panel, retry/request buttons, preview/publish actions, add chapter, overflow delete/cancel actions, live empty/error state panel. | Create upload, edit drafts, add/edit chapters, request/retry generation, preview audiobook or chapter, publish, make public/private, delete/cancel non-published chapters. | Requires signed-in user, Firebase config, backend base URL for writes, and valid book/chapter IDs. Notification permission is requested on Android 13+ when needed. | Create Audiobook, Manage Chapter, Book Detail creator preview, Reader single-chapter preview, or previous screen. |
 | Audio Preferences | Manage local audio settings. | Reader-style exit icon, default speed chips, grouped downloaded chapter list, file sizes, delete buttons, empty state. | Choose default playback speed, delete downloaded chapter MP3 files, return to Profile. | Invalid speed indexes fall back to `1.0x`; delete failures show a message. | Profile. |
 
 ### Navigation Flow Diagram
@@ -1202,7 +1507,17 @@ flowchart TD
     Profile --> Search
     Profile --> Library
     Profile --> AudioPrefs["AudioPreferencesActivity"]
+    Profile --> CreateUpload["CreateAudiobookActivity"]
+    Profile --> MyUploads["MyUploadsActivity"]
     AudioPrefs --> Profile
+    CreateUpload --> MyUploads
+    MyUploads --> CreateUpload
+    MyUploads --> ManageChapter["ManageChapterActivity"]
+    ManageChapter --> MyUploads
+    MyUploads --> CreatorBookDetail["BookDetailActivity creator preview"]
+    CreatorBookDetail --> ManageChapter
+    CreatorBookDetail --> Reader
+    MyUploads --> ReaderPreview["ActivityReader chapter preview"]
     Discover --> BookDetail["BookDetailActivity"]
     Search --> BookDetail
     Library --> BookDetail
@@ -1306,22 +1621,60 @@ flowchart TD
 
 ### Feature 5: Library and Profile Statistics
 
-- Description: Users view current listening, downloaded, and finished books,
-  plus basic profile statistics and account/audio settings entry points.
-- Related screens: Library, Profile, and Audio Preferences.
+- Description: Users save published audiobooks into their library, then view
+  saved books by listening, downloaded, and finished status, plus basic profile
+  statistics and account/audio/creator entry points.
+- Related screens: Book Detail, Library, Profile, and Audio Preferences.
 - Related classes: `LibraryActivity`, `ProfileActivity`, `BookRepository`,
-  `ProgressRepository`, `DownloadedAudioRepository`, `AudioPreferences`.
-- Input: published books, published chapters, saved chapter progress, local
-  chapter file availability, local audio preference values.
-- Output: filtered library rows, aggregate completion percentage, remaining
-  time, completed book count, listened hours, display name, default speed
-  choice, and grouped downloaded chapter list.
+  `SavedBookRepository`, `ProgressRepository`, `DownloadedAudioRepository`,
+  `AudioPreferences`.
+- Input: saved book IDs, published visible books, published chapters, saved
+  chapter progress, local chapter file availability, local audio preference
+  values.
+- Output: saved/unsaved state, filtered library rows, aggregate completion
+  percentage, remaining time, completed book count, listened hours, display
+  name, default speed choice, and grouped downloaded chapter list.
 - Validation: missing progress defaults to `UserProgress.empty(bookId,
-  chapterId)`.
+  chapterId)`; saved-library reads fall back to an empty library when the user
+  is signed out or Firebase is unavailable.
 - Error handling: empty states are shown for each filter.
 - Expected behavior: the Library and Profile screens update using the latest
-  chapter progress and local download data; Audio Preferences persists default
-  speed for future reader sessions.
+  saved-book IDs, chapter progress, and local download data; Audio Preferences
+  persists default speed for future reader sessions.
+
+### Feature 6: Creator Uploads and My Uploads
+
+- Description: Signed-in users create generated-audiobook drafts, manage
+  chapters, request AWS Polly generation through the backend, preview ready
+  audio, publish ready uploads, and manage public/private visibility.
+- Related screens: Profile, Create Audiobook, Manage Chapter, My Uploads, Book
+  Detail creator preview, and Reader chapter preview.
+- Related classes: `CreateAudiobookActivity`, `ManageChapterActivity`,
+  `MyUploadsActivity`, `CreatorAudiobookRepository`, `CreatorApiClient`,
+  `CreatorApiContract`, `BookAccessPolicy`, `BookRepository`,
+  `GenerationNotificationSetup`, `GenerationNotificationMessagingService`,
+  `UploadNotificationTokenRepository`, `UserGeneratedAudiobook`,
+  `UserGeneratedChapter`, `AudiobookGenerationStatus`.
+- Input: authenticated Firebase user, backend base URL, title, author,
+  optional cover URL, chapter title/text, voice (`Patrick` or `Ruth`), and
+  selected upload/chapter IDs.
+- Output: trusted Firestore book/chapter documents, generation status updates,
+  S3-backed `audioUrl` values after completion, creator preview access,
+  published public catalog entries, hidden/private creator entries, and
+  best-effort FCM notifications.
+- Validation: title and author are required and limited to 120 characters;
+  chapter text is required and limited to 3,500 words; Android excludes
+  identity, AWS, S3, engine, output, and markup settings from creator payloads.
+- Error handling: backend validation errors are shown near the chapter text
+  when possible; failed generation shows sanitized `generationError`; draft
+  save followed by generation-request failure returns to My Uploads with a
+  partial-success message; notification failure does not fail generation.
+- Expected behavior: My Uploads observes both the creator's books and chapter
+  subcollections live, supports `draft`, `pending_generation`, `failed`,
+  `ready_for_review`, `published`, `rejected`, and `deleted` states, hides
+  deleted chapters, allows delete/cancel only for non-published chapters, and
+  keeps unpublished content out of Discover/Search unless the creator opens
+  preview mode.
 
 ## 14. Permissions and Android Components
 
@@ -1329,7 +1682,7 @@ flowchart TD
 
 | Component | Used? | Implementation |
 |---|---|---|
-| Activity | Yes | `MainActivity`, `LoginActivity`, `RegisterActivity`, `DiscoverActivity`, `SearchActivity`, `LibraryActivity`, `BookDetailActivity`, `ProfileActivity`, `CreateAudiobookActivity`, `MyUploadsActivity`, `AudioPreferencesActivity`, `ActivityReader`. |
+| Activity | Yes | `MainActivity`, `LoginActivity`, `RegisterActivity`, `DiscoverActivity`, `SearchActivity`, `LibraryActivity`, `BookDetailActivity`, `ProfileActivity`, `CreateAudiobookActivity`, `ManageChapterActivity`, `MyUploadsActivity`, `AudioPreferencesActivity`, `ActivityReader`. |
 | Fragment | No | The app currently uses Activity-based screens only. |
 | Service | Yes | `.audio.PlaybackService` extends Media3 `MediaSessionService`, and `.notifications.GenerationNotificationMessagingService` handles FCM upload-generation messages. Both are declared in `AndroidManifest.xml`. |
 | Foreground Service | Yes | `PlaybackService` uses `android:foregroundServiceType="mediaPlayback"` for ongoing audiobook playback. |
@@ -1369,6 +1722,11 @@ the app-private internal files directory.
 | Download HTTP failure | Repository reports an IOException and deletes temporary file. | Do not leave partial MP3 files as valid downloads. |
 | Download delete failure | Audio Preferences keeps the row visible and shows a Toast. | Avoid pretending offline audio was removed when file deletion fails. |
 | Invalid default speed index | `AudioPreferences` clamps the index back to `1.0x`. | Keep playback speed deterministic even if local preferences are corrupted. |
+| Missing backend base URL | Creator repository reports that the backend base URL is not configured. | Configure debug `BACKEND_BASE_URL` or keep creator write actions unavailable for release until an HTTPS backend exists. |
+| Creator text too long | Local word counter blocks text over 3,500 words, and backend validation can map `chapterText` errors back to the input. | Keep Android and backend validation aligned. |
+| Draft saved but generation request fails | The app reports partial success and returns to My Uploads so the creator can retry. | Do not lose accepted draft content when generation queueing fails. |
+| Failed generation | My Uploads displays the sanitized generation error and enables retry when status allows it. | Avoid exposing source text or internal stack details. |
+| Delete/cancel invalid chapter | Backend rejects published or otherwise non-deletable chapters and Android keeps the row visible. | Published chapters cannot be deleted in the current version. |
 | Internet unavailable | Firebase or HTTP callbacks fail and display messages. | Future work should add clearer offline-specific states. |
 | Unexpected lifecycle interruption | `ActivityReader.onStop()` saves progress and releases only the `MediaController`; `PlaybackService` keeps ExoPlayer alive for background playback and saves progress on pause/end/chapter transition/destroy. | Preserve progress while allowing background audio. |
 
@@ -1376,7 +1734,7 @@ the app-private internal files directory.
 
 ### Environment Requirements
 
-- Android Studio with support for Android Gradle Plugin 9.2.0.
+- Android Studio with support for Android Gradle Plugin 9.2.1.
 - JDK compatible with Java 11 source and target settings.
 - Android SDK platform for compile SDK release 36 with minor API level 1.
 - Android device or emulator running Android 7.0 or newer, based on minSdk 24.
@@ -1391,7 +1749,7 @@ the app-private internal files directory.
 ### Open the Project
 
 1. Open Android Studio.
-2. Select the repository root: `D:\Dai Hoc\Nam 3\HK2\Mobile\Fonos_Group13`.
+2. Select the repository root: `D:\Dai Hoc\Nam 3\HK2\Mobile\Fonos\Fonos_Group13`.
 3. Allow Gradle sync to complete.
 4. Confirm the `:app` module is selected.
 
@@ -1464,9 +1822,10 @@ security rules.
 - The media service exposes playback controls, but it does not implement a full
   `MediaLibraryService` browse tree.
 - The app includes user-created audiobook screens, creator preview, and an
-  authenticated backend write path for draft/generation actions. A real demo
-  still requires Firebase Admin credentials, AWS credentials, and the public demo
-  S3 bucket described in the sibling backend README.
+  authenticated backend write path for draft, chapter, generation,
+  publication, visibility, and delete/cancel actions. A real demo still
+  requires Firebase Admin credentials, AWS credentials, and the public demo S3
+  bucket described in the sibling backend README.
 - Search is local over the currently loaded book list, not a server-side or
   indexed search.
 - The Library screen binds a limited number of visible rows.
@@ -1483,8 +1842,8 @@ security rules.
   audiobooks move beyond the laptop demo.
 - Add signed URLs or an authenticated audio proxy before storing private or
   production generated audio.
-- Add review/moderation handling for user-created books if publishing becomes
-  required later.
+- Add review/moderation handling for user-created books if external approval
+  becomes required later.
 - Add book-level star ratings and short text reviews, with rating summaries on
   book documents.
 - Add a richer media browse tree if Android Auto, assistant, or external media
