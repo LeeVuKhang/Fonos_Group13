@@ -5,11 +5,15 @@
     <color name="background">#F7F8F4</color>
     <color name="surface">#FFFFFF</color>
     <color name="surface_soft">#EEF3EA</color>
+    <color name="surface_card">#FFFFFF</color>
+    <color name="surface_panel">#F1F5EE</color>
     <color name="accent">#5E7C66</color>
     <color name="accent_soft">#DCE8DD</color>
     <color name="stroke_soft">#D8E0D5</color>
     <color name="warning_text">#946200</color>
     <color name="error_text">#B3261E</color>
+    <color name="danger_soft">#F9D8D5</color>
+    <color name="info_soft">#DDEAF7</color>
 
     <!-- Reader Colors -->
     <color name="reader_bg">#F7F8F4</color>

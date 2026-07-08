@@ -25,4 +25,5 @@
     <string name="profile">Cá nhân</string>
     <string name="subtitle_handpicked">Lựa chọn riêng dựa trên sở thích của bạn</string>
     <string name="book_content_sample">Nội dung mẫu</string>
+    <string name="my_uploads_add_chapter">+ Thêm chương</string>
 </resources>

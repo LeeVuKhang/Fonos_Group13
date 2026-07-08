@@ -37,11 +37,12 @@ import com.example.fonos_group13.data.BookAccessMode;
 import com.example.fonos_group13.data.DownloadedAudioRepository;
 import com.example.fonos_group13.data.ProgressRepository;
 import com.example.fonos_group13.data.RepositoryCallback;
-import com.example.fonos_group13.model.AudiobookGenerationStatus;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
 import com.example.fonos_group13.model.UserProgress;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
@@ -57,6 +58,7 @@ public class ActivityReader extends AppCompatActivity {
     public static final String EXTRA_CHAPTER_ID = "chapter_id";
     public static final String EXTRA_AUTO_PLAY = "auto_play";
     public static final String EXTRA_CREATOR_PREVIEW = "creator_review_preview";
+    public static final String EXTRA_SINGLE_CHAPTER_PREVIEW = "single_chapter_preview";
     public static final String METADATA_BOOK_ID = "metadata_book_id";
     public static final String METADATA_CHAPTER_ID = "metadata_chapter_id";
     public static final String METADATA_CREATOR_PREVIEW = "metadata_creator_review_preview";
@@ -112,6 +114,7 @@ public class ActivityReader extends AppCompatActivity {
     private String requestedChapterId;
     private boolean requestedAutoPlay;
     private boolean requestedCreatorPreview;
+    private boolean requestedSingleChapterPreview;
     private boolean creatorPreviewActive;
     private boolean userSeeking;
     private boolean downloadingAudio;
@@ -297,16 +300,20 @@ public class ActivityReader extends AppCompatActivity {
         String chapterId = intent == null ? null : trimToNull(intent.getStringExtra(EXTRA_CHAPTER_ID));
         boolean autoPlay = intent != null && intent.getBooleanExtra(EXTRA_AUTO_PLAY, false);
         boolean creatorPreview = intent != null && intent.getBooleanExtra(EXTRA_CREATOR_PREVIEW, false);
+        boolean singleChapterPreview = intent != null
+                && intent.getBooleanExtra(EXTRA_SINGLE_CHAPTER_PREVIEW, false);
 
         if (currentBook != null
                 && currentChapter != null
                 && bookId.equals(currentBook.getId())
                 && (chapterId == null || chapterId.equals(currentChapter.getId()))
-                && creatorPreview == creatorPreviewActive) {
+                && creatorPreview == creatorPreviewActive
+                && singleChapterPreview == requestedSingleChapterPreview) {
             requestedBookId = bookId;
             requestedChapterId = currentChapter.getId();
             requestedAutoPlay = autoPlay;
             requestedCreatorPreview = creatorPreview;
+            requestedSingleChapterPreview = singleChapterPreview;
             refreshCurrentChapter();
             return;
         }
@@ -315,7 +322,8 @@ public class ActivityReader extends AppCompatActivity {
                 && bookId.equals(requestedBookId)
                 && ((chapterId == null && requestedChapterId == null)
                 || (chapterId != null && chapterId.equals(requestedChapterId)))
-                && creatorPreview == requestedCreatorPreview) {
+                && creatorPreview == requestedCreatorPreview
+                && singleChapterPreview == requestedSingleChapterPreview) {
             return;
         }
 
@@ -323,6 +331,7 @@ public class ActivityReader extends AppCompatActivity {
         requestedChapterId = chapterId;
         requestedAutoPlay = autoPlay;
         requestedCreatorPreview = creatorPreview;
+        requestedSingleChapterPreview = singleChapterPreview;
         loadBookAndChapter(bookId, chapterId);
     }
 
@@ -349,8 +358,7 @@ public class ActivityReader extends AppCompatActivity {
                         || loadingCreatorPreview != requestedCreatorPreview) {
                     return;
                 }
-                creatorPreviewActive = loadingCreatorPreview
-                        && book.getGenerationStatus() == AudiobookGenerationStatus.READY_FOR_REVIEW;
+                creatorPreviewActive = loadingCreatorPreview && isCurrentCreator(book);
                 loadChapter(book, chapterId);
             }
 
@@ -387,6 +395,10 @@ public class ActivityReader extends AppCompatActivity {
                     finish();
                     return;
                 }
+                if (requestedSingleChapterPreview) {
+                    currentChapters.clear();
+                    currentChapters.add(selectedChapter);
+                }
                 bindBook(book, selectedChapter);
                 prepareAudio(book, selectedChapter, false, C.TIME_UNSET, requestedAutoPlay);
                 requestedAutoPlay = false;
@@ -402,6 +414,16 @@ public class ActivityReader extends AppCompatActivity {
                 finish();
             }
         });
+    }
+
+    private boolean isCurrentCreator(Book book) {
+        if (book == null) {
+            return false;
+        }
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        String currentUid = user == null ? null : trimToNull(user.getUid());
+        String creatorUid = trimToNull(book.getCreatorUid());
+        return currentUid != null && currentUid.equals(creatorUid);
     }
 
     private BookChapter selectChapter(List<BookChapter> chapters, String chapterId) {
