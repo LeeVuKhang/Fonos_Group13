@@ -34,6 +34,8 @@ import com.example.fonos_group13.model.UserProgress;
 import com.example.fonos_group13.ui.BookCoverLoader;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -185,8 +187,7 @@ public class BookDetailActivity extends AppCompatActivity {
                     return;
                 }
                 currentBook = book;
-                creatorPreviewActive = creatorPreviewRequested
-                        && book.getGenerationStatus() == AudiobookGenerationStatus.READY_FOR_REVIEW;
+                creatorPreviewActive = creatorPreviewRequested && isCurrentCreator(book);
                 bindBookHeader(book);
                 if (creatorPreviewActive) {
                     currentBookSaved = false;
@@ -386,7 +387,7 @@ public class BookDetailActivity extends AppCompatActivity {
     }
 
     private void publishCurrentBook() {
-        if (currentBook == null || !creatorPreviewActive || publishLoading) {
+        if (!canPublishCurrentBook() || publishLoading) {
             return;
         }
 
@@ -443,7 +444,7 @@ public class BookDetailActivity extends AppCompatActivity {
         if (publishButton == null) {
             return;
         }
-        boolean visible = creatorPreviewActive && currentBook != null;
+        boolean visible = canPublishCurrentBook();
         publishButton.setVisibility(visible ? View.VISIBLE : View.GONE);
         if (!visible) {
             return;
@@ -464,6 +465,22 @@ public class BookDetailActivity extends AppCompatActivity {
         }
         addChapterButton.setEnabled(!publishLoading);
         addChapterButton.setAlpha(publishLoading ? 0.65f : 1f);
+    }
+
+    private boolean canPublishCurrentBook() {
+        return creatorPreviewActive
+                && currentBook != null
+                && currentBook.getGenerationStatus() == AudiobookGenerationStatus.READY_FOR_REVIEW;
+    }
+
+    private boolean isCurrentCreator(Book book) {
+        if (book == null) {
+            return false;
+        }
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        String currentUid = user == null ? null : trimToNull(user.getUid());
+        String creatorUid = trimToNull(book.getCreatorUid());
+        return currentUid != null && currentUid.equals(creatorUid);
     }
 
     private void openAddChapter() {

@@ -37,11 +37,12 @@ import com.example.fonos_group13.data.BookAccessMode;
 import com.example.fonos_group13.data.DownloadedAudioRepository;
 import com.example.fonos_group13.data.ProgressRepository;
 import com.example.fonos_group13.data.RepositoryCallback;
-import com.example.fonos_group13.model.AudiobookGenerationStatus;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
 import com.example.fonos_group13.model.UserProgress;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
@@ -357,8 +358,7 @@ public class ActivityReader extends AppCompatActivity {
                         || loadingCreatorPreview != requestedCreatorPreview) {
                     return;
                 }
-                creatorPreviewActive = loadingCreatorPreview
-                        && book.getGenerationStatus() == AudiobookGenerationStatus.READY_FOR_REVIEW;
+                creatorPreviewActive = loadingCreatorPreview && isCurrentCreator(book);
                 loadChapter(book, chapterId);
             }
 
@@ -414,6 +414,16 @@ public class ActivityReader extends AppCompatActivity {
                 finish();
             }
         });
+    }
+
+    private boolean isCurrentCreator(Book book) {
+        if (book == null) {
+            return false;
+        }
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        String currentUid = user == null ? null : trimToNull(user.getUid());
+        String creatorUid = trimToNull(book.getCreatorUid());
+        return currentUid != null && currentUid.equals(creatorUid);
     }
 
     private BookChapter selectChapter(List<BookChapter> chapters, String chapterId) {
