@@ -25,7 +25,7 @@
             android:contentDescription="Back"
             android:focusable="true"
             android:padding="12dp"
-            android:src="@drawable/ic_logout"
+            android:src="@drawable/ic_arrow_back"
             app:tint="@color/text_main" />
 
         <TextView
@@ -33,11 +33,28 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
+            android:ellipsize="end"
             android:fontFamily="serif"
+            android:maxLines="1"
             android:text="My Uploads"
             android:textColor="@color/text_dark"
             android:textSize="28sp"
             android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_create_upload"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginStart="10dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:paddingHorizontal="14dp"
+            android:text="+ Create New"
+            android:textAllCaps="false"
+            android:textColor="@color/accent"
+            android:textSize="13sp"
+            app:backgroundTint="@color/accent_soft"
+            app:cornerRadius="14dp" />
     </LinearLayout>
 
     <androidx.core.widget.NestedScrollView
@@ -55,28 +72,50 @@
             android:paddingHorizontal="24dp"
             android:paddingBottom="32dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_create_upload"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:text="Create Audiobook"
-                android:textAllCaps="false"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                app:backgroundTint="@color/accent"
-                app:cornerRadius="16dp" />
-
-            <TextView
-                android:id="@+id/uploads_empty_state"
+            <LinearLayout
+                android:id="@+id/uploads_state_panel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
-                android:background="@drawable/bg_empty_state"
-                android:gravity="center"
-                android:padding="20dp"
-                android:text="Loading uploads..."
-                android:textColor="@color/text_muted"
-                android:textSize="15sp" />
+                android:background="@drawable/bg_upload_state_panel"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingTop="20dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="20dp">
+
+                <TextView
+                    android:id="@+id/uploads_state_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="start"
+                    android:text="Loading uploads..."
+                    android:textColor="@color/text_dark"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/uploads_state_message"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Checking the latest generation status for your audiobooks."
+                    android:textColor="@color/text_muted"
+                    android:textSize="14sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/uploads_state_action"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="16dp"
+                    android:text="+ Create New Audiobook"
+                    android:textAllCaps="false"
+                    android:textColor="@color/white"
+                    android:textSize="15sp"
+                    android:visibility="gone"
+                    app:backgroundTint="@color/accent"
+                    app:cornerRadius="14dp" />
+            </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/uploads_container"

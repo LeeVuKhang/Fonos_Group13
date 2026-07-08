@@ -5,10 +5,14 @@ import android.content.res.ColorStateList;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,7 +30,10 @@ import com.example.fonos_group13.model.AudiobookGenerationStatus;
 import com.example.fonos_group13.model.UserGeneratedAudiobook;
 import com.example.fonos_group13.model.UserGeneratedChapter;
 import com.example.fonos_group13.notifications.GenerationNotificationSetup;
+import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.imageview.ShapeableImageView;
+import com.google.android.material.shape.ShapeAppearanceModel;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.ListenerRegistration;
 
@@ -44,7 +51,10 @@ public class MyUploadsActivity extends AppCompatActivity {
     private CreatorAudiobookRepository repository;
     private GenerationNotificationSetup notificationSetup;
     private LinearLayout uploadsContainer;
-    private TextView emptyState;
+    private LinearLayout statePanel;
+    private TextView stateTitle;
+    private TextView stateMessage;
+    private MaterialButton stateAction;
     private MaterialButton createButton;
     private ListenerRegistration uploadsRegistration;
     private List<UserGeneratedAudiobook> currentUploads = Collections.emptyList();
@@ -82,7 +92,10 @@ public class MyUploadsActivity extends AppCompatActivity {
 
     private void bindViews() {
         uploadsContainer = findViewById(R.id.uploads_container);
-        emptyState = findViewById(R.id.uploads_empty_state);
+        statePanel = findViewById(R.id.uploads_state_panel);
+        stateTitle = findViewById(R.id.uploads_state_title);
+        stateMessage = findViewById(R.id.uploads_state_message);
+        stateAction = findViewById(R.id.uploads_state_action);
         createButton = findViewById(R.id.btn_create_upload);
     }
 
@@ -224,70 +237,111 @@ public class MyUploadsActivity extends AppCompatActivity {
             return;
         }
         showMessage(null);
+        boolean renderedAnyUpload = false;
         for (UserGeneratedAudiobook upload : uploads) {
+            if (upload == null) {
+                continue;
+            }
             uploadsContainer.addView(createUploadCard(upload));
+            renderedAnyUpload = true;
+        }
+        if (!renderedAnyUpload) {
+            showMessage("No uploads yet.");
         }
     }
 
     private View createUploadCard(UserGeneratedAudiobook upload) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackgroundResource(R.drawable.bg_card_white);
-        card.setPadding(dp(16), dp(14), dp(16), dp(14));
+        card.setBackgroundResource(R.drawable.bg_upload_card);
+        card.setClipToOutline(true);
+        card.setElevation(dp(2));
+        card.setPadding(dp(18), dp(18), dp(18), dp(18));
 
         LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
         );
-        cardParams.setMargins(0, 0, 0, dp(14));
+        cardParams.setMargins(0, 0, 0, dp(18));
         card.setLayoutParams(cardParams);
 
         LinearLayout headerRow = new LinearLayout(this);
-        headerRow.setGravity(Gravity.CENTER_VERTICAL);
+        headerRow.setGravity(Gravity.TOP);
         headerRow.setOrientation(LinearLayout.HORIZONTAL);
 
-        LinearLayout titleBlock = new LinearLayout(this);
-        titleBlock.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout.LayoutParams titleBlockParams = new LinearLayout.LayoutParams(
+        ShapeableImageView cover = createCoverView(upload);
+        LinearLayout.LayoutParams coverParams = new LinearLayout.LayoutParams(dp(74), dp(98));
+        coverParams.setMargins(0, 0, dp(14), 0);
+        headerRow.addView(cover, coverParams);
+
+        LinearLayout infoBlock = new LinearLayout(this);
+        infoBlock.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams infoBlockParams = new LinearLayout.LayoutParams(
                 0,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 1f
         );
 
+        LinearLayout badgeRow = new LinearLayout(this);
+        badgeRow.setGravity(Gravity.CENTER_VERTICAL);
+        badgeRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        TextView statusChip = createStatusChip(upload.getGenerationStatus());
+        LinearLayout.LayoutParams chipParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        badgeRow.addView(statusChip, chipParams);
+
+        TextView visibilityChip = createVisibilityChip(upload);
+        LinearLayout.LayoutParams visibilityParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        visibilityParams.setMargins(dp(8), 0, 0, 0);
+        badgeRow.addView(visibilityChip, visibilityParams);
+        infoBlock.addView(badgeRow);
+
         TextView title = new TextView(this);
         title.setText(upload.getTitle());
         title.setTextColor(getColor(R.color.text_dark));
-        title.setTextSize(17);
+        title.setTextSize(18);
         title.setTypeface(null, Typeface.BOLD);
         title.setMaxLines(2);
+        title.setEllipsize(TextUtils.TruncateAt.END);
+        title.setIncludeFontPadding(false);
+        title.setPadding(0, dp(8), 0, 0);
 
         TextView author = new TextView(this);
         author.setText(upload.getAuthor());
         author.setTextColor(getColor(R.color.text_muted));
         author.setTextSize(13);
-        author.setPadding(0, dp(3), 0, 0);
-
-        titleBlock.addView(title);
-        titleBlock.addView(author);
-        headerRow.addView(titleBlock, titleBlockParams);
-        headerRow.addView(createStatusChip(upload.getGenerationStatus()));
-        card.addView(headerRow);
+        author.setMaxLines(1);
+        author.setEllipsize(TextUtils.TruncateAt.END);
+        author.setPadding(0, dp(5), 0, 0);
 
         TextView meta = new TextView(this);
-        String visibilityLabel = upload.isHiddenByCreator() ? " - Hidden from public" : "";
-        meta.setText(upload.getVoiceLabel() + " - " + formatTimestamp(upload) + visibilityLabel);
+        meta.setText(formatUploadMeta(upload));
         meta.setTextColor(getColor(R.color.text_muted));
-        meta.setTextSize(13);
-        meta.setPadding(0, dp(12), 0, 0);
-        card.addView(meta);
+        meta.setTextSize(12);
+        meta.setMaxLines(2);
+        meta.setEllipsize(TextUtils.TruncateAt.END);
+        meta.setPadding(0, dp(8), 0, 0);
+
+        infoBlock.addView(title);
+        infoBlock.addView(author);
+        infoBlock.addView(meta);
+        headerRow.addView(infoBlock, infoBlockParams);
+        card.addView(headerRow);
 
         if (upload.getGenerationError() != null) {
-            TextView error = new TextView(this);
-            error.setText(upload.getGenerationError());
-            error.setTextColor(0xFF9E3A32);
-            error.setTextSize(13);
-            error.setPadding(0, dp(8), 0, 0);
-            card.addView(error);
+            TextView error = createErrorText(upload.getGenerationError());
+            LinearLayout.LayoutParams errorParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            errorParams.setMargins(0, dp(14), 0, 0);
+            card.addView(error, errorParams);
         }
 
         View actions = createActionButtons(upload);
@@ -311,27 +365,97 @@ public class MyUploadsActivity extends AppCompatActivity {
         return card;
     }
 
+    private ShapeableImageView createCoverView(UserGeneratedAudiobook upload) {
+        ShapeableImageView cover = new ShapeableImageView(this);
+        cover.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        cover.setBackgroundResource(R.drawable.bg_cover_placeholder);
+        cover.setContentDescription(upload.getTitle() + " cover");
+        cover.setShapeAppearanceModel(
+                ShapeAppearanceModel.builder()
+                        .setAllCornerSizes(dp(14))
+                        .build()
+        );
+        cover.setStrokeColor(ColorStateList.valueOf(0x1F26312A));
+        cover.setStrokeWidth(dp(1));
+
+        if (TextUtils.isEmpty(upload.getCoverUrl())) {
+            Glide.with(cover).clear(cover);
+            cover.setImageResource(R.drawable.bg_cover_placeholder);
+            return cover;
+        }
+
+        Glide.with(cover)
+                .load(upload.getCoverUrl())
+                .centerCrop()
+                .placeholder(R.drawable.bg_cover_placeholder)
+                .error(R.drawable.bg_cover_placeholder)
+                .into(cover);
+        return cover;
+    }
+
+    private String formatUploadMeta(UserGeneratedAudiobook upload) {
+        return formatVoiceLabel(upload) + " - " + formatTimestamp(upload);
+    }
+
+    private String formatVisibilityLabel(UserGeneratedAudiobook upload) {
+        return upload.isPublished() && !upload.isHiddenByCreator() ? "Public" : "Private";
+    }
+
+    private String formatVoiceLabel(UserGeneratedAudiobook upload) {
+        String gender = trimToNull(upload.getVoiceGender());
+        String voiceLabel = gender == null
+                ? "Voice"
+                : gender.substring(0, 1).toUpperCase(Locale.US) + gender.substring(1).toLowerCase(Locale.US) + " voice";
+        String voiceName = trimToNull(upload.getPollyVoiceId());
+        return voiceName == null ? voiceLabel : voiceName + " - " + voiceLabel;
+    }
+
+    private TextView createErrorText(String message) {
+        TextView error = new TextView(this);
+        error.setText(message);
+        error.setTextColor(getColor(R.color.error_text));
+        error.setTextSize(13);
+        error.setLineSpacing(dp(2), 1f);
+        return error;
+    }
+
     private TextView createStatusChip(AudiobookGenerationStatus status) {
         TextView chip = new TextView(this);
         chip.setText(status.getDisplayLabel());
-        chip.setTextSize(12);
+        chip.setTextSize(11);
         chip.setTypeface(null, Typeface.BOLD);
         chip.setGravity(Gravity.CENTER);
+        chip.setMaxLines(1);
+        chip.setEllipsize(TextUtils.TruncateAt.END);
+        chip.setIncludeFontPadding(false);
         chip.setPadding(dp(10), dp(6), dp(10), dp(6));
         chip.setTextColor(statusTextColor(status));
 
         GradientDrawable background = new GradientDrawable();
         background.setShape(GradientDrawable.RECTANGLE);
-        background.setCornerRadius(dp(18));
+        background.setCornerRadius(dp(14));
         background.setColor(statusBackgroundColor(status));
         chip.setBackground(background);
+        return chip;
+    }
 
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-        params.setMargins(dp(12), 0, 0, 0);
-        chip.setLayoutParams(params);
+    private TextView createVisibilityChip(UserGeneratedAudiobook upload) {
+        boolean publicBook = upload.isPublished() && !upload.isHiddenByCreator();
+        TextView chip = new TextView(this);
+        chip.setText(formatVisibilityLabel(upload));
+        chip.setTextSize(11);
+        chip.setTypeface(null, Typeface.BOLD);
+        chip.setGravity(Gravity.CENTER);
+        chip.setMaxLines(1);
+        chip.setIncludeFontPadding(false);
+        chip.setPadding(dp(10), dp(6), dp(10), dp(6));
+        chip.setTextColor(publicBook ? getColor(R.color.accent) : getColor(R.color.warning_text));
+
+        GradientDrawable background = new GradientDrawable();
+        background.setShape(GradientDrawable.RECTANGLE);
+        background.setCornerRadius(dp(14));
+        background.setColor(publicBook ? getColor(R.color.accent_soft) : 0xFFFFF4CF);
+        chip.setBackground(background);
         return chip;
     }
 
@@ -339,14 +463,33 @@ public class MyUploadsActivity extends AppCompatActivity {
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
 
+        List<UserGeneratedChapter> chapters = chaptersByBookId.get(upload.getId());
+        LinearLayout headingRow = new LinearLayout(this);
+        headingRow.setGravity(Gravity.CENTER_VERTICAL);
+        headingRow.setOrientation(LinearLayout.HORIZONTAL);
+
         TextView heading = new TextView(this);
         heading.setText("Chapters");
         heading.setTextColor(getColor(R.color.text_dark));
-        heading.setTextSize(14);
+        heading.setTextSize(15);
         heading.setTypeface(null, Typeface.BOLD);
-        panel.addView(heading);
+        heading.setIncludeFontPadding(false);
+        headingRow.addView(heading, new LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
+        ));
 
-        List<UserGeneratedChapter> chapters = chaptersByBookId.get(upload.getId());
+        if (chapters != null) {
+            TextView count = new TextView(this);
+            count.setText(formatChapterProgress(chapters));
+            count.setTextColor(getColor(R.color.text_muted));
+            count.setTextSize(12);
+            count.setIncludeFontPadding(false);
+            headingRow.addView(count);
+        }
+        panel.addView(headingRow);
+
         if (chapters == null) {
             panel.addView(createMutedText("Loading chapters..."));
             return panel;
@@ -356,6 +499,8 @@ public class MyUploadsActivity extends AppCompatActivity {
             panel.addView(createAddChapterButton(upload), fullWidthButtonParams(dp(8), dp(44)));
             return panel;
         }
+
+        panel.addView(createMutedText(formatChapterSummary(chapters)));
 
         for (UserGeneratedChapter chapter : chapters) {
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
@@ -371,14 +516,8 @@ public class MyUploadsActivity extends AppCompatActivity {
     private View createChapterRow(UserGeneratedAudiobook upload, UserGeneratedChapter chapter) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.VERTICAL);
-        row.setPadding(dp(12), dp(10), dp(12), dp(10));
-
-        GradientDrawable background = new GradientDrawable();
-        background.setShape(GradientDrawable.RECTANGLE);
-        background.setCornerRadius(dp(8));
-        background.setColor(0xFFF8FAF7);
-        background.setStroke(dp(1), 0xFFE3E8DE);
-        row.setBackground(background);
+        row.setPadding(dp(14), dp(12), dp(14), dp(12));
+        row.setBackgroundResource(R.drawable.bg_upload_chapter_row);
 
         LinearLayout header = new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
@@ -390,21 +529,31 @@ public class MyUploadsActivity extends AppCompatActivity {
         title.setTextSize(14);
         title.setTypeface(null, Typeface.BOLD);
         title.setMaxLines(2);
+        title.setEllipsize(TextUtils.TruncateAt.END);
+        title.setIncludeFontPadding(false);
         header.addView(title, new LinearLayout.LayoutParams(
                 0,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 1f
         ));
-        header.addView(createStatusChip(chapter.getGenerationStatus()));
+
+        TextView chip = createStatusChip(chapter.getGenerationStatus());
+        LinearLayout.LayoutParams chipParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        chipParams.setMargins(dp(10), 0, 0, 0);
+        header.addView(chip, chipParams);
         row.addView(header);
 
         if (chapter.getGenerationError() != null) {
-            TextView error = new TextView(this);
-            error.setText(chapter.getGenerationError());
-            error.setTextColor(0xFF9E3A32);
-            error.setTextSize(12);
-            error.setPadding(0, dp(6), 0, 0);
-            row.addView(error);
+            TextView error = createErrorText(chapter.getGenerationError());
+            LinearLayout.LayoutParams errorParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            errorParams.setMargins(0, dp(8), 0, 0);
+            row.addView(error, errorParams);
         }
 
         View actions = createChapterActions(upload, chapter);
@@ -413,57 +562,88 @@ public class MyUploadsActivity extends AppCompatActivity {
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
             );
-            params.setMargins(0, dp(8), 0, 0);
+            params.setMargins(0, dp(10), 0, 0);
             row.addView(actions, params);
         }
         return row;
     }
 
     private View createChapterActions(UserGeneratedAudiobook upload, UserGeneratedChapter chapter) {
-        LinearLayout actions = new LinearLayout(this);
-        actions.setOrientation(LinearLayout.VERTICAL);
-
-        boolean hasAction = false;
+        List<MaterialButton> buttons = new ArrayList<>();
         if (chapter.canEdit()) {
-            actions.addView(createSmallActionButton(
+            buttons.add(createSmallActionButton(
                     "Edit",
                     getColor(R.color.accent),
                     getColor(R.color.accent_soft),
                     v -> openChapterEditor(upload, chapter)
-            ), rowButtonParams(hasAction));
-            hasAction = true;
+            ));
         }
         if (chapter.canRequestGeneration()) {
             boolean loading = chapterKey(upload.getId(), chapter.getId()).equals(loadingChapterKey);
-            actions.addView(createSmallActionButton(
+            buttons.add(createSmallActionButton(
                     loading ? "Requesting..." : "Request",
                     getColor(R.color.white),
                     getColor(R.color.accent),
                     v -> requestChapterGeneration(upload, chapter)
-            ), rowButtonParams(hasAction));
-            hasAction = true;
+            ));
         }
         if (chapter.canPreview()) {
-            actions.addView(createSmallActionButton(
+            buttons.add(createSmallActionButton(
                     "Preview",
                     getColor(R.color.accent),
                     getColor(R.color.accent_soft),
                     v -> openBookDetail(upload, true)
-            ), rowButtonParams(hasAction));
-            hasAction = true;
-        }
-        if (chapter.canDelete()) {
-            boolean deleting = chapterKey(upload.getId(), chapter.getId()).equals(deletingChapterKey);
-            actions.addView(createSmallActionButton(
-                    deleting ? "Deleting..." : chapter.getDeleteActionLabel(),
-                    0xFF9E3A32,
-                    0xFFF9D8D5,
-                    v -> showDeleteChapterConfirmation(upload, chapter)
-            ), rowButtonParams(hasAction));
-            hasAction = true;
+            ));
         }
 
-        return hasAction ? actions : null;
+        boolean hasOverflow = chapter.canDelete();
+        if (buttons.isEmpty() && !hasOverflow) {
+            return null;
+        }
+
+        LinearLayout actions = new LinearLayout(this);
+        actions.setGravity(Gravity.CENTER_VERTICAL);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        for (int i = 0; i < buttons.size(); i++) {
+            actions.addView(buttons.get(i), chapterActionButtonParams(i > 0, buttons.size()));
+        }
+        if (hasOverflow) {
+            if (buttons.isEmpty()) {
+                View spacer = new View(this);
+                actions.addView(spacer, new LinearLayout.LayoutParams(0, dp(40), 1f));
+            }
+            actions.addView(createChapterOverflowButton(upload, chapter), overflowButtonParams(!buttons.isEmpty()));
+        }
+        return actions;
+    }
+
+    private View createChapterOverflowButton(UserGeneratedAudiobook upload, UserGeneratedChapter chapter) {
+        ImageView button = new ImageView(this);
+        button.setImageResource(R.drawable.ic_more_vert);
+        button.setColorFilter(getColor(R.color.text_muted));
+        button.setContentDescription("Chapter actions");
+        button.setClickable(true);
+        button.setFocusable(true);
+        button.setPadding(dp(10), dp(10), dp(10), dp(10));
+
+        TypedValue outValue = new TypedValue();
+        getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true);
+        button.setBackgroundResource(outValue.resourceId);
+
+        button.setEnabled(!requestInProgress());
+        button.setAlpha(button.isEnabled() ? 1f : 0.45f);
+        button.setOnClickListener(v -> showChapterOverflowMenu(v, upload, chapter));
+        return button;
+    }
+
+    private void showChapterOverflowMenu(View anchor, UserGeneratedAudiobook upload, UserGeneratedChapter chapter) {
+        PopupMenu menu = new PopupMenu(this, anchor);
+        menu.getMenu().add(chapter.getDeleteActionLabel());
+        menu.setOnMenuItemClickListener(item -> {
+            showDeleteChapterConfirmation(upload, chapter);
+            return true;
+        });
+        menu.show();
     }
 
     private TextView createMutedText(String message) {
@@ -471,30 +651,85 @@ public class MyUploadsActivity extends AppCompatActivity {
         text.setText(message);
         text.setTextColor(getColor(R.color.text_muted));
         text.setTextSize(13);
-        text.setPadding(0, dp(8), 0, 0);
+        text.setLineSpacing(dp(2), 1f);
+        text.setPadding(0, dp(10), 0, 0);
         return text;
+    }
+
+    private String formatChapterProgress(List<UserGeneratedChapter> chapters) {
+        int total = chapters == null ? 0 : chapters.size();
+        if (total == 0) {
+            return "No chapters";
+        }
+        return publishedChapterCount(chapters) + "/" + total + " published";
+    }
+
+    private String formatChapterSummary(List<UserGeneratedChapter> chapters) {
+        int total = chapters == null ? 0 : chapters.size();
+        if (total == 0) {
+            return "No active chapters";
+        }
+
+        List<String> parts = new ArrayList<>();
+        parts.add(total == 1 ? "1 chapter" : total + " chapters");
+        appendCount(parts, publishedChapterCount(chapters), "published");
+        appendCount(parts, statusCount(chapters, AudiobookGenerationStatus.READY_FOR_REVIEW), "ready for review");
+        appendCount(parts, statusCount(chapters, AudiobookGenerationStatus.PENDING_GENERATION), "pending");
+        appendCount(parts, statusCount(chapters, AudiobookGenerationStatus.DRAFT), "draft");
+        appendCount(parts, statusCount(chapters, AudiobookGenerationStatus.FAILED), "failed");
+        return TextUtils.join(" - ", parts);
+    }
+
+    private void appendCount(List<String> parts, int count, String label) {
+        if (count > 0) {
+            parts.add(count + " " + label);
+        }
+    }
+
+    private int publishedChapterCount(List<UserGeneratedChapter> chapters) {
+        int count = 0;
+        if (chapters == null) {
+            return count;
+        }
+        for (UserGeneratedChapter chapter : chapters) {
+            if (chapter != null
+                    && (chapter.isPublished()
+                    || chapter.getGenerationStatus() == AudiobookGenerationStatus.PUBLISHED)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private int statusCount(List<UserGeneratedChapter> chapters, AudiobookGenerationStatus status) {
+        int count = 0;
+        if (chapters == null) {
+            return count;
+        }
+        for (UserGeneratedChapter chapter : chapters) {
+            if (chapter != null && chapter.getGenerationStatus() == status) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private View createActionButtons(UserGeneratedAudiobook upload) {
         LinearLayout actions = new LinearLayout(this);
-        actions.setOrientation(LinearLayout.VERTICAL);
+        actions.setGravity(Gravity.CENTER_VERTICAL);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
 
         View primaryAction = createPrimaryActionButton(upload);
+        View visibilityAction = createVisibilityButton(upload);
+        if (primaryAction == null && visibilityAction == null) {
+            return null;
+        }
         if (primaryAction != null) {
-            actions.addView(primaryAction, new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    dp(48)
-            ));
+            actions.addView(primaryAction, bookActionParams(false, visibilityAction != null));
         }
 
-        View visibilityAction = createVisibilityButton(upload);
         if (visibilityAction != null) {
-            LinearLayout.LayoutParams visibilityParams = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    dp(44)
-            );
-            visibilityParams.setMargins(0, primaryAction == null ? 0 : dp(10), 0, 0);
-            actions.addView(visibilityAction, visibilityParams);
+            actions.addView(visibilityAction, bookActionParams(primaryAction != null, primaryAction != null));
         }
         return actions;
     }
@@ -510,6 +745,7 @@ public class MyUploadsActivity extends AppCompatActivity {
             button.setTextSize(15);
             button.setEnabled(!requestInProgress());
             button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.accent)));
+            configureActionButton(button, 15, 14);
             button.setOnClickListener(v -> {
                 if (upload.hasChapterUpdate() && !upload.activeChapterIsInitialChapter()) {
                     openChapterEditor(upload);
@@ -530,6 +766,7 @@ public class MyUploadsActivity extends AppCompatActivity {
             button.setTextSize(15);
             button.setEnabled(!requestInProgress());
             button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.accent)));
+            configureActionButton(button, 15, 14);
             button.setOnClickListener(v -> requestGeneration(upload));
             return button;
         }
@@ -537,11 +774,12 @@ public class MyUploadsActivity extends AppCompatActivity {
         if (upload.getGenerationStatus() == AudiobookGenerationStatus.READY_FOR_REVIEW) {
             MaterialButton button = new MaterialButton(this);
             button.setAllCaps(false);
-            button.setText(upload.isPublished() ? "Preview Updates" : "Preview Audiobook");
+            button.setText(upload.isPublished() ? "Review Updates" : "Preview Audiobook");
             button.setTextColor(getColor(R.color.accent));
             button.setTextSize(15);
             button.setEnabled(!requestInProgress());
             button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.accent_soft)));
+            configureActionButton(button, 15, 14);
             button.setOnClickListener(v -> openBookDetail(upload, true));
             return button;
         }
@@ -554,6 +792,7 @@ public class MyUploadsActivity extends AppCompatActivity {
             button.setTextSize(15);
             button.setEnabled(!requestInProgress());
             button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.accent_soft)));
+            configureActionButton(button, 15, 14);
             button.setOnClickListener(v -> openAddChapter(upload));
             return button;
         }
@@ -571,11 +810,12 @@ public class MyUploadsActivity extends AppCompatActivity {
         button.setAllCaps(false);
         button.setText(updating
                 ? "Updating..."
-                : (hidden ? "Show Publicly" : "Hide from Public"));
+                : (hidden ? "Make Public" : "Make Private"));
         button.setTextColor(hidden ? getColor(R.color.accent) : 0xFF9E3A32);
         button.setTextSize(14);
         button.setEnabled(!requestInProgress());
-        button.setBackgroundTintList(ColorStateList.valueOf(hidden ? getColor(R.color.accent_soft) : 0xFFF9D8D5));
+        button.setBackgroundTintList(ColorStateList.valueOf(hidden ? getColor(R.color.accent_soft) : getColor(R.color.danger_soft)));
+        configureActionButton(button, 14, 14);
         button.setOnClickListener(v -> toggleVisibility(upload));
         return button;
     }
@@ -588,6 +828,7 @@ public class MyUploadsActivity extends AppCompatActivity {
         button.setTextSize(14);
         button.setEnabled(!requestInProgress());
         button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.accent_soft)));
+        configureActionButton(button, 14, 14);
         button.setOnClickListener(v -> openAddChapter(upload));
         return button;
     }
@@ -601,25 +842,56 @@ public class MyUploadsActivity extends AppCompatActivity {
         MaterialButton button = new MaterialButton(this);
         button.setAllCaps(false);
         button.setText(text);
-        button.setTextSize(12);
         button.setTextColor(textColor);
-        button.setMinHeight(0);
-        button.setMinimumHeight(0);
-        button.setInsetTop(0);
-        button.setInsetBottom(0);
         button.setEnabled(!requestInProgress());
         button.setBackgroundTintList(ColorStateList.valueOf(backgroundColor));
+        configureActionButton(button, 13, 12);
         button.setOnClickListener(listener);
         return button;
     }
 
-    private LinearLayout.LayoutParams rowButtonParams(boolean hasPreviousAction) {
+    private void configureActionButton(MaterialButton button, int textSize, int cornerRadius) {
+        button.setTextSize(textSize);
+        button.setMaxLines(1);
+        button.setEllipsize(TextUtils.TruncateAt.END);
+        button.setGravity(Gravity.CENTER);
+        button.setMinHeight(0);
+        button.setMinimumHeight(0);
+        button.setMinWidth(0);
+        button.setMinimumWidth(0);
+        button.setInsetTop(0);
+        button.setInsetBottom(0);
+        button.setCornerRadius(dp(cornerRadius));
+    }
+
+    private LinearLayout.LayoutParams bookActionParams(boolean hasStartMargin, boolean split) {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(38)
+                split ? 0 : ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(46),
+                split ? 1f : 0f
         );
-        if (hasPreviousAction) {
-            params.setMargins(0, dp(8), 0, 0);
+        if (hasStartMargin) {
+            params.setMargins(dp(10), 0, 0, 0);
+        }
+        return params;
+    }
+
+    private LinearLayout.LayoutParams chapterActionButtonParams(boolean hasStartMargin, int visibleActionCount) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                0,
+                dp(40),
+                visibleActionCount == 1 ? 1.2f : 1f
+        );
+        if (hasStartMargin) {
+            params.setMargins(dp(8), 0, 0, 0);
+        }
+        return params;
+    }
+
+    private LinearLayout.LayoutParams overflowButtonParams(boolean hasStartMargin) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(44), dp(40));
+        if (hasStartMargin) {
+            params.setMargins(dp(8), 0, 0, 0);
         }
         return params;
     }
@@ -673,10 +945,10 @@ public class MyUploadsActivity extends AppCompatActivity {
         boolean shouldHide = !upload.isHiddenByCreator();
         if (shouldHide) {
             new AlertDialog.Builder(this)
-                    .setTitle("Hide from Public")
-                    .setMessage("Hide \"" + upload.getTitle() + "\" from public discovery? It will stay here in My Uploads.")
+                    .setTitle("Make Private")
+                    .setMessage("Make \"" + upload.getTitle() + "\" private? It will stay here in My Uploads.")
                     .setNegativeButton("Cancel", null)
-                    .setPositiveButton("Hide", (dialog, which) -> setAudiobookVisibility(upload, true))
+                    .setPositiveButton("Make Private", (dialog, which) -> setAudiobookVisibility(upload, true))
                     .show();
             return;
         }
@@ -695,7 +967,7 @@ public class MyUploadsActivity extends AppCompatActivity {
                 visibilityBookId = null;
                 Toast.makeText(
                         MyUploadsActivity.this,
-                        hiddenByCreator ? "Hidden from public." : "Visible publicly.",
+                        hiddenByCreator ? "Made private." : "Made public.",
                         Toast.LENGTH_SHORT
                 ).show();
                 renderUploads(currentUploads);
@@ -900,15 +1172,66 @@ public class MyUploadsActivity extends AppCompatActivity {
     }
 
     private void showMessage(String message) {
-        if (emptyState == null) {
+        if (statePanel == null || stateTitle == null || stateMessage == null || stateAction == null) {
             return;
         }
         if (message == null || message.trim().isEmpty()) {
-            emptyState.setVisibility(View.GONE);
-            emptyState.setText("");
+            statePanel.setVisibility(View.GONE);
+            stateAction.setVisibility(View.GONE);
+            stateAction.setOnClickListener(null);
+            stateTitle.setText("");
+            stateMessage.setText("");
+            return;
+        }
+
+        String trimmed = message.trim();
+        if ("Loading uploads...".equals(trimmed)) {
+            showStatePanel(
+                    "Loading uploads...",
+                    "Checking the latest generation status for your audiobooks.",
+                    null,
+                    null
+            );
+            return;
+        }
+        if ("No uploads yet.".equals(trimmed)) {
+            showStatePanel(
+                    "No uploads yet.",
+                    "Create an audiobook draft and it will appear here for review, publishing, and chapter updates.",
+                    "+ Create New Audiobook",
+                    v -> startActivity(new Intent(this, CreateAudiobookActivity.class))
+            );
+            return;
+        }
+        if ("Could not load your uploads.".equals(trimmed)) {
+            showStatePanel(
+                    "Could not load your uploads.",
+                    "Check your connection and try again.",
+                    "Try Again",
+                    v -> startObservingUploads()
+            );
         } else {
-            emptyState.setVisibility(View.VISIBLE);
-            emptyState.setText(message);
+            showStatePanel(trimmed, "", null, null);
+        }
+    }
+
+    private void showStatePanel(
+            String title,
+            String message,
+            String actionText,
+            View.OnClickListener action
+    ) {
+        statePanel.setVisibility(View.VISIBLE);
+        stateTitle.setText(title);
+        stateMessage.setText(message);
+        stateMessage.setVisibility(TextUtils.isEmpty(message) ? View.GONE : View.VISIBLE);
+        if (TextUtils.isEmpty(actionText) || action == null) {
+            stateAction.setVisibility(View.GONE);
+            stateAction.setOnClickListener(null);
+        } else {
+            stateAction.setText(actionText);
+            stateAction.setVisibility(View.VISIBLE);
+            stateAction.setOnClickListener(action);
         }
     }
 
@@ -926,9 +1249,9 @@ public class MyUploadsActivity extends AppCompatActivity {
             case PENDING_GENERATION:
                 return 0xFFFFF4CF;
             case FAILED:
-                return 0xFFF9D8D5;
+                return getColor(R.color.danger_soft);
             case READY_FOR_REVIEW:
-                return 0xFFDDEAF7;
+                return getColor(R.color.info_soft);
             case PUBLISHED:
                 return 0xFFDCE8DD;
             case REJECTED:
@@ -955,6 +1278,14 @@ public class MyUploadsActivity extends AppCompatActivity {
             default:
                 return getColor(R.color.accent);
         }
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private int dp(int value) {

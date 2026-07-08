@@ -86,9 +86,14 @@ public class MyUploadsLiveNotificationConfigurationTest {
         assertTrue(repository.contains("UserGeneratedChapter.isDeletedDocument"));
         assertTrue(repository.contains("setAudiobookVisibility"));
         assertTrue(repository.contains("deleteChapter"));
-        assertTrue(activity.contains("Hide from Public"));
-        assertTrue(activity.contains("Show Publicly"));
-        assertTrue(activity.contains("Cancel Chapter"));
+        assertTrue(activity.contains("\"Preview\""));
+        assertTrue(activity.contains("\"Edit\""));
+        assertTrue(activity.contains("\"Request\""));
+        assertTrue(activity.contains("\"Cancel Chapter\""));
+        assertTrue(activity.contains("\"Make Public\""));
+        assertTrue(activity.contains("\"Make Private\""));
+        assertTrue(activity.contains("PopupMenu"));
+        assertTrue(activity.contains("showChapterOverflowMenu"));
         assertTrue(activity.contains("repository.deleteChapter"));
     }
 
@@ -100,6 +105,42 @@ public class MyUploadsLiveNotificationConfigurationTest {
         assertTrue(activity.contains("status.getDisplayLabel()"));
         assertTrue(status.contains("Pending Generation"));
         assertTrue(status.contains("Ready for Review"));
+    }
+
+    @Test
+    public void myUploadsUsesVisualCoverCardsAndDedicatedBackIcon() throws Exception {
+        String activity = readFile("src/main/java/com/example/fonos_group13/MyUploadsActivity.java");
+        String layout = readFile("src/main/res/layout/activity_my_uploads.xml");
+
+        assertTrue(activity.contains("ShapeableImageView"));
+        assertTrue(activity.contains("upload.getCoverUrl()"));
+        assertTrue(activity.contains("Glide.with(cover)"));
+        assertTrue(activity.contains("R.drawable.bg_cover_placeholder"));
+        assertTrue(layout.contains("@+id/uploads_state_panel"));
+        assertTrue(layout.contains("@+id/uploads_state_action"));
+        assertTrue(layout.contains("@+id/btn_create_upload"));
+        assertTrue(layout.contains("+ Create New"));
+        assertTrue(layout.contains("+ Create New Audiobook"));
+        assertTrue(layout.contains("@drawable/ic_arrow_back"));
+        assertFalse(layout.contains("@drawable/ic_logout"));
+    }
+
+    @Test
+    public void myUploadsUsesClearActionAndProgressLabels() throws Exception {
+        String activity = readFile("src/main/java/com/example/fonos_group13/MyUploadsActivity.java");
+
+        assertTrue(activity.contains("Preview Audiobook"));
+        assertTrue(activity.contains("Review Updates"));
+        assertTrue(activity.contains("Make Public"));
+        assertTrue(activity.contains("Make Private"));
+        assertTrue(activity.contains("formatVisibilityLabel"));
+        assertTrue(activity.contains("formatVoiceLabel"));
+        assertTrue(activity.contains("formatChapterProgress"));
+        assertTrue(activity.contains("formatChapterSummary"));
+        assertTrue(activity.contains("ic_more_vert"));
+        assertFalse(activity.contains("Preview Updates"));
+        assertFalse(activity.contains("Show Publicly"));
+        assertFalse(activity.contains("Hidden from public"));
     }
 
     @Test
