@@ -1,8 +1,10 @@
-package com.example.fonos_group13.data;
+package com.example.fonos_group13.data.auth;
 
 import android.content.Context;
 import android.text.TextUtils;
 
+import com.example.fonos_group13.data.core.FirebaseConfig;
+import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserProfileChangeRequest;

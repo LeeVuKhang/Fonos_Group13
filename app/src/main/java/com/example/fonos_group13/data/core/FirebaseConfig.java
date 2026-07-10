@@ -1,4 +1,4 @@
-package com.example.fonos_group13.data;
+package com.example.fonos_group13.data.core;
 
 import android.content.Context;
 

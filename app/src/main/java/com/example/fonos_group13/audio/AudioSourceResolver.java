@@ -4,7 +4,7 @@ import android.content.Context;
 import android.net.Uri;
 import android.text.TextUtils;
 
-import com.example.fonos_group13.data.DownloadedAudioRepository;
+import com.example.fonos_group13.data.library.DownloadedAudioRepository;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
 

@@ -15,11 +15,11 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.example.fonos_group13.data.BookRepository;
-import com.example.fonos_group13.data.DownloadedAudioRepository;
-import com.example.fonos_group13.data.ProgressRepository;
-import com.example.fonos_group13.data.RepositoryCallback;
-import com.example.fonos_group13.data.SavedBookRepository;
+import com.example.fonos_group13.data.catalog.BookRepository;
+import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.data.library.DownloadedAudioRepository;
+import com.example.fonos_group13.data.library.ProgressRepository;
+import com.example.fonos_group13.data.library.SavedBookRepository;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
 import com.example.fonos_group13.model.UserProgress;

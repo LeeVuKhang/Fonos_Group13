@@ -6,7 +6,7 @@ import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.fonos_group13.data.AuthRepository;
+import com.example.fonos_group13.data.auth.AuthRepository;
 
 public class MainActivity extends AppCompatActivity {
     private static final long HANDOFF_DELAY_MS = 32L;

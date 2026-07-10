@@ -1,7 +1,7 @@
 package com.example.fonos_group13.notifications;
 
-import com.example.fonos_group13.data.RepositoryCallback;
-import com.example.fonos_group13.data.UploadNotificationTokenRepository;
+import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.data.notification.UploadNotificationTokenRepository;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 

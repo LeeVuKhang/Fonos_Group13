@@ -1,7 +1,9 @@
-package com.example.fonos_group13.data;
+package com.example.fonos_group13.data.catalog;
 
 import android.content.Context;
 
+import com.example.fonos_group13.data.core.FirebaseConfig;
+import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.example.fonos_group13.model.AudiobookGenerationStatus;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;

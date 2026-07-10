@@ -1,4 +1,4 @@
-package com.example.fonos_group13.data;
+package com.example.fonos_group13.data.creator;
 
 public class DraftSavedGenerationRequestException extends Exception {
     private final String bookId;

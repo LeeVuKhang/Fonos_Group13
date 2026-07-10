@@ -16,11 +16,11 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.example.fonos_group13.data.AuthRepository;
-import com.example.fonos_group13.data.BackendApiException;
-import com.example.fonos_group13.data.CreatorAudiobookRepository;
-import com.example.fonos_group13.data.DraftSavedGenerationRequestException;
-import com.example.fonos_group13.data.RepositoryCallback;
+import com.example.fonos_group13.data.auth.AuthRepository;
+import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.data.creator.BackendApiException;
+import com.example.fonos_group13.data.creator.CreatorAudiobookRepository;
+import com.example.fonos_group13.data.creator.DraftSavedGenerationRequestException;
 import com.example.fonos_group13.model.CreateChapterDraftInput;
 import com.example.fonos_group13.model.CreatorVoiceOption;
 import com.example.fonos_group13.model.EditableChapterDraft;

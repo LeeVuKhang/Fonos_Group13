@@ -1,9 +1,10 @@
-package com.example.fonos_group13.data;
+package com.example.fonos_group13.data.library;
 
 import android.content.Context;
 import android.net.Uri;
 import android.text.TextUtils;
 
+import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
 

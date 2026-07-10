@@ -1,4 +1,4 @@
-package com.example.fonos_group13.data;
+package com.example.fonos_group13.data.creator;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;

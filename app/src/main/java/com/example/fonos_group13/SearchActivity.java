@@ -17,8 +17,8 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.example.fonos_group13.data.BookRepository;
-import com.example.fonos_group13.data.RepositoryCallback;
+import com.example.fonos_group13.data.catalog.BookRepository;
+import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.ui.BookCoverLoader;
 

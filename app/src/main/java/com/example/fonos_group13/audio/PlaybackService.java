@@ -21,7 +21,7 @@ import androidx.media3.session.MediaSessionService;
 import com.example.fonos_group13.ActivityReader;
 import com.example.fonos_group13.MainActivity;
 import com.example.fonos_group13.R;
-import com.example.fonos_group13.data.ProgressRepository;
+import com.example.fonos_group13.data.library.ProgressRepository;
 import com.google.common.collect.ImmutableList;
 
 @OptIn(markerClass = UnstableApi.class)

@@ -8,8 +8,8 @@ import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 
-import com.example.fonos_group13.data.RepositoryCallback;
-import com.example.fonos_group13.data.UploadNotificationTokenRepository;
+import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.data.notification.UploadNotificationTokenRepository;
 
 public final class GenerationNotificationSetup {
     public static final int REQUEST_POST_NOTIFICATIONS = 4102;

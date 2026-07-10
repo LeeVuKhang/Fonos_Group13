@@ -1,7 +1,9 @@
-package com.example.fonos_group13.data;
+package com.example.fonos_group13.data.notification;
 
 import android.content.Context;
 
+import com.example.fonos_group13.data.core.FirebaseConfig;
+import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;

@@ -16,8 +16,8 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.example.fonos_group13.data.AuthRepository;
-import com.example.fonos_group13.data.RepositoryCallback;
+import com.example.fonos_group13.data.auth.AuthRepository;
+import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.google.firebase.auth.FirebaseUser;
 
 public class LoginActivity extends AppCompatActivity {
