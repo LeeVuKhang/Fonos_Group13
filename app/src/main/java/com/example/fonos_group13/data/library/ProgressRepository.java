@@ -4,6 +4,7 @@ import android.content.Context;
 
 import com.example.fonos_group13.data.core.FirebaseConfig;
 import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.data.firestore.UserProgressDocumentMapper;
 import com.example.fonos_group13.model.BookChapter;
 import com.example.fonos_group13.model.UserProgress;
 import com.google.firebase.auth.FirebaseAuth;
@@ -15,7 +16,7 @@ import com.google.firebase.firestore.SetOptions;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ProgressRepository {
+public class ProgressRepository implements com.example.fonos_group13.data.repository.ProgressRepository {
     private static final String PROGRESS_KEY_SEPARATOR = "__";
 
     private final boolean configured;
@@ -62,7 +63,7 @@ public class ProgressRepository {
                 .get()
                 .addOnSuccessListener(document -> {
                     if (document.exists()) {
-                        callback.onSuccess(UserProgress.fromDocument(bookId, chapterId, document));
+                        callback.onSuccess(UserProgressDocumentMapper.fromDocument(bookId, chapterId, document));
                     } else if (BookChapter.LEGACY_CHAPTER_ID.equals(chapterId)) {
                         getLegacyProgress(bookId, callback);
                     } else {
@@ -115,7 +116,11 @@ public class ProgressRepository {
                 .get()
                 .addOnSuccessListener(document -> {
                     if (document.exists()) {
-                        callback.onSuccess(UserProgress.fromDocument(bookId, BookChapter.LEGACY_CHAPTER_ID, document));
+                        callback.onSuccess(UserProgressDocumentMapper.fromDocument(
+                                bookId,
+                                BookChapter.LEGACY_CHAPTER_ID,
+                                document
+                        ));
                     } else {
                         callback.onSuccess(UserProgress.empty(bookId, BookChapter.LEGACY_CHAPTER_ID));
                     }

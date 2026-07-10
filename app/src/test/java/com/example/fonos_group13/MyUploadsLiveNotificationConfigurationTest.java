@@ -83,7 +83,7 @@ public class MyUploadsLiveNotificationConfigurationTest {
         String repository = readFile("src/main/java/com/example/fonos_group13/data/creator/CreatorAudiobookRepository.java");
 
         assertTrue(repository.contains("observeUploadChapters"));
-        assertTrue(repository.contains("UserGeneratedChapter.isDeletedDocument"));
+        assertTrue(repository.contains("CreatorUploadDocumentMapper.isDeletedChapter"));
         assertTrue(repository.contains("setAudiobookVisibility"));
         assertTrue(repository.contains("deleteChapter"));
         assertTrue(activity.contains("\"Preview\""));

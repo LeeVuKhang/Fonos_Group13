@@ -1,4 +1,4 @@
-package com.example.fonos_group13.model;
+package com.example.fonos_group13.data.firestore;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -15,7 +15,7 @@ public class FirestoreValueReaderTest {
         assertNull(FirestoreValueReader.stringValue(42));
         assertEquals(0L, FirestoreValueReader.longValue("not-a-number"));
         assertFalse(FirestoreValueReader.booleanValue("not-a-boolean", false));
-        assertNull(FirestoreValueReader.timestampValue("yesterday"));
+        assertEquals(0L, FirestoreValueReader.timestampMillisValue("yesterday"));
     }
 
     @Test
@@ -25,6 +25,6 @@ public class FirestoreValueReaderTest {
         assertEquals("Title", FirestoreValueReader.stringValue("  Title  "));
         assertEquals(12L, FirestoreValueReader.longValue(12.8));
         assertTrue(FirestoreValueReader.booleanValue("true", false));
-        assertEquals(timestamp, FirestoreValueReader.timestampValue(timestamp));
+        assertEquals(timestamp.toDate().getTime(), FirestoreValueReader.timestampMillisValue(timestamp));
     }
 }

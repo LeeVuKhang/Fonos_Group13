@@ -1,15 +1,12 @@
 package com.example.fonos_group13.model;
 
-import com.google.firebase.Timestamp;
-import com.google.firebase.firestore.DocumentSnapshot;
-
 public class UserGeneratedChapter {
     private final String id;
     private final String title;
     private final AudiobookGenerationStatus generationStatus;
     private final boolean published;
     private final int order;
-    private final Timestamp updatedAt;
+    private final long updatedAtMillis;
     private final String generationError;
     private final boolean hasAudio;
 
@@ -19,7 +16,7 @@ public class UserGeneratedChapter {
             AudiobookGenerationStatus generationStatus,
             boolean published,
             int order,
-            Timestamp updatedAt,
+            long updatedAtMillis,
             String generationError,
             boolean hasAudio
     ) {
@@ -28,34 +25,9 @@ public class UserGeneratedChapter {
         this.generationStatus = generationStatus == null ? AudiobookGenerationStatus.DRAFT : generationStatus;
         this.published = published;
         this.order = Math.max(order, 0);
-        this.updatedAt = updatedAt;
+        this.updatedAtMillis = Math.max(updatedAtMillis, 0);
         this.generationError = optionalString(generationError);
         this.hasAudio = hasAudio;
-    }
-
-    public static UserGeneratedChapter fromDocument(String bookId, DocumentSnapshot document) {
-        long order = FirestoreValueReader.longValue(document, "order");
-        return new UserGeneratedChapter(
-                document == null ? null : document.getId(),
-                firstNonBlank(
-                        FirestoreValueReader.string(document, "title"),
-                        FirestoreValueReader.string(document, "chapterTitle")
-                ),
-                AudiobookGenerationStatus.fromValue(FirestoreValueReader.string(document, "generationStatus")),
-                FirestoreValueReader.booleanValue(document, "published", false),
-                (int) order,
-                FirestoreValueReader.timestamp(document, "updatedAt"),
-                FirestoreValueReader.string(document, "generationError"),
-                hasAudio(document)
-        );
-    }
-
-    public static boolean isDeletedDocument(DocumentSnapshot document) {
-        return FirestoreValueReader.booleanValue(document, "deletedByCreator", false)
-                || FirestoreValueReader.timestamp(document, "deletedAt") != null
-                || AudiobookGenerationStatus.DELETED == AudiobookGenerationStatus.fromValue(
-                FirestoreValueReader.string(document, "generationStatus")
-        );
     }
 
     public boolean canEdit() {
@@ -108,8 +80,8 @@ public class UserGeneratedChapter {
         return order;
     }
 
-    public Timestamp getUpdatedAt() {
-        return updatedAt;
+    public long getUpdatedAtMillis() {
+        return updatedAtMillis;
     }
 
     public String getGenerationError() {
@@ -118,15 +90,6 @@ public class UserGeneratedChapter {
 
     public boolean hasAudio() {
         return hasAudio;
-    }
-
-    private static boolean hasAudio(DocumentSnapshot document) {
-        return firstNonBlank(
-                FirestoreValueReader.string(document, "audioUrl"),
-                FirestoreValueReader.string(document, "url"),
-                FirestoreValueReader.string(document, "audioStoragePath"),
-                FirestoreValueReader.string(document, "s3Key")
-        ) != null;
     }
 
     private static String valueOrDefault(String value, String fallback) {

@@ -4,10 +4,12 @@ import android.content.Context;
 
 import com.example.fonos_group13.data.core.FirebaseConfig;
 import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.data.firestore.BookChapterDocumentMapper;
+import com.example.fonos_group13.data.firestore.BookDocumentMapper;
+import com.example.fonos_group13.data.firestore.FirestoreValueReader;
 import com.example.fonos_group13.model.AudiobookGenerationStatus;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
-import com.example.fonos_group13.model.FirestoreValueReader;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -17,7 +19,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class BookRepository {
+public class BookRepository implements com.example.fonos_group13.data.repository.CatalogRepository {
     private final boolean configured;
     private FirebaseAuth auth;
     private FirebaseFirestore firestore;
@@ -43,7 +45,7 @@ public class BookRepository {
                     List<Book> books = new ArrayList<>();
                     querySnapshot.getDocuments().forEach(document -> {
                         if (!isPubliclyHidden(document)) {
-                            books.add(Book.fromDocument(document));
+                            books.add(BookDocumentMapper.fromDocument(document));
                         }
                     });
                     Collections.sort(books, (left, right) -> Integer.compare(left.getOrder(), right.getOrder()));
@@ -85,7 +87,7 @@ public class BookRepository {
                             currentUserUid(),
                             resolvedAccessMode
                     )) {
-                        callback.onSuccess(Book.fromDocument(document));
+                        callback.onSuccess(BookDocumentMapper.fromDocument(document));
                     } else {
                         callback.onError(unavailableBookException());
                     }
@@ -146,7 +148,7 @@ public class BookRepository {
                         if (isDeletedChapter(document)) {
                             return;
                         }
-                        BookChapter chapter = BookChapter.fromDocument(bookId, document);
+                        BookChapter chapter = BookChapterDocumentMapper.fromDocument(bookId, document);
                         if (BookAccessPolicy.shouldIncludeChapter(
                                 book.isPublished(),
                                 creatorPreviewAuthorized,
@@ -181,12 +183,12 @@ public class BookRepository {
     private boolean isPubliclyHidden(DocumentSnapshot document) {
         return FirestoreValueReader.booleanValue(document, "hiddenByCreator", false)
                 || FirestoreValueReader.booleanValue(document, "archivedByCreator", false)
-                || FirestoreValueReader.timestamp(document, "archivedAt") != null;
+                || FirestoreValueReader.hasTimestamp(document, "archivedAt");
     }
 
     private boolean isDeletedChapter(DocumentSnapshot document) {
         return FirestoreValueReader.booleanValue(document, "deletedByCreator", false)
-                || FirestoreValueReader.timestamp(document, "deletedAt") != null
+                || FirestoreValueReader.hasTimestamp(document, "deletedAt")
                 || AudiobookGenerationStatus.DELETED == AudiobookGenerationStatus.fromValue(
                 FirestoreValueReader.string(document, "generationStatus")
         );

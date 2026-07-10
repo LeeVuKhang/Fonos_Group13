@@ -15,7 +15,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class DownloadedAudioRepository {
+public class DownloadedAudioRepository implements com.example.fonos_group13.data.repository.AudioDownloadRepository {
     private static final String AUDIO_DIR_NAME = "audiobooks";
     private static final int CONNECT_TIMEOUT_MS = 15000;
     private static final int READ_TIMEOUT_MS = 30000;

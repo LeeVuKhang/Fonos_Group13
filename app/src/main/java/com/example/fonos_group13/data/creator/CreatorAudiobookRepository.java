@@ -5,6 +5,7 @@ import android.content.Context;
 import com.example.fonos_group13.BuildConfig;
 import com.example.fonos_group13.data.core.FirebaseConfig;
 import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.data.firestore.CreatorUploadDocumentMapper;
 import com.example.fonos_group13.model.CreateAudiobookDraftInput;
 import com.example.fonos_group13.model.CreateChapterDraftInput;
 import com.example.fonos_group13.model.EditableAudiobookDraft;
@@ -20,7 +21,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class CreatorAudiobookRepository {
+public class CreatorAudiobookRepository implements com.example.fonos_group13.data.repository.CreatorCommandRepository {
     private static final String COLLECTION_BOOKS = "books";
     private static final String COLLECTION_CHAPTERS = "chapters";
 
@@ -428,7 +429,9 @@ public class CreatorAudiobookRepository {
     private List<UserGeneratedAudiobook> mapUploads(QuerySnapshot querySnapshot) {
         List<UserGeneratedAudiobook> uploads = new ArrayList<>();
         if (querySnapshot != null) {
-            querySnapshot.getDocuments().forEach(document -> uploads.add(UserGeneratedAudiobook.fromDocument(document)));
+            querySnapshot.getDocuments().forEach(document -> uploads.add(
+                    CreatorUploadDocumentMapper.audiobook(document)
+            ));
         }
         Collections.sort(uploads, (left, right) -> Long.compare(
                 right.getSortTimestampMillis(),
@@ -441,8 +444,8 @@ public class CreatorAudiobookRepository {
         List<UserGeneratedChapter> chapters = new ArrayList<>();
         if (querySnapshot != null) {
             querySnapshot.getDocuments().forEach(document -> {
-                if (!UserGeneratedChapter.isDeletedDocument(document)) {
-                    chapters.add(UserGeneratedChapter.fromDocument(bookId, document));
+                if (!CreatorUploadDocumentMapper.isDeletedChapter(document)) {
+                    chapters.add(CreatorUploadDocumentMapper.chapter(document));
                 }
             });
         }

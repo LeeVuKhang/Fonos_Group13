@@ -4,7 +4,7 @@ import android.content.Context;
 
 import com.example.fonos_group13.data.core.FirebaseConfig;
 import com.example.fonos_group13.data.core.RepositoryCallback;
-import com.example.fonos_group13.model.FirestoreValueReader;
+import com.example.fonos_group13.data.firestore.FirestoreValueReader;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FieldValue;
@@ -16,7 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class SavedBookRepository {
+public class SavedBookRepository implements com.example.fonos_group13.data.repository.SavedBooksRepository {
     private final boolean configured;
     private FirebaseAuth auth;
     private FirebaseFirestore firestore;

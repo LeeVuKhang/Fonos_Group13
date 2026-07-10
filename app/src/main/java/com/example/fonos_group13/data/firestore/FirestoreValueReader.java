@@ -1,9 +1,11 @@
-package com.example.fonos_group13.model;
+package com.example.fonos_group13.data.firestore;
 
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
 
-/** Reads Firestore fields without letting a malformed document crash the UI thread. */
+import java.util.Date;
+
+/** Reads Firestore fields without allowing malformed documents to crash the UI thread. */
 public final class FirestoreValueReader {
     private FirestoreValueReader() {
     }
@@ -20,11 +22,15 @@ public final class FirestoreValueReader {
         return booleanValue(rawValue(document, field), fallback);
     }
 
-    public static Timestamp timestamp(DocumentSnapshot document, String field) {
-        return timestampValue(rawValue(document, field));
+    public static long timestampMillis(DocumentSnapshot document, String field) {
+        return timestampMillisValue(rawValue(document, field));
     }
 
-    static String stringValue(Object value) {
+    public static boolean hasTimestamp(DocumentSnapshot document, String field) {
+        return timestampMillis(document, field) > 0;
+    }
+
+    public static String stringValue(Object value) {
         if (!(value instanceof String)) {
             return null;
         }
@@ -32,7 +38,7 @@ public final class FirestoreValueReader {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
-    static long longValue(Object value) {
+    public static long longValue(Object value) {
         if (value instanceof Number) {
             return ((Number) value).longValue();
         }
@@ -46,7 +52,7 @@ public final class FirestoreValueReader {
         return 0L;
     }
 
-    static boolean booleanValue(Object value, boolean fallback) {
+    public static boolean booleanValue(Object value, boolean fallback) {
         if (value instanceof Boolean) {
             return (Boolean) value;
         }
@@ -62,8 +68,14 @@ public final class FirestoreValueReader {
         return fallback;
     }
 
-    static Timestamp timestampValue(Object value) {
-        return value instanceof Timestamp ? (Timestamp) value : null;
+    public static long timestampMillisValue(Object value) {
+        if (value instanceof Timestamp) {
+            return ((Timestamp) value).toDate().getTime();
+        }
+        if (value instanceof Date) {
+            return ((Date) value).getTime();
+        }
+        return 0L;
     }
 
     private static Object rawValue(DocumentSnapshot document, String field) {

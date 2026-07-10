@@ -2,13 +2,13 @@ package com.example.fonos_group13;
 
 import android.os.Handler;
 
-import com.example.fonos_group13.data.auth.AuthRepository;
-import com.example.fonos_group13.data.catalog.BookRepository;
 import com.example.fonos_group13.data.creator.CreatorAudiobookRepository;
-import com.example.fonos_group13.data.library.DownloadedAudioRepository;
-import com.example.fonos_group13.data.library.ProgressRepository;
-import com.example.fonos_group13.data.library.SavedBookRepository;
 import com.example.fonos_group13.data.notification.UploadNotificationTokenRepository;
+import com.example.fonos_group13.data.repository.AudioDownloadRepository;
+import com.example.fonos_group13.data.repository.AuthRepository;
+import com.example.fonos_group13.data.repository.CatalogRepository;
+import com.example.fonos_group13.data.repository.ProgressRepository;
+import com.example.fonos_group13.data.repository.SavedBooksRepository;
 
 import java.util.concurrent.ExecutorService;
 
@@ -16,13 +16,13 @@ import java.util.concurrent.ExecutorService;
 public interface AppContainer {
     AuthRepository authRepository();
 
-    BookRepository bookRepository();
+    CatalogRepository catalogRepository();
 
-    SavedBookRepository savedBookRepository();
+    SavedBooksRepository savedBooksRepository();
 
     ProgressRepository progressRepository();
 
-    DownloadedAudioRepository downloadedAudioRepository();
+    AudioDownloadRepository audioDownloadRepository();
 
     CreatorAudiobookRepository creatorAudiobookRepository();
 

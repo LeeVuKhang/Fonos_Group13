@@ -15,7 +15,7 @@ import com.google.firebase.firestore.SetOptions;
 import java.util.HashMap;
 import java.util.Map;
 
-public class AuthRepository {
+public class AuthRepository implements com.example.fonos_group13.data.repository.AuthRepository {
     private final boolean configured;
     private FirebaseAuth auth;
     private FirebaseFirestore firestore;

@@ -1,8 +1,5 @@
 package com.example.fonos_group13.model;
 
-import com.google.firebase.Timestamp;
-import com.google.firebase.firestore.DocumentSnapshot;
-
 public class UserGeneratedAudiobook {
     private final String id;
     private final String title;
@@ -16,8 +13,8 @@ public class UserGeneratedAudiobook {
     private final String reviewStatus;
     private final boolean published;
     private final boolean hiddenByCreator;
-    private final Timestamp createdAt;
-    private final Timestamp updatedAt;
+    private final long createdAtMillis;
+    private final long updatedAtMillis;
     private final String generationError;
 
     public UserGeneratedAudiobook(
@@ -33,8 +30,8 @@ public class UserGeneratedAudiobook {
             String reviewStatus,
             boolean published,
             boolean hiddenByCreator,
-            Timestamp createdAt,
-            Timestamp updatedAt,
+            long createdAtMillis,
+            long updatedAtMillis,
             String generationError
     ) {
         this.id = valueOrDefault(id, "");
@@ -49,46 +46,13 @@ public class UserGeneratedAudiobook {
         this.reviewStatus = valueOrDefault(reviewStatus, "pending");
         this.published = published;
         this.hiddenByCreator = hiddenByCreator;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
+        this.createdAtMillis = Math.max(createdAtMillis, 0);
+        this.updatedAtMillis = Math.max(updatedAtMillis, 0);
         this.generationError = optionalString(generationError);
     }
 
-    public static UserGeneratedAudiobook fromDocument(DocumentSnapshot document) {
-        String rawStatus = FirestoreValueReader.string(document, "generationStatus");
-        AudiobookGenerationStatus status = AudiobookGenerationStatus.fromValue(rawStatus);
-        boolean published = FirestoreValueReader.booleanValue(document, "published", false);
-        String activeChapterId = optionalString(FirestoreValueReader.string(document, "activeChapterId"));
-        if (published && (optionalString(rawStatus) == null || activeChapterId == null || status == AudiobookGenerationStatus.PUBLISHED)) {
-            status = AudiobookGenerationStatus.PUBLISHED;
-        }
-        return new UserGeneratedAudiobook(
-                document.getId(),
-                FirestoreValueReader.string(document, "title"),
-                FirestoreValueReader.string(document, "author"),
-                firstNonBlank(
-                        FirestoreValueReader.string(document, "coverUrl"),
-                        FirestoreValueReader.string(document, "coverImageUrl"),
-                        FirestoreValueReader.string(document, "imageUrl"),
-                        FirestoreValueReader.string(document, "thumbnailUrl")
-                ),
-                FirestoreValueReader.string(document, "languageCode"),
-                FirestoreValueReader.string(document, "voiceGender"),
-                FirestoreValueReader.string(document, "pollyVoiceId"),
-                status,
-                activeChapterId,
-                FirestoreValueReader.string(document, "reviewStatus"),
-                published,
-                FirestoreValueReader.booleanValue(document, "hiddenByCreator", false),
-                FirestoreValueReader.timestamp(document, "createdAt"),
-                FirestoreValueReader.timestamp(document, "updatedAt"),
-                FirestoreValueReader.string(document, "generationError")
-        );
-    }
-
     public long getSortTimestampMillis() {
-        Timestamp timestamp = updatedAt == null ? createdAt : updatedAt;
-        return timestamp == null ? 0 : timestamp.toDate().getTime();
+        return updatedAtMillis > 0 ? updatedAtMillis : createdAtMillis;
     }
 
     public boolean canRequestGeneration() {
@@ -159,12 +123,12 @@ public class UserGeneratedAudiobook {
         return hiddenByCreator;
     }
 
-    public Timestamp getCreatedAt() {
-        return createdAt;
+    public long getCreatedAtMillis() {
+        return createdAtMillis;
     }
 
-    public Timestamp getUpdatedAt() {
-        return updatedAt;
+    public long getUpdatedAtMillis() {
+        return updatedAtMillis;
     }
 
     public String getGenerationError() {

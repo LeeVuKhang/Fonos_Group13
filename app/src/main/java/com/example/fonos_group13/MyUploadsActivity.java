@@ -34,7 +34,6 @@ import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.shape.ShapeAppearanceModel;
-import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.ListenerRegistration;
 
 import java.text.SimpleDateFormat;
@@ -1298,12 +1297,14 @@ public class MyUploadsActivity extends AppCompatActivity {
     }
 
     private String formatTimestamp(UserGeneratedAudiobook upload) {
-        Timestamp timestamp = upload.getUpdatedAt() == null ? upload.getCreatedAt() : upload.getUpdatedAt();
-        if (timestamp == null) {
+        long timestampMillis = upload.getUpdatedAtMillis() > 0
+                ? upload.getUpdatedAtMillis()
+                : upload.getCreatedAtMillis();
+        if (timestampMillis <= 0) {
             return "Recently updated";
         }
         SimpleDateFormat formatter = new SimpleDateFormat("MMM d, yyyy", Locale.US);
-        return "Updated " + formatter.format(timestamp.toDate());
+        return "Updated " + formatter.format(new java.util.Date(timestampMillis));
     }
 
     private int statusBackgroundColor(AudiobookGenerationStatus status) {
