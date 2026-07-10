@@ -14,23 +14,22 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.example.fonos_group13.data.catalog.BookRepository;
-import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.controller.catalog.CatalogController;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.ui.BookCoverLoader;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class DiscoverActivity extends AppCompatActivity {
-    private BookRepository bookRepository;
+public class DiscoverActivity extends AppCompatActivity implements CatalogController.View {
+    private CatalogController catalogController;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_discover);
-        bookRepository = new BookRepository(this);
+        catalogController = new CatalogController(FonosApplication.container(this).catalogRepository(), this);
 
         View mainView = findViewById(R.id.main);
         if (mainView != null) {
@@ -44,23 +43,35 @@ public class DiscoverActivity extends AppCompatActivity {
         setupBottomNavigation();
         bindBooks(new ArrayList<>());
         showMessage("Loading audiobooks...");
-        loadBooks();
     }
 
-    private void loadBooks() {
-        bookRepository.getPublishedBooks(new RepositoryCallback<List<Book>>() {
-            @Override
-            public void onSuccess(List<Book> books) {
-                bindBooks(books);
-            }
+    @Override
+    protected void onStart() {
+        super.onStart();
+        catalogController.start();
+    }
 
-            @Override
-            public void onError(Exception exception) {
-                bindBooks(new ArrayList<>());
-                showMessage("Could not load Firestore books.");
-                Toast.makeText(DiscoverActivity.this, "Could not load Firestore books.", Toast.LENGTH_SHORT).show();
-            }
-        });
+    @Override
+    protected void onStop() {
+        catalogController.stop();
+        super.onStop();
+    }
+
+    @Override
+    public void showCatalogLoading() {
+        showMessage("Loading audiobooks...");
+    }
+
+    @Override
+    public void showCatalogBooks(List<Book> books) {
+        bindBooks(books);
+    }
+
+    @Override
+    public void showCatalogError(Exception exception) {
+        bindBooks(new ArrayList<>());
+        showMessage("Could not load Firestore books.");
+        Toast.makeText(this, "Could not load Firestore books.", Toast.LENGTH_SHORT).show();
     }
 
     private void bindBooks(List<Book> books) {

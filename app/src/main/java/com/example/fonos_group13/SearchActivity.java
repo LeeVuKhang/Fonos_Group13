@@ -17,17 +17,16 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.example.fonos_group13.data.catalog.BookRepository;
-import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.controller.catalog.CatalogController;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.ui.BookCoverLoader;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class SearchActivity extends AppCompatActivity {
+public class SearchActivity extends AppCompatActivity implements CatalogController.View {
     private final List<Book> allBooks = new ArrayList<>();
-    private BookRepository bookRepository;
+    private CatalogController catalogController;
     private EditText searchInput;
 
     @Override
@@ -35,7 +34,7 @@ public class SearchActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_search);
-        bookRepository = new BookRepository(this);
+        catalogController = new CatalogController(FonosApplication.container(this).catalogRepository(), this);
 
         View mainView = findViewById(R.id.main);
         if (mainView != null) {
@@ -48,7 +47,18 @@ public class SearchActivity extends AppCompatActivity {
         
         setupBottomNavigation();
         setupSearch();
-        loadBooks();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        catalogController.start();
+    }
+
+    @Override
+    protected void onStop() {
+        catalogController.stop();
+        super.onStop();
     }
 
     private void setupSearch() {
@@ -72,26 +82,26 @@ public class SearchActivity extends AppCompatActivity {
         });
     }
 
-    private void loadBooks() {
+    @Override
+    public void showCatalogLoading() {
         showMessage("Loading audiobooks...");
-        bookRepository.getPublishedBooks(new RepositoryCallback<List<Book>>() {
-            @Override
-            public void onSuccess(List<Book> books) {
-                allBooks.clear();
-                if (books != null) {
-                    allBooks.addAll(books);
-                }
-                bindResults(searchInput == null ? "" : searchInput.getText().toString());
-            }
+    }
 
-            @Override
-            public void onError(Exception exception) {
-                allBooks.clear();
-                bindResults("");
-                showMessage("Could not load Firestore books.");
-                Toast.makeText(SearchActivity.this, "Could not load Firestore books.", Toast.LENGTH_SHORT).show();
-            }
-        });
+    @Override
+    public void showCatalogBooks(List<Book> books) {
+        allBooks.clear();
+        if (books != null) {
+            allBooks.addAll(books);
+        }
+        bindResults(searchInput == null ? "" : searchInput.getText().toString());
+    }
+
+    @Override
+    public void showCatalogError(Exception exception) {
+        allBooks.clear();
+        bindResults("");
+        showMessage("Could not load Firestore books.");
+        Toast.makeText(this, "Could not load Firestore books.", Toast.LENGTH_SHORT).show();
     }
 
     private void bindResults(String query) {

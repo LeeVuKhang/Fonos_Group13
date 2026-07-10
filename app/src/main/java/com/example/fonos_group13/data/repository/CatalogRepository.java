@@ -4,6 +4,7 @@ import com.example.fonos_group13.data.catalog.BookAccessMode;
 import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
+import com.example.fonos_group13.model.CatalogSnapshot;
 
 import java.util.List;
 
@@ -21,4 +22,8 @@ public interface CatalogRepository {
             BookAccessMode accessMode,
             RepositoryCallback<List<BookChapter>> callback
     );
+
+    void getChapters(Book book, RepositoryCallback<List<BookChapter>> callback);
+
+    void getPublishedCatalog(RepositoryCallback<CatalogSnapshot> callback);
 }

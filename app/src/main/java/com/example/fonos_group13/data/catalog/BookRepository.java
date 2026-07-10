@@ -10,6 +10,7 @@ import com.example.fonos_group13.data.firestore.FirestoreValueReader;
 import com.example.fonos_group13.model.AudiobookGenerationStatus;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
+import com.example.fonos_group13.model.CatalogSnapshot;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -18,6 +19,8 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class BookRepository implements com.example.fonos_group13.data.repository.CatalogRepository {
     private final boolean configured;
@@ -123,6 +126,75 @@ public class BookRepository implements com.example.fonos_group13.data.repository
                 callback.onError(exception);
             }
         });
+    }
+
+    @Override
+    public void getChapters(Book book, RepositoryCallback<List<BookChapter>> callback) {
+        if (book == null) {
+            callback.onError(new IllegalArgumentException("Missing book."));
+            return;
+        }
+        loadAuthorizedChapters(book, BookAccessMode.PUBLISHED_ONLY, callback);
+    }
+
+    @Override
+    public void getPublishedCatalog(RepositoryCallback<CatalogSnapshot> callback) {
+        getPublishedBooks(new RepositoryCallback<List<Book>>() {
+            @Override
+            public void onSuccess(List<Book> books) {
+                if (books == null || books.isEmpty()) {
+                    callback.onSuccess(new CatalogSnapshot(
+                            Collections.emptyList(),
+                            Collections.emptyMap(),
+                            false
+                    ));
+                    return;
+                }
+                Map<String, List<BookChapter>> chaptersByBookId = new HashMap<>();
+                int[] remaining = {books.size()};
+                boolean[] partial = {false};
+                for (Book book : books) {
+                    getChapters(book, new RepositoryCallback<List<BookChapter>>() {
+                        @Override
+                        public void onSuccess(List<BookChapter> chapters) {
+                            chaptersByBookId.put(
+                                    book.getId(),
+                                    chapters == null ? Collections.emptyList() : chapters
+                            );
+                            finishCatalogLoad(books, chaptersByBookId, remaining, partial, callback);
+                        }
+
+                        @Override
+                        public void onError(Exception exception) {
+                            partial[0] = true;
+                            chaptersByBookId.put(
+                                    book.getId(),
+                                    Collections.singletonList(BookChapter.fromLegacyBook(book))
+                            );
+                            finishCatalogLoad(books, chaptersByBookId, remaining, partial, callback);
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                callback.onError(exception);
+            }
+        });
+    }
+
+    private void finishCatalogLoad(
+            List<Book> books,
+            Map<String, List<BookChapter>> chaptersByBookId,
+            int[] remaining,
+            boolean[] partial,
+            RepositoryCallback<CatalogSnapshot> callback
+    ) {
+        remaining[0]--;
+        if (remaining[0] == 0) {
+            callback.onSuccess(new CatalogSnapshot(books, chaptersByBookId, partial[0]));
+        }
     }
 
     private void loadAuthorizedChapters(

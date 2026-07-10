@@ -18,11 +18,11 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.example.fonos_group13.audio.AudioPreferences;
-import com.example.fonos_group13.data.catalog.BookRepository;
-import com.example.fonos_group13.data.core.RepositoryCallback;
-import com.example.fonos_group13.data.library.DownloadedAudioRepository;
+import com.example.fonos_group13.controller.catalog.CatalogSnapshotController;
+import com.example.fonos_group13.data.repository.AudioDownloadRepository;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
+import com.example.fonos_group13.model.CatalogSnapshot;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
@@ -31,9 +31,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-public class AudioPreferencesActivity extends AppCompatActivity {
-    private BookRepository bookRepository;
-    private DownloadedAudioRepository downloadedAudioRepository;
+public class AudioPreferencesActivity extends AppCompatActivity implements CatalogSnapshotController.View {
+    private AudioDownloadRepository downloadedAudioRepository;
+    private CatalogSnapshotController catalogController;
     private LinearLayout downloadsContainer;
     private TextView downloadsEmptyState;
     private TextView[] speedChips;
@@ -46,13 +46,25 @@ public class AudioPreferencesActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_audio_preferences);
 
-        bookRepository = new BookRepository(this);
-        downloadedAudioRepository = new DownloadedAudioRepository(this);
+        AppContainer container = FonosApplication.container(this);
+        downloadedAudioRepository = container.audioDownloadRepository();
+        catalogController = new CatalogSnapshotController(container.catalogRepository(), this);
 
         bindViews();
         setupInsets();
         setupSpeedOptions();
-        loadDownloads();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        catalogController.start();
+    }
+
+    @Override
+    protected void onStop() {
+        catalogController.stop();
+        super.onStop();
     }
 
     private void bindViews() {
@@ -114,61 +126,32 @@ public class AudioPreferencesActivity extends AppCompatActivity {
         }
     }
 
-    private void loadDownloads() {
+    @Override
+    public void showCatalogSnapshotLoading() {
         if (downloadsContainer != null) {
             downloadsContainer.removeAllViews();
         }
         publishedBooks.clear();
         chaptersByBookId.clear();
         showDownloadsMessage("Loading downloaded audio...");
-        bookRepository.getPublishedBooks(new RepositoryCallback<List<Book>>() {
-            @Override
-            public void onSuccess(List<Book> books) {
-                if (books != null) {
-                    publishedBooks.addAll(books);
-                }
-                loadChaptersForDownloads();
-            }
-
-            @Override
-            public void onError(Exception exception) {
-                if (downloadsContainer != null) {
-                    downloadsContainer.removeAllViews();
-                }
-                showDownloadsMessage("Could not load downloaded audio.");
-                Toast.makeText(AudioPreferencesActivity.this, "Could not load downloaded audio.", Toast.LENGTH_SHORT).show();
-            }
-        });
     }
 
-    private void loadChaptersForDownloads() {
-        if (publishedBooks.isEmpty()) {
-            bindDownloadedChapters();
-            return;
-        }
-        final int[] remaining = {publishedBooks.size()};
-        for (Book book : publishedBooks) {
-            bookRepository.getChapters(book.getId(), new RepositoryCallback<List<BookChapter>>() {
-                @Override
-                public void onSuccess(List<BookChapter> chapters) {
-                    chaptersByBookId.put(book.getId(), chapters == null ? new ArrayList<>() : new ArrayList<>(chapters));
-                    finishOneChapterLoad(remaining);
-                }
-
-                @Override
-                public void onError(Exception exception) {
-                    chaptersByBookId.put(book.getId(), new ArrayList<>());
-                    finishOneChapterLoad(remaining);
-                }
-            });
-        }
+    @Override
+    public void showCatalogSnapshot(CatalogSnapshot snapshot) {
+        publishedBooks.clear();
+        chaptersByBookId.clear();
+        publishedBooks.addAll(snapshot.getBooks());
+        chaptersByBookId.putAll(snapshot.getChaptersByBookId());
+        bindDownloadedChapters();
     }
 
-    private void finishOneChapterLoad(int[] remaining) {
-        remaining[0]--;
-        if (remaining[0] <= 0) {
-            bindDownloadedChapters();
+    @Override
+    public void showCatalogSnapshotError(Exception exception) {
+        if (downloadsContainer != null) {
+            downloadsContainer.removeAllViews();
         }
+        showDownloadsMessage("Could not load downloaded audio.");
+        Toast.makeText(this, "Could not load downloaded audio.", Toast.LENGTH_SHORT).show();
     }
 
     private void bindDownloadedChapters() {

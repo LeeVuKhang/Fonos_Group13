@@ -4,8 +4,10 @@ import android.content.Context;
 
 import com.example.fonos_group13.data.core.FirebaseConfig;
 import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.data.firestore.FirestoreValueReader;
 import com.example.fonos_group13.data.firestore.UserProgressDocumentMapper;
 import com.example.fonos_group13.model.BookChapter;
+import com.example.fonos_group13.model.ProgressKey;
 import com.example.fonos_group13.model.UserProgress;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -69,6 +71,43 @@ public class ProgressRepository implements com.example.fonos_group13.data.reposi
                     } else {
                         callback.onSuccess(UserProgress.empty(bookId, chapterId));
                     }
+                })
+                .addOnFailureListener(callback::onError);
+    }
+
+    @Override
+    public void getAllProgress(RepositoryCallback<Map<ProgressKey, UserProgress>> callback) {
+        FirebaseUser user = auth == null ? null : auth.getCurrentUser();
+        if (!configured || firestore == null || user == null) {
+            callback.onSuccess(new HashMap<>());
+            return;
+        }
+
+        firestore.collection("users")
+                .document(user.getUid())
+                .collection("progress")
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    Map<ProgressKey, UserProgress> progressByChapter = new HashMap<>();
+                    snapshot.getDocuments().forEach(document -> {
+                        String bookId = FirestoreValueReader.string(document, "bookId");
+                        String chapterId = FirestoreValueReader.string(document, "chapterId");
+                        if (bookId == null) {
+                            String documentId = document.getId();
+                            int separator = documentId.indexOf(PROGRESS_KEY_SEPARATOR);
+                            bookId = separator < 0 ? documentId : documentId.substring(0, separator);
+                        }
+                        if (chapterId == null) {
+                            chapterId = BookChapter.LEGACY_CHAPTER_ID;
+                        }
+                        UserProgress progress = UserProgressDocumentMapper.fromDocument(
+                                bookId,
+                                chapterId,
+                                document
+                        );
+                        progressByChapter.put(ProgressKey.from(progress), progress);
+                    });
+                    callback.onSuccess(progressByChapter);
                 })
                 .addOnFailureListener(callback::onError);
     }
