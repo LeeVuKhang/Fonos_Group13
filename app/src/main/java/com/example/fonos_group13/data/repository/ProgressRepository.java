@@ -16,4 +16,12 @@ public interface ProgressRepository {
     void saveProgress(String bookId, long positionMs, long durationMs);
 
     void saveProgress(String bookId, String chapterId, long positionMs, long durationMs);
+
+    void saveProgress(
+            String bookId,
+            String chapterId,
+            long positionMs,
+            long durationMs,
+            RepositoryCallback<Void> callback
+    );
 }

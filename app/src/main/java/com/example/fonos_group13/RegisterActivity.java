@@ -14,9 +14,10 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.example.fonos_group13.data.auth.AuthRepository;
+import com.example.fonos_group13.data.auth.AuthErrorFormatter;
 import com.example.fonos_group13.data.core.RepositoryCallback;
-import com.google.firebase.auth.FirebaseUser;
+import com.example.fonos_group13.data.repository.AuthRepository;
+import com.example.fonos_group13.model.UserAccount;
 import com.google.android.material.button.MaterialButton;
 
 public class RegisterActivity extends AppCompatActivity {
@@ -31,7 +32,7 @@ public class RegisterActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_register);
-        authRepository = new AuthRepository(this);
+        authRepository = FonosApplication.container(this).authRepository();
 
         // 1. Edge-to-Edge System Bar Padding
         View mainView = findViewById(R.id.main);
@@ -90,9 +91,9 @@ public class RegisterActivity extends AppCompatActivity {
         }
 
         setLoading(true);
-        authRepository.register(email, password, new RepositoryCallback<FirebaseUser>() {
+        authRepository.register(email, password, new RepositoryCallback<UserAccount>() {
             @Override
-            public void onSuccess(FirebaseUser data) {
+            public void onSuccess(UserAccount data) {
                 setLoading(false);
                 Toast.makeText(RegisterActivity.this, "Account created successfully", Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(RegisterActivity.this, DiscoverActivity.class);
@@ -103,7 +104,7 @@ public class RegisterActivity extends AppCompatActivity {
             @Override
             public void onError(Exception exception) {
                 setLoading(false);
-                Toast.makeText(RegisterActivity.this, AuthRepository.friendlyError(exception), Toast.LENGTH_LONG).show();
+                Toast.makeText(RegisterActivity.this, AuthErrorFormatter.friendlyMessage(exception), Toast.LENGTH_LONG).show();
             }
         });
     }

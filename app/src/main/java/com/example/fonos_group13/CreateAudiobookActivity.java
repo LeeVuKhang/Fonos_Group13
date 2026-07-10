@@ -16,7 +16,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.example.fonos_group13.data.auth.AuthRepository;
+import com.example.fonos_group13.data.auth.AuthErrorFormatter;
 import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.example.fonos_group13.data.creator.BackendApiException;
 import com.example.fonos_group13.controller.creator.CreateAudiobookController;
@@ -187,7 +187,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
                 }
                 Toast.makeText(
                         CreateAudiobookActivity.this,
-                        AuthRepository.friendlyError(exception),
+                        AuthErrorFormatter.friendlyMessage(exception),
                         Toast.LENGTH_LONG
                 ).show();
             }
@@ -227,7 +227,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
                 setDraftLoading(false);
                 Toast.makeText(
                         CreateAudiobookActivity.this,
-                        AuthRepository.friendlyError(exception),
+                        AuthErrorFormatter.friendlyMessage(exception),
                         Toast.LENGTH_LONG
                 ).show();
                 finish();

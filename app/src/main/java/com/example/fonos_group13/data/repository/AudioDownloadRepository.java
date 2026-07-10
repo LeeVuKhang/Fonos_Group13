@@ -3,6 +3,7 @@ package com.example.fonos_group13.data.repository;
 import android.net.Uri;
 
 import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.data.core.RequestHandle;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
 
@@ -25,7 +26,7 @@ public interface AudioDownloadRepository {
 
     boolean deleteDownloadedAudio(String bookId, String chapterId);
 
-    void download(Book book, RepositoryCallback<File> callback);
+    RequestHandle download(Book book, RepositoryCallback<File> callback);
 
-    void download(Book book, BookChapter chapter, RepositoryCallback<File> callback);
+    RequestHandle download(Book book, BookChapter chapter, RepositoryCallback<File> callback);
 }

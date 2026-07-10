@@ -137,5 +137,6 @@ public class LibraryControllerTest {
         @Override public void getProgress(String bookId, String chapterId, RepositoryCallback<UserProgress> callback) { throw new UnsupportedOperationException(); }
         @Override public void saveProgress(String bookId, long positionMs, long durationMs) { throw new UnsupportedOperationException(); }
         @Override public void saveProgress(String bookId, String chapterId, long positionMs, long durationMs) { throw new UnsupportedOperationException(); }
+        @Override public void saveProgress(String bookId, String chapterId, long positionMs, long durationMs, RepositoryCallback<Void> callback) { throw new UnsupportedOperationException(); }
     }
 }

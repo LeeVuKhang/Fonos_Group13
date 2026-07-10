@@ -1,18 +1,17 @@
 package com.example.fonos_group13.audio;
 
-import android.content.Context;
 import android.net.Uri;
 import android.text.TextUtils;
 
-import com.example.fonos_group13.data.library.DownloadedAudioRepository;
+import com.example.fonos_group13.data.repository.AudioDownloadRepository;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
 
 public class AudioSourceResolver {
-    private final DownloadedAudioRepository downloadedAudioRepository;
+    private final AudioDownloadRepository downloadedAudioRepository;
 
-    public AudioSourceResolver(Context context) {
-        downloadedAudioRepository = new DownloadedAudioRepository(context.getApplicationContext());
+    public AudioSourceResolver(AudioDownloadRepository downloadedAudioRepository) {
+        this.downloadedAudioRepository = downloadedAudioRepository;
     }
 
     public Uri resolve(Book book) {

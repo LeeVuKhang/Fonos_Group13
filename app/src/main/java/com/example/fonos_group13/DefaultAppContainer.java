@@ -6,6 +6,9 @@ import android.os.Looper;
 
 import com.example.fonos_group13.data.creator.CreatorAudiobookRepository;
 import com.example.fonos_group13.data.creator.FirestoreCreatorUploadsRepository;
+import com.example.fonos_group13.data.library.DefaultAudioDownloadRepository;
+import com.example.fonos_group13.data.library.DownloadedAudioStore;
+import com.example.fonos_group13.data.library.HttpAudioDownloader;
 import com.example.fonos_group13.data.notification.UploadNotificationTokenRepository;
 import com.example.fonos_group13.data.repository.AudioDownloadRepository;
 import com.example.fonos_group13.data.repository.AuthRepository;
@@ -38,7 +41,12 @@ final class DefaultAppContainer implements AppContainer {
         catalogRepository = new com.example.fonos_group13.data.catalog.BookRepository(appContext);
         savedBooksRepository = new com.example.fonos_group13.data.library.SavedBookRepository(appContext);
         progressRepository = new com.example.fonos_group13.data.library.ProgressRepository(appContext);
-        audioDownloadRepository = new com.example.fonos_group13.data.library.DownloadedAudioRepository(appContext);
+        audioDownloadRepository = new DefaultAudioDownloadRepository(
+                new DownloadedAudioStore(new java.io.File(appContext.getFilesDir(), "audiobooks")),
+                new HttpAudioDownloader(),
+                ioExecutor,
+                mainHandler
+        );
         creatorCommandRepository = new CreatorAudiobookRepository(appContext, ioExecutor, mainHandler);
         creatorUploadsRepository = new FirestoreCreatorUploadsRepository(appContext);
         uploadNotificationTokenRepository = new UploadNotificationTokenRepository(appContext);

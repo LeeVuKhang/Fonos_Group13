@@ -10,6 +10,7 @@ import androidx.core.content.ContextCompat;
 
 import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.example.fonos_group13.data.notification.UploadNotificationTokenRepository;
+import com.example.fonos_group13.FonosApplication;
 
 public final class GenerationNotificationSetup {
     public static final int REQUEST_POST_NOTIFICATIONS = 4102;
@@ -23,7 +24,7 @@ public final class GenerationNotificationSetup {
 
     public GenerationNotificationSetup(Activity activity) {
         this.activity = activity;
-        this.tokenRepository = new UploadNotificationTokenRepository(activity);
+        this.tokenRepository = FonosApplication.container(activity).uploadNotificationTokenRepository();
     }
 
     public void ensureReady() {

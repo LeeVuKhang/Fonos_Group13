@@ -23,7 +23,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.example.fonos_group13.data.auth.AuthRepository;
+import com.example.fonos_group13.data.auth.AuthErrorFormatter;
 import com.example.fonos_group13.controller.creator.MyUploadsController;
 import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.example.fonos_group13.data.repository.CreatorCommandRepository;
@@ -152,7 +152,7 @@ public class MyUploadsActivity extends AppCompatActivity implements MyUploadsCon
             uploadsContainer.removeAllViews();
         }
         showMessage("Could not load your uploads.");
-        Toast.makeText(this, AuthRepository.friendlyError(exception), Toast.LENGTH_LONG).show();
+        Toast.makeText(this, AuthErrorFormatter.friendlyMessage(exception), Toast.LENGTH_LONG).show();
     }
 
     private void renderUploads(List<UserGeneratedAudiobook> uploads) {
@@ -869,7 +869,7 @@ public class MyUploadsActivity extends AppCompatActivity implements MyUploadsCon
                 loadingBookId = null;
                 Toast.makeText(
                         MyUploadsActivity.this,
-                        AuthRepository.friendlyError(exception),
+                        AuthErrorFormatter.friendlyMessage(exception),
                         Toast.LENGTH_LONG
                 ).show();
                 renderUploads(currentUploads);
@@ -922,7 +922,7 @@ public class MyUploadsActivity extends AppCompatActivity implements MyUploadsCon
                 visibilityBookId = null;
                 Toast.makeText(
                         MyUploadsActivity.this,
-                        AuthRepository.friendlyError(exception),
+                        AuthErrorFormatter.friendlyMessage(exception),
                         Toast.LENGTH_LONG
                 ).show();
                 renderUploads(currentUploads);
@@ -949,7 +949,7 @@ public class MyUploadsActivity extends AppCompatActivity implements MyUploadsCon
                 publishingBookId = null;
                 Toast.makeText(
                         MyUploadsActivity.this,
-                        AuthRepository.friendlyError(exception),
+                        AuthErrorFormatter.friendlyMessage(exception),
                         Toast.LENGTH_LONG
                 ).show();
                 renderUploads(currentUploads);
@@ -977,7 +977,7 @@ public class MyUploadsActivity extends AppCompatActivity implements MyUploadsCon
                 loadingChapterKey = null;
                 Toast.makeText(
                         MyUploadsActivity.this,
-                        AuthRepository.friendlyError(exception),
+                        AuthErrorFormatter.friendlyMessage(exception),
                         Toast.LENGTH_LONG
                 ).show();
                 renderUploads(currentUploads);
@@ -1023,7 +1023,7 @@ public class MyUploadsActivity extends AppCompatActivity implements MyUploadsCon
                 deletingChapterKey = null;
                 Toast.makeText(
                         MyUploadsActivity.this,
-                        AuthRepository.friendlyError(exception),
+                        AuthErrorFormatter.friendlyMessage(exception),
                         Toast.LENGTH_LONG
                 ).show();
                 renderUploads(currentUploads);

@@ -1,6 +1,7 @@
 package com.example.fonos_group13.data.library;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.example.fonos_group13.data.core.FirebaseConfig;
 import com.example.fonos_group13.data.core.RepositoryCallback;
@@ -20,6 +21,7 @@ import java.util.Map;
 
 public class ProgressRepository implements com.example.fonos_group13.data.repository.ProgressRepository {
     private static final String PROGRESS_KEY_SEPARATOR = "__";
+    private static final String TAG = "ProgressRepository";
 
     private final boolean configured;
     private FirebaseAuth auth;
@@ -117,8 +119,29 @@ public class ProgressRepository implements com.example.fonos_group13.data.reposi
     }
 
     public void saveProgress(String bookId, String chapterId, long positionMs, long durationMs) {
+        saveProgress(bookId, chapterId, positionMs, durationMs, new RepositoryCallback<Void>() {
+            @Override
+            public void onSuccess(Void data) {
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Log.w(TAG, "Could not save playback progress.", exception);
+            }
+        });
+    }
+
+    @Override
+    public void saveProgress(
+            String bookId,
+            String chapterId,
+            long positionMs,
+            long durationMs,
+            RepositoryCallback<Void> callback
+    ) {
         FirebaseUser user = auth == null ? null : auth.getCurrentUser();
         if (!configured || firestore == null || user == null || bookId == null || chapterId == null) {
+            callback.onError(new IllegalStateException("Progress cannot be saved without a signed-in user."));
             return;
         }
 
@@ -127,14 +150,16 @@ public class ProgressRepository implements com.example.fonos_group13.data.reposi
         progress.put("chapterId", chapterId);
         progress.put("positionMs", Math.max(positionMs, 0));
         progress.put("durationMs", Math.max(durationMs, 0));
-        progress.put("completed", durationMs > 0 && positionMs >= durationMs * 0.95f);
+        progress.put("completed", ProgressCompletionPolicy.isCompleted(positionMs, durationMs));
         progress.put("updatedAt", FieldValue.serverTimestamp());
 
         firestore.collection("users")
                 .document(user.getUid())
                 .collection("progress")
                 .document(progressDocumentId(bookId, chapterId))
-                .set(progress, SetOptions.merge());
+                .set(progress, SetOptions.merge())
+                .addOnSuccessListener(unused -> callback.onSuccess(null))
+                .addOnFailureListener(callback::onError);
     }
 
     public static String progressDocumentId(String bookId, String chapterId) {

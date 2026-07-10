@@ -19,14 +19,10 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.example.fonos_group13.data.auth.AuthRepository;
+import com.example.fonos_group13.data.auth.AuthErrorFormatter;
+import com.example.fonos_group13.controller.reader.BookDetailDataController;
 import com.example.fonos_group13.data.catalog.BookAccessMode;
-import com.example.fonos_group13.data.catalog.BookRepository;
 import com.example.fonos_group13.data.core.RepositoryCallback;
-import com.example.fonos_group13.data.repository.CreatorCommandRepository;
-import com.example.fonos_group13.data.library.DownloadedAudioRepository;
-import com.example.fonos_group13.data.library.ProgressRepository;
-import com.example.fonos_group13.data.library.SavedBookRepository;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
 import com.example.fonos_group13.model.AudiobookGenerationStatus;
@@ -34,8 +30,6 @@ import com.example.fonos_group13.model.UserProgress;
 import com.example.fonos_group13.ui.BookCoverLoader;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -48,11 +42,7 @@ public class BookDetailActivity extends AppCompatActivity {
     public static final String EXTRA_BOOK_ID = "book_id";
     public static final String EXTRA_CREATOR_PREVIEW = "creator_review_preview";
 
-    private BookRepository bookRepository;
-    private CreatorCommandRepository creatorAudiobookRepository;
-    private ProgressRepository progressRepository;
-    private DownloadedAudioRepository downloadedAudioRepository;
-    private SavedBookRepository savedBookRepository;
+    private BookDetailDataController dataController;
     private Book currentBook;
     private String requestedBookId;
     private String downloadingChapterId;
@@ -83,16 +73,34 @@ public class BookDetailActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_book_detail);
 
-        bookRepository = new BookRepository(this);
-        creatorAudiobookRepository = FonosApplication.container(this).creatorCommandRepository();
-        progressRepository = new ProgressRepository(this);
-        downloadedAudioRepository = new DownloadedAudioRepository(this);
-        savedBookRepository = new SavedBookRepository(this);
+        AppContainer container = FonosApplication.container(this);
+        dataController = new BookDetailDataController(
+                container.catalogRepository(),
+                container.progressRepository(),
+                container.audioDownloadRepository(),
+                container.savedBooksRepository(),
+                container.creatorCommandRepository(),
+                container.authRepository()
+        );
 
         bindViews();
         setupInsets();
         setupControls();
-        handleIntent(getIntent());
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        dataController.start();
+        if (currentBook == null) {
+            handleIntent(getIntent());
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        dataController.stop();
+        super.onStop();
     }
 
     @Override
@@ -180,7 +188,7 @@ public class BookDetailActivity extends AppCompatActivity {
         BookAccessMode accessMode = creatorPreviewRequested
                 ? BookAccessMode.CREATOR_REVIEW_PREVIEW
                 : BookAccessMode.PUBLISHED_ONLY;
-        bookRepository.getBook(bookId, accessMode, new RepositoryCallback<Book>() {
+        dataController.getBook(bookId, accessMode, new RepositoryCallback<Book>() {
             @Override
             public void onSuccess(Book book) {
                 if (!bookId.equals(requestedBookId)) {
@@ -232,7 +240,7 @@ public class BookDetailActivity extends AppCompatActivity {
     private void loadSavedState(String bookId) {
         saveBookLoading = true;
         updateSaveBookButton();
-        savedBookRepository.isSaved(bookId, new RepositoryCallback<Boolean>() {
+        dataController.isSaved(bookId, new RepositoryCallback<Boolean>() {
             @Override
             public void onSuccess(Boolean saved) {
                 if (!bookId.equals(requestedBookId)) {
@@ -259,7 +267,7 @@ public class BookDetailActivity extends AppCompatActivity {
         BookAccessMode accessMode = creatorPreviewActive
                 ? BookAccessMode.CREATOR_REVIEW_PREVIEW
                 : BookAccessMode.PUBLISHED_ONLY;
-        bookRepository.getChapters(bookId, accessMode, new RepositoryCallback<List<BookChapter>>() {
+        dataController.getChapters(bookId, accessMode, new RepositoryCallback<List<BookChapter>>() {
             @Override
             public void onSuccess(List<BookChapter> data) {
                 if (!bookId.equals(requestedBookId)) {
@@ -305,7 +313,7 @@ public class BookDetailActivity extends AppCompatActivity {
     }
 
     private void loadProgress(BookChapter chapter) {
-        progressRepository.getProgress(chapter.getBookId(), chapter.getId(), new RepositoryCallback<UserProgress>() {
+        dataController.getProgress(chapter.getBookId(), chapter.getId(), new RepositoryCallback<UserProgress>() {
             @Override
             public void onSuccess(UserProgress progress) {
                 progressByChapterId.put(chapter.getId(), progress);
@@ -379,11 +387,7 @@ public class BookDetailActivity extends AppCompatActivity {
             }
         };
 
-        if (targetSaved) {
-            savedBookRepository.saveBook(bookId, callback);
-        } else {
-            savedBookRepository.unsaveBook(bookId, callback);
-        }
+        dataController.setSaved(bookId, targetSaved, callback);
     }
 
     private void publishCurrentBook() {
@@ -394,7 +398,7 @@ public class BookDetailActivity extends AppCompatActivity {
         String bookId = currentBook.getId();
         publishLoading = true;
         updatePublishButton();
-        creatorAudiobookRepository.publishAudiobook(bookId, new RepositoryCallback<Void>() {
+        dataController.publish(bookId, new RepositoryCallback<Void>() {
             @Override
             public void onSuccess(Void data) {
                 publishLoading = false;
@@ -413,7 +417,7 @@ public class BookDetailActivity extends AppCompatActivity {
                 updateAddChapterButton();
                 Toast.makeText(
                         BookDetailActivity.this,
-                        AuthRepository.friendlyError(exception),
+                        AuthErrorFormatter.friendlyMessage(exception),
                         Toast.LENGTH_LONG
                 ).show();
             }
@@ -477,10 +481,7 @@ public class BookDetailActivity extends AppCompatActivity {
         if (book == null) {
             return false;
         }
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        String currentUid = user == null ? null : trimToNull(user.getUid());
-        String creatorUid = trimToNull(book.getCreatorUid());
-        return currentUid != null && currentUid.equals(creatorUid);
+        return dataController.isCurrentCreator(book);
     }
 
     private void openAddChapter() {
@@ -561,7 +562,7 @@ public class BookDetailActivity extends AppCompatActivity {
         contentRow.addView(textContainer, textParams);
 
         ImageView download = new ImageView(this);
-        boolean downloaded = downloadedAudioRepository.isDownloaded(chapter.getBookId(), chapter.getId());
+        boolean downloaded = dataController.isDownloaded(chapter.getBookId(), chapter.getId());
         boolean downloading = chapter.getId().equals(downloadingChapterId);
         download.setImageResource(downloaded ? R.drawable.ic_download_done : R.drawable.ic_download);
         download.setColorFilter(ContextCompat.getColor(this, R.color.accent));
@@ -590,7 +591,7 @@ public class BookDetailActivity extends AppCompatActivity {
         UserProgress progress = progressByChapterId.get(chapter.getId());
         String duration = formatDuration(chapterDurationMs(chapter, progress));
         int percent = chapterPercent(chapter);
-        boolean downloaded = downloadedAudioRepository.isDownloaded(chapter.getBookId(), chapter.getId());
+        boolean downloaded = dataController.isDownloaded(chapter.getBookId(), chapter.getId());
         String downloadLabel = downloaded ? "Downloaded" : "Streaming";
         return percent + "% complete - " + duration + " - " + downloadLabel;
     }
@@ -621,7 +622,7 @@ public class BookDetailActivity extends AppCompatActivity {
         if (currentBook == null || chapter == null || downloadingChapterId != null) {
             return;
         }
-        if (downloadedAudioRepository.isDownloaded(chapter.getBookId(), chapter.getId())) {
+        if (dataController.isDownloaded(chapter.getBookId(), chapter.getId())) {
             Toast.makeText(this, "Chapter is already downloaded.", Toast.LENGTH_SHORT).show();
             renderChapters();
             return;
@@ -635,7 +636,7 @@ public class BookDetailActivity extends AppCompatActivity {
         downloadingChapterId = chapter.getId();
         renderChapters();
         Toast.makeText(this, "Downloading chapter...", Toast.LENGTH_SHORT).show();
-        downloadedAudioRepository.download(currentBook, chapter, new RepositoryCallback<File>() {
+        dataController.download(currentBook, chapter, new RepositoryCallback<File>() {
             @Override
             public void onSuccess(File data) {
                 runOnUiThread(() -> {

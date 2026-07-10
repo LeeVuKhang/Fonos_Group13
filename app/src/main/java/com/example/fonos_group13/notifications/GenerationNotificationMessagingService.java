@@ -1,7 +1,7 @@
 package com.example.fonos_group13.notifications;
 
 import com.example.fonos_group13.data.core.RepositoryCallback;
-import com.example.fonos_group13.data.notification.UploadNotificationTokenRepository;
+import com.example.fonos_group13.FonosApplication;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
@@ -17,7 +17,9 @@ public class GenerationNotificationMessagingService extends FirebaseMessagingSer
     @Override
     public void onNewToken(String token) {
         super.onNewToken(token);
-        new UploadNotificationTokenRepository(this).saveToken(token, new RepositoryCallback<Void>() {
+        FonosApplication.container(this).uploadNotificationTokenRepository().saveToken(
+                token,
+                new RepositoryCallback<Void>() {
             @Override
             public void onSuccess(Void data) {
                 // Token refresh is best-effort; no foreground UI is available here.
@@ -27,6 +29,7 @@ public class GenerationNotificationMessagingService extends FirebaseMessagingSer
             public void onError(Exception exception) {
                 // Token refresh is retried from My Uploads when generation is requested or pending.
             }
-        });
+                }
+        );
     }
 }

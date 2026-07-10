@@ -5,6 +5,7 @@ import android.text.TextUtils;
 
 import com.example.fonos_group13.data.core.FirebaseConfig;
 import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.model.UserAccount;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserProfileChangeRequest;
@@ -32,22 +33,22 @@ public class AuthRepository implements com.example.fonos_group13.data.repository
         return configured;
     }
 
-    public FirebaseUser getCurrentUser() {
-        return auth == null ? null : auth.getCurrentUser();
+    public UserAccount getCurrentUser() {
+        return toAccount(auth == null ? null : auth.getCurrentUser());
     }
 
-    public void signIn(String email, String password, RepositoryCallback<FirebaseUser> callback) {
+    public void signIn(String email, String password, RepositoryCallback<UserAccount> callback) {
         if (!configured || auth == null) {
             callback.onError(FirebaseConfig.missingConfigException());
             return;
         }
 
         auth.signInWithEmailAndPassword(email, password)
-                .addOnSuccessListener(authResult -> callback.onSuccess(authResult.getUser()))
+                .addOnSuccessListener(authResult -> callback.onSuccess(toAccount(authResult.getUser())))
                 .addOnFailureListener(callback::onError);
     }
 
-    public void register(String email, String password, RepositoryCallback<FirebaseUser> callback) {
+    public void register(String email, String password, RepositoryCallback<UserAccount> callback) {
         if (!configured || auth == null) {
             callback.onError(FirebaseConfig.missingConfigException());
             return;
@@ -74,13 +75,13 @@ public class AuthRepository implements com.example.fonos_group13.data.repository
                     firestore.collection("users")
                             .document(user.getUid())
                             .set(profile, SetOptions.merge())
-                            .addOnSuccessListener(unused -> callback.onSuccess(user))
+                            .addOnSuccessListener(unused -> callback.onSuccess(toAccount(user)))
                             .addOnFailureListener(callback::onError);
                 })
                 .addOnFailureListener(callback::onError);
     }
 
-    public void updateDisplayName(String displayName, RepositoryCallback<FirebaseUser> callback) {
+    public void updateDisplayName(String displayName, RepositoryCallback<UserAccount> callback) {
         String cleanDisplayName = displayName == null ? "" : displayName.trim();
         if (TextUtils.isEmpty(cleanDisplayName)) {
             callback.onError(new IllegalArgumentException("Display name cannot be empty."));
@@ -108,7 +109,11 @@ public class AuthRepository implements com.example.fonos_group13.data.repository
                     firestore.collection("users")
                             .document(user.getUid())
                             .set(profile, SetOptions.merge())
-                            .addOnSuccessListener(saved -> callback.onSuccess(user))
+                            .addOnSuccessListener(saved -> callback.onSuccess(new UserAccount(
+                                    user.getUid(),
+                                    user.getEmail(),
+                                    cleanDisplayName
+                            )))
                             .addOnFailureListener(callback::onError);
                 })
                 .addOnFailureListener(callback::onError);
@@ -120,22 +125,19 @@ public class AuthRepository implements com.example.fonos_group13.data.repository
         }
     }
 
-    public static String friendlyError(Exception exception) {
-        String message = exception == null ? null : exception.getMessage();
-        if (TextUtils.isEmpty(message)) {
-            return "Something went wrong. Please try again.";
-        }
-        if (message.contains("google-services.json") || message.contains("Firebase is not configured")) {
-            return "Firebase is not configured. Add google-services.json to the app folder.";
-        }
-        return message;
-    }
-
     private static String makeDisplayName(String email) {
         int atIndex = email == null ? -1 : email.indexOf('@');
         if (atIndex <= 0) {
             return "Reader";
         }
         return email.substring(0, atIndex);
+    }
+
+    private static UserAccount toAccount(FirebaseUser user) {
+        return user == null ? null : new UserAccount(
+                user.getUid(),
+                user.getEmail(),
+                user.getDisplayName()
+        );
     }
 }

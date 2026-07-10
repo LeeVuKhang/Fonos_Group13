@@ -20,9 +20,10 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.example.fonos_group13.controller.profile.ProfileController;
 import com.example.fonos_group13.controller.profile.ProfileStats;
+import com.example.fonos_group13.data.auth.AuthErrorFormatter;
 import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.example.fonos_group13.data.repository.AuthRepository;
-import com.google.firebase.auth.FirebaseUser;
+import com.example.fonos_group13.model.UserAccount;
 
 public class ProfileActivity extends AppCompatActivity implements ProfileController.View {
     private AuthRepository authRepository;
@@ -57,7 +58,7 @@ public class ProfileActivity extends AppCompatActivity implements ProfileControl
     }
 
     private void bindProfile() {
-        FirebaseUser user = authRepository.getCurrentUser();
+        UserAccount user = authRepository.getCurrentUser();
         TextView name = findViewById(R.id.tv_profile_name);
         TextView email = findViewById(R.id.tv_profile_email);
 
@@ -103,7 +104,7 @@ public class ProfileActivity extends AppCompatActivity implements ProfileControl
     }
 
     private void showDisplayNameDialog() {
-        FirebaseUser user = authRepository.getCurrentUser();
+        UserAccount user = authRepository.getCurrentUser();
         if (user == null) {
             Toast.makeText(this, "Please sign in again to update your profile.", Toast.LENGTH_LONG).show();
             return;
@@ -138,9 +139,9 @@ public class ProfileActivity extends AppCompatActivity implements ProfileControl
             save.setEnabled(false);
             save.setAlpha(0.65f);
             save.setText("Saving...");
-            authRepository.updateDisplayName(displayName, new RepositoryCallback<FirebaseUser>() {
+            authRepository.updateDisplayName(displayName, new RepositoryCallback<UserAccount>() {
                 @Override
-                public void onSuccess(FirebaseUser data) {
+                public void onSuccess(UserAccount data) {
                     runOnUiThread(() -> {
                         updateProfileName(displayName);
                         Toast.makeText(ProfileActivity.this, "Display name updated.", Toast.LENGTH_SHORT).show();
@@ -158,7 +159,7 @@ public class ProfileActivity extends AppCompatActivity implements ProfileControl
                         save.setText("Save");
                         Toast.makeText(
                                 ProfileActivity.this,
-                                com.example.fonos_group13.data.auth.AuthRepository.friendlyError(exception),
+                                AuthErrorFormatter.friendlyMessage(exception),
                                 Toast.LENGTH_LONG
                         ).show();
                     });

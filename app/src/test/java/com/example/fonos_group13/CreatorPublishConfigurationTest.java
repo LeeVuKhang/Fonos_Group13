@@ -22,8 +22,8 @@ public class CreatorPublishConfigurationTest {
         assertTrue(activity.contains("creatorPreviewRequested && isCurrentCreator(book)"));
         assertTrue(activity.contains("canPublishCurrentBook()"));
         assertTrue(activity.contains("currentBook.getGenerationStatus() == AudiobookGenerationStatus.READY_FOR_REVIEW"));
-        assertTrue(activity.contains("FirebaseAuth.getInstance().getCurrentUser()"));
-        assertTrue(activity.contains("publishAudiobook(bookId"));
+        assertTrue(activity.contains("dataController.isCurrentCreator(book)"));
+        assertTrue(activity.contains("dataController.publish(bookId"));
         assertTrue(repository.contains("publishAudiobook(String bookId"));
         assertTrue(apiClient.contains("/publications"));
     }
