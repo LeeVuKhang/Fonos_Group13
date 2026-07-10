@@ -14,6 +14,8 @@ public class ThemeConfigurationTest {
     public void appThemeUsesExplicitLightWindowBackground() throws Exception {
         String defaultTheme = readThemeFile("src/main/res/values/themes.xml");
         String nightTheme = readThemeFile("src/main/res/values-night/themes.xml");
+        String api29Theme = readThemeFile("src/main/res/values-v29/themes.xml");
+        String api29NightTheme = readThemeFile("src/main/res/values-night-v29/themes.xml");
 
         assertFalse(defaultTheme.contains("DayNight"));
         assertFalse(nightTheme.contains("DayNight"));
@@ -21,8 +23,10 @@ public class ThemeConfigurationTest {
         assertTrue(nightTheme.contains("Theme.Material3.Light.NoActionBar"));
         assertTrue(defaultTheme.contains("android:windowBackground"));
         assertTrue(nightTheme.contains("android:windowBackground"));
-        assertTrue(defaultTheme.contains("android:forceDarkAllowed"));
-        assertTrue(nightTheme.contains("android:forceDarkAllowed"));
+        assertFalse(defaultTheme.contains("android:forceDarkAllowed"));
+        assertFalse(nightTheme.contains("android:forceDarkAllowed"));
+        assertTrue(api29Theme.contains("android:forceDarkAllowed"));
+        assertTrue(api29NightTheme.contains("android:forceDarkAllowed"));
     }
 
     private String readThemeFile(String path) throws Exception {

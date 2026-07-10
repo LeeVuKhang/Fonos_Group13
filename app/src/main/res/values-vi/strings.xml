@@ -26,4 +26,6 @@
     <string name="subtitle_handpicked">Lựa chọn riêng dựa trên sở thích của bạn</string>
     <string name="book_content_sample">Nội dung mẫu</string>
     <string name="my_uploads_add_chapter">+ Thêm chương</string>
+    <string name="playback_notification_channel_name">Phát sách nói</string>
+    <string name="generation_notification_channel_name">Tạo sách nói</string>
 </resources>
