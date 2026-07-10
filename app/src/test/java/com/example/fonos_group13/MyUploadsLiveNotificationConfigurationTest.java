@@ -18,7 +18,7 @@ public class MyUploadsLiveNotificationConfigurationTest {
     @Test
     public void myUploadsUsesFirestoreSnapshotsAndRemovesTheListener() throws Exception {
         String activity = readFile("src/main/java/com/example/fonos_group13/MyUploadsActivity.java");
-        String repository = readFile("src/main/java/com/example/fonos_group13/data/CreatorAudiobookRepository.java");
+        String repository = readFile("src/main/java/com/example/fonos_group13/data/creator/CreatorAudiobookRepository.java");
 
         assertTrue(repository.contains("ListenerRegistration"));
         assertTrue(repository.contains("observeMyUploads"));
@@ -44,7 +44,7 @@ public class MyUploadsLiveNotificationConfigurationTest {
                 "src/main/java/com/example/fonos_group13/notifications/GenerationNotificationHelper.java"
         );
         String tokenRepository = readFile(
-                "src/main/java/com/example/fonos_group13/data/UploadNotificationTokenRepository.java"
+                "src/main/java/com/example/fonos_group13/data/notification/UploadNotificationTokenRepository.java"
         );
 
         assertTrue(activity.contains("GenerationNotificationSetup"));
@@ -80,7 +80,7 @@ public class MyUploadsLiveNotificationConfigurationTest {
     @Test
     public void myUploadsSupportsChapterManagementAndVisibilityToggle() throws Exception {
         String activity = readFile("src/main/java/com/example/fonos_group13/MyUploadsActivity.java");
-        String repository = readFile("src/main/java/com/example/fonos_group13/data/CreatorAudiobookRepository.java");
+        String repository = readFile("src/main/java/com/example/fonos_group13/data/creator/CreatorAudiobookRepository.java");
 
         assertTrue(repository.contains("observeUploadChapters"));
         assertTrue(repository.contains("UserGeneratedChapter.isDeletedDocument"));

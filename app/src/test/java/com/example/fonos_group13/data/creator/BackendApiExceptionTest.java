@@ -1,4 +1,4 @@
-package com.example.fonos_group13.data;
+package com.example.fonos_group13.data.creator;
 
 import static org.junit.Assert.assertEquals;
 
