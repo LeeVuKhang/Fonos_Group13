@@ -7,6 +7,9 @@ import com.example.fonos_group13.model.EditableAudiobookDraft;
 import com.example.fonos_group13.model.EditableChapterDraft;
 
 interface CreatorBackendDataSource {
+    default void cancelPendingRequests() {
+    }
+
     void createDraft(CreateAudiobookDraftInput input, RepositoryCallback<String> callback);
 
     void getDraftForEdit(String bookId, RepositoryCallback<EditableAudiobookDraft> callback);

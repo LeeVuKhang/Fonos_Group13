@@ -282,7 +282,6 @@ public class CreatorAudiobookRepositoryBackendTest {
     private CreatorAudiobookRepository repositoryWith(FakeBackendApi backendApi, String uid) {
         return new CreatorAudiobookRepository(
                 true,
-                null,
                 () -> uid,
                 backendApi
         );

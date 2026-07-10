@@ -19,7 +19,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.example.fonos_group13.data.auth.AuthRepository;
 import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.example.fonos_group13.data.creator.BackendApiException;
-import com.example.fonos_group13.data.creator.CreatorAudiobookRepository;
+import com.example.fonos_group13.controller.creator.CreateAudiobookController;
 import com.example.fonos_group13.data.creator.DraftSavedGenerationRequestException;
 import com.example.fonos_group13.model.CreateAudiobookDraftInput;
 import com.example.fonos_group13.model.CreatorVoiceOption;
@@ -31,7 +31,7 @@ import com.google.android.material.button.MaterialButton;
 public class CreateAudiobookActivity extends AppCompatActivity {
     public static final String EXTRA_EDIT_BOOK_ID = "com.example.fonos_group13.EXTRA_EDIT_BOOK_ID";
 
-    private CreatorAudiobookRepository repository;
+    private CreateAudiobookController repository;
     private GenerationNotificationSetup notificationSetup;
     private TextView headerTitle;
     private EditText inputTitle;
@@ -54,7 +54,9 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_create_audiobook);
 
-        repository = new CreatorAudiobookRepository(this);
+        repository = new CreateAudiobookController(
+                FonosApplication.container(this).creatorCommandRepository()
+        );
         notificationSetup = new GenerationNotificationSetup(this);
         editingBookId = trimToNull(getIntent().getStringExtra(EXTRA_EDIT_BOOK_ID));
         bindViews();
@@ -470,6 +472,12 @@ public class CreateAudiobookActivity extends AppCompatActivity {
 
     private String textFrom(EditText input) {
         return input == null || input.getText() == null ? "" : input.getText().toString().trim();
+    }
+
+    @Override
+    protected void onStop() {
+        repository.stop();
+        super.onStop();
     }
 
     private boolean isEditMode() {

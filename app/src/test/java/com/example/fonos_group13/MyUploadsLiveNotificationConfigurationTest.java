@@ -18,15 +18,16 @@ public class MyUploadsLiveNotificationConfigurationTest {
     @Test
     public void myUploadsUsesFirestoreSnapshotsAndRemovesTheListener() throws Exception {
         String activity = readFile("src/main/java/com/example/fonos_group13/MyUploadsActivity.java");
-        String repository = readFile("src/main/java/com/example/fonos_group13/data/creator/CreatorAudiobookRepository.java");
+        String repository = readFile("src/main/java/com/example/fonos_group13/data/creator/FirestoreCreatorUploadsRepository.java");
+        String controller = readFile("src/main/java/com/example/fonos_group13/controller/creator/MyUploadsController.java");
 
-        assertTrue(repository.contains("ListenerRegistration"));
+        assertTrue(repository.contains("FirestoreSubscription"));
         assertTrue(repository.contains("observeMyUploads"));
         assertTrue(repository.contains("addSnapshotListener"));
         assertTrue(activity.contains("protected void onStart()"));
-        assertTrue(activity.contains("startObservingUploads()"));
+        assertTrue(activity.contains("uploadsController.start()"));
         assertTrue(activity.contains("protected void onStop()"));
-        assertTrue(activity.contains("uploadsRegistration.remove()"));
+        assertTrue(controller.contains("uploadsSubscription.cancel()"));
         assertFalse(activity.contains("protected void onResume()"));
         assertFalse(activity.contains("loadUploads();"));
     }
@@ -81,9 +82,10 @@ public class MyUploadsLiveNotificationConfigurationTest {
     public void myUploadsSupportsChapterManagementAndVisibilityToggle() throws Exception {
         String activity = readFile("src/main/java/com/example/fonos_group13/MyUploadsActivity.java");
         String repository = readFile("src/main/java/com/example/fonos_group13/data/creator/CreatorAudiobookRepository.java");
+        String uploadsRepository = readFile("src/main/java/com/example/fonos_group13/data/creator/FirestoreCreatorUploadsRepository.java");
 
-        assertTrue(repository.contains("observeUploadChapters"));
-        assertTrue(repository.contains("CreatorUploadDocumentMapper.isDeletedChapter"));
+        assertTrue(uploadsRepository.contains("observeUploadChapters"));
+        assertTrue(uploadsRepository.contains("CreatorUploadDocumentMapper.isDeletedChapter"));
         assertTrue(repository.contains("setAudiobookVisibility"));
         assertTrue(repository.contains("deleteChapter"));
         assertTrue(activity.contains("\"Preview\""));

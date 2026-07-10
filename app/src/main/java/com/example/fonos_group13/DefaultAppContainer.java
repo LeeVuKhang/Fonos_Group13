@@ -5,10 +5,13 @@ import android.os.Handler;
 import android.os.Looper;
 
 import com.example.fonos_group13.data.creator.CreatorAudiobookRepository;
+import com.example.fonos_group13.data.creator.FirestoreCreatorUploadsRepository;
 import com.example.fonos_group13.data.notification.UploadNotificationTokenRepository;
 import com.example.fonos_group13.data.repository.AudioDownloadRepository;
 import com.example.fonos_group13.data.repository.AuthRepository;
 import com.example.fonos_group13.data.repository.CatalogRepository;
+import com.example.fonos_group13.data.repository.CreatorCommandRepository;
+import com.example.fonos_group13.data.repository.CreatorUploadsRepository;
 import com.example.fonos_group13.data.repository.ProgressRepository;
 import com.example.fonos_group13.data.repository.SavedBooksRepository;
 
@@ -21,7 +24,8 @@ final class DefaultAppContainer implements AppContainer {
     private final SavedBooksRepository savedBooksRepository;
     private final ProgressRepository progressRepository;
     private final AudioDownloadRepository audioDownloadRepository;
-    private final CreatorAudiobookRepository creatorAudiobookRepository;
+    private final CreatorCommandRepository creatorCommandRepository;
+    private final CreatorUploadsRepository creatorUploadsRepository;
     private final UploadNotificationTokenRepository uploadNotificationTokenRepository;
     private final ExecutorService ioExecutor;
     private final Handler mainHandler;
@@ -35,7 +39,8 @@ final class DefaultAppContainer implements AppContainer {
         savedBooksRepository = new com.example.fonos_group13.data.library.SavedBookRepository(appContext);
         progressRepository = new com.example.fonos_group13.data.library.ProgressRepository(appContext);
         audioDownloadRepository = new com.example.fonos_group13.data.library.DownloadedAudioRepository(appContext);
-        creatorAudiobookRepository = new CreatorAudiobookRepository(appContext);
+        creatorCommandRepository = new CreatorAudiobookRepository(appContext, ioExecutor, mainHandler);
+        creatorUploadsRepository = new FirestoreCreatorUploadsRepository(appContext);
         uploadNotificationTokenRepository = new UploadNotificationTokenRepository(appContext);
     }
 
@@ -65,8 +70,13 @@ final class DefaultAppContainer implements AppContainer {
     }
 
     @Override
-    public CreatorAudiobookRepository creatorAudiobookRepository() {
-        return creatorAudiobookRepository;
+    public CreatorCommandRepository creatorCommandRepository() {
+        return creatorCommandRepository;
+    }
+
+    @Override
+    public CreatorUploadsRepository creatorUploadsRepository() {
+        return creatorUploadsRepository;
     }
 
     @Override

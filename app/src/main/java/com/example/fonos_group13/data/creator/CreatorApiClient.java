@@ -1,7 +1,6 @@
 package com.example.fonos_group13.data.creator;
 
 import android.os.Handler;
-import android.os.Looper;
 
 import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.example.fonos_group13.model.CreateAudiobookDraftInput;
@@ -22,7 +21,8 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Future;
 
 class CreatorApiClient implements CreatorBackendDataSource {
     private static final int CONNECT_TIMEOUT_MS = 10_000;
@@ -32,16 +32,21 @@ class CreatorApiClient implements CreatorBackendDataSource {
     private final FirebaseAuth auth;
     private final ExecutorService executorService;
     private final Handler mainHandler;
-
-    CreatorApiClient(String baseUrl, FirebaseAuth auth) {
-        this(baseUrl, auth, Executors.newSingleThreadExecutor(), new Handler(Looper.getMainLooper()));
-    }
+    private final ConcurrentLinkedQueue<Future<?>> pendingRequests = new ConcurrentLinkedQueue<>();
 
     CreatorApiClient(String baseUrl, FirebaseAuth auth, ExecutorService executorService, Handler mainHandler) {
         this.baseUrl = stripTrailingSlash(baseUrl);
         this.auth = auth;
         this.executorService = executorService;
         this.mainHandler = mainHandler;
+    }
+
+    @Override
+    public void cancelPendingRequests() {
+        Future<?> request;
+        while ((request = pendingRequests.poll()) != null) {
+            request.cancel(true);
+        }
     }
 
     @Override
@@ -276,7 +281,7 @@ class CreatorApiClient implements CreatorBackendDataSource {
     }
 
     private void sendJson(String method, String path, String token, String body, RepositoryCallback<String> callback) {
-        executorService.execute(() -> {
+        submit(() -> {
             HttpURLConnection connection = null;
             try {
                 connection = (HttpURLConnection) new URL(baseUrl + path).openConnection();
@@ -305,7 +310,7 @@ class CreatorApiClient implements CreatorBackendDataSource {
     }
 
     private void sendJsonForChapter(String method, String path, String token, String body, RepositoryCallback<String> callback) {
-        executorService.execute(() -> {
+        submit(() -> {
             HttpURLConnection connection = null;
             try {
                 connection = (HttpURLConnection) new URL(baseUrl + path).openConnection();
@@ -334,7 +339,7 @@ class CreatorApiClient implements CreatorBackendDataSource {
     }
 
     private void getEditableDraft(String path, String token, RepositoryCallback<EditableAudiobookDraft> callback) {
-        executorService.execute(() -> {
+        submit(() -> {
             HttpURLConnection connection = null;
             try {
                 connection = (HttpURLConnection) new URL(baseUrl + path).openConnection();
@@ -357,7 +362,7 @@ class CreatorApiClient implements CreatorBackendDataSource {
     }
 
     private void getEditableChapterDraft(String path, String token, RepositoryCallback<EditableChapterDraft> callback) {
-        executorService.execute(() -> {
+        submit(() -> {
             HttpURLConnection connection = null;
             try {
                 connection = (HttpURLConnection) new URL(baseUrl + path).openConnection();
@@ -392,6 +397,11 @@ class CreatorApiClient implements CreatorBackendDataSource {
             }
             return outputStream.toString(StandardCharsets.UTF_8.name());
         }
+    }
+
+    private void submit(Runnable request) {
+        pendingRequests.removeIf(Future::isDone);
+        pendingRequests.add(executorService.submit(request));
     }
 
     private <T> void postSuccess(RepositoryCallback<T> callback, T value) {

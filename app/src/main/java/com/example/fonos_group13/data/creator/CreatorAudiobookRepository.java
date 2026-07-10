@@ -1,61 +1,62 @@
 package com.example.fonos_group13.data.creator;
 
 import android.content.Context;
+import android.os.Handler;
 
 import com.example.fonos_group13.BuildConfig;
 import com.example.fonos_group13.data.core.FirebaseConfig;
 import com.example.fonos_group13.data.core.RepositoryCallback;
-import com.example.fonos_group13.data.firestore.CreatorUploadDocumentMapper;
 import com.example.fonos_group13.model.CreateAudiobookDraftInput;
 import com.example.fonos_group13.model.CreateChapterDraftInput;
 import com.example.fonos_group13.model.EditableAudiobookDraft;
 import com.example.fonos_group13.model.EditableChapterDraft;
-import com.example.fonos_group13.model.UserGeneratedAudiobook;
-import com.example.fonos_group13.model.UserGeneratedChapter;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.QuerySnapshot;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 public class CreatorAudiobookRepository implements com.example.fonos_group13.data.repository.CreatorCommandRepository {
-    private static final String COLLECTION_BOOKS = "books";
-    private static final String COLLECTION_CHAPTERS = "chapters";
-
     private final boolean configured;
-    private final FirebaseFirestore firestore;
     private final SignedInUserProvider userProvider;
     private final CreatorBackendDataSource backendApi;
+    private final CreatorDraftValidator validator = new CreatorDraftValidator();
 
-    public CreatorAudiobookRepository(Context context) {
+    public CreatorAudiobookRepository(
+            Context context,
+            ExecutorService executorService,
+            Handler mainHandler
+    ) {
         configured = FirebaseConfig.isConfigured(context);
-        FirebaseFirestore resolvedFirestore = null;
         SignedInUserProvider resolvedUserProvider = () -> null;
         CreatorBackendDataSource resolvedBackendApi = null;
         if (configured) {
             FirebaseAuth auth = FirebaseAuth.getInstance();
-            resolvedFirestore = FirebaseFirestore.getInstance();
             resolvedUserProvider = new FirebaseSignedInUserProvider(auth);
-            resolvedBackendApi = new CreatorApiClient(BuildConfig.BACKEND_BASE_URL, auth);
+            resolvedBackendApi = new CreatorApiClient(
+                    BuildConfig.BACKEND_BASE_URL,
+                    auth,
+                    executorService,
+                    mainHandler
+            );
         }
-        firestore = resolvedFirestore;
         userProvider = resolvedUserProvider;
         backendApi = resolvedBackendApi;
     }
 
     CreatorAudiobookRepository(
             boolean configured,
-            FirebaseFirestore firestore,
             SignedInUserProvider userProvider,
             CreatorBackendDataSource backendApi
     ) {
         this.configured = configured;
-        this.firestore = firestore;
         this.userProvider = userProvider;
         this.backendApi = backendApi;
+    }
+
+    @Override
+    public void cancelPendingRequests() {
+        if (backendApi != null) {
+            backendApi.cancelPendingRequests();
+        }
     }
 
     public void createDraft(CreateAudiobookDraftInput input, RepositoryCallback<String> callback) {
@@ -289,50 +290,6 @@ public class CreatorAudiobookRepository implements com.example.fonos_group13.dat
         });
     }
 
-    public void getMyUploads(RepositoryCallback<List<UserGeneratedAudiobook>> callback) {
-        String uid = currentUserUid();
-        if (!configured || firestore == null) {
-            callback.onError(FirebaseConfig.missingConfigException());
-            return;
-        }
-        if (uid == null) {
-            callback.onError(new IllegalStateException("Please sign in to view your uploads."));
-            return;
-        }
-
-        firestore.collection(COLLECTION_BOOKS)
-                .whereEqualTo("creatorUid", uid)
-                .whereEqualTo("createdByUser", true)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    callback.onSuccess(mapUploads(querySnapshot));
-                })
-                .addOnFailureListener(callback::onError);
-    }
-
-    public ListenerRegistration observeMyUploads(RepositoryCallback<List<UserGeneratedAudiobook>> callback) {
-        String uid = currentUserUid();
-        if (!configured || firestore == null) {
-            callback.onError(FirebaseConfig.missingConfigException());
-            return null;
-        }
-        if (uid == null) {
-            callback.onError(new IllegalStateException("Please sign in to view your uploads."));
-            return null;
-        }
-
-        return firestore.collection(COLLECTION_BOOKS)
-                .whereEqualTo("creatorUid", uid)
-                .whereEqualTo("createdByUser", true)
-                .addSnapshotListener((querySnapshot, exception) -> {
-                    if (exception != null) {
-                        callback.onError(exception);
-                        return;
-                    }
-                    callback.onSuccess(mapUploads(querySnapshot));
-                });
-    }
-
     public void requestGeneration(String bookId, RepositoryCallback<Void> callback) {
         if (!canWrite(callback)) {
             return;
@@ -395,70 +352,6 @@ public class CreatorAudiobookRepository implements com.example.fonos_group13.dat
         backendApi.deleteChapter(safeBookId, safeChapterId, callback);
     }
 
-    public ListenerRegistration observeUploadChapters(
-            String bookId,
-            RepositoryCallback<List<UserGeneratedChapter>> callback
-    ) {
-        String uid = currentUserUid();
-        if (!configured || firestore == null) {
-            callback.onError(FirebaseConfig.missingConfigException());
-            return null;
-        }
-        if (uid == null) {
-            callback.onError(new IllegalStateException("Please sign in to view chapters."));
-            return null;
-        }
-        String safeBookId = trimToNull(bookId);
-        if (safeBookId == null) {
-            callback.onError(new IllegalArgumentException("Missing audiobook id."));
-            return null;
-        }
-
-        return firestore.collection(COLLECTION_BOOKS)
-                .document(safeBookId)
-                .collection(COLLECTION_CHAPTERS)
-                .addSnapshotListener((querySnapshot, exception) -> {
-                    if (exception != null) {
-                        callback.onError(exception);
-                        return;
-                    }
-                    callback.onSuccess(mapUploadChapters(safeBookId, querySnapshot));
-                });
-    }
-
-    private List<UserGeneratedAudiobook> mapUploads(QuerySnapshot querySnapshot) {
-        List<UserGeneratedAudiobook> uploads = new ArrayList<>();
-        if (querySnapshot != null) {
-            querySnapshot.getDocuments().forEach(document -> uploads.add(
-                    CreatorUploadDocumentMapper.audiobook(document)
-            ));
-        }
-        Collections.sort(uploads, (left, right) -> Long.compare(
-                right.getSortTimestampMillis(),
-                left.getSortTimestampMillis()
-        ));
-        return uploads;
-    }
-
-    private List<UserGeneratedChapter> mapUploadChapters(String bookId, QuerySnapshot querySnapshot) {
-        List<UserGeneratedChapter> chapters = new ArrayList<>();
-        if (querySnapshot != null) {
-            querySnapshot.getDocuments().forEach(document -> {
-                if (!CreatorUploadDocumentMapper.isDeletedChapter(document)) {
-                    chapters.add(CreatorUploadDocumentMapper.chapter(document));
-                }
-            });
-        }
-        Collections.sort(chapters, (left, right) -> {
-            int orderCompare = Integer.compare(left.getOrder(), right.getOrder());
-            if (orderCompare != 0) {
-                return orderCompare;
-            }
-            return left.getTitle().compareToIgnoreCase(right.getTitle());
-        });
-        return chapters;
-    }
-
     private boolean canWrite(RepositoryCallback<?> callback) {
         return canUseBackend(callback, "Please sign in to create audiobooks.");
     }
@@ -476,52 +369,18 @@ public class CreatorAudiobookRepository implements com.example.fonos_group13.dat
     }
 
     private boolean isValidInput(CreateAudiobookDraftInput input, RepositoryCallback<?> callback) {
-        if (input == null) {
-            callback.onError(new IllegalArgumentException("Missing audiobook draft."));
-            return false;
-        }
-        if (isBlank(input.getTitle())) {
-            callback.onError(new IllegalArgumentException("Title is required."));
-            return false;
-        }
-        if (isBlank(input.getAuthor())) {
-            callback.onError(new IllegalArgumentException("Author is required."));
-            return false;
-        }
-        if (isBlank(input.getChapterText())) {
-            callback.onError(new IllegalArgumentException("Chapter text is required."));
-            return false;
-        }
-        if (input.getTitle().length() > CreateAudiobookDraftInput.MAX_TITLE_CHARS) {
-            callback.onError(new IllegalArgumentException("Title must be 120 characters or fewer."));
-            return false;
-        }
-        if (input.getAuthor().length() > CreateAudiobookDraftInput.MAX_AUTHOR_CHARS) {
-            callback.onError(new IllegalArgumentException("Author must be 120 characters or fewer."));
-            return false;
-        }
-        if (CreateAudiobookDraftInput.countWords(input.getChapterText()) > CreateAudiobookDraftInput.MAX_CHAPTER_TEXT_WORDS) {
-            callback.onError(new IllegalArgumentException("Chapter text must be 3500 words or fewer."));
+        Exception validationError = validator.validate(input);
+        if (validationError != null) {
+            callback.onError(validationError);
             return false;
         }
         return true;
     }
 
     private boolean isValidChapterInput(CreateChapterDraftInput input, RepositoryCallback<?> callback) {
-        if (input == null) {
-            callback.onError(new IllegalArgumentException("Missing chapter draft."));
-            return false;
-        }
-        if (isBlank(input.getChapterTitle())) {
-            callback.onError(new IllegalArgumentException("Chapter title is required."));
-            return false;
-        }
-        if (isBlank(input.getChapterText())) {
-            callback.onError(new IllegalArgumentException("Chapter text is required."));
-            return false;
-        }
-        if (CreateChapterDraftInput.countWords(input.getChapterText()) > CreateChapterDraftInput.MAX_CHAPTER_TEXT_WORDS) {
-            callback.onError(new IllegalArgumentException("Chapter text must be 3500 words or fewer."));
+        Exception validationError = validator.validate(input);
+        if (validationError != null) {
+            callback.onError(validationError);
             return false;
         }
         return true;
@@ -529,10 +388,6 @@ public class CreatorAudiobookRepository implements com.example.fonos_group13.dat
 
     private String currentUserUid() {
         return userProvider == null ? null : trimToNull(userProvider.currentUid());
-    }
-
-    private boolean isBlank(String value) {
-        return trimToNull(value) == null;
     }
 
     private String trimToNull(String value) {

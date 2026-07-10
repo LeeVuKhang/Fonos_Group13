@@ -23,7 +23,7 @@ import com.example.fonos_group13.data.auth.AuthRepository;
 import com.example.fonos_group13.data.catalog.BookAccessMode;
 import com.example.fonos_group13.data.catalog.BookRepository;
 import com.example.fonos_group13.data.core.RepositoryCallback;
-import com.example.fonos_group13.data.creator.CreatorAudiobookRepository;
+import com.example.fonos_group13.data.repository.CreatorCommandRepository;
 import com.example.fonos_group13.data.library.DownloadedAudioRepository;
 import com.example.fonos_group13.data.library.ProgressRepository;
 import com.example.fonos_group13.data.library.SavedBookRepository;
@@ -49,7 +49,7 @@ public class BookDetailActivity extends AppCompatActivity {
     public static final String EXTRA_CREATOR_PREVIEW = "creator_review_preview";
 
     private BookRepository bookRepository;
-    private CreatorAudiobookRepository creatorAudiobookRepository;
+    private CreatorCommandRepository creatorAudiobookRepository;
     private ProgressRepository progressRepository;
     private DownloadedAudioRepository downloadedAudioRepository;
     private SavedBookRepository savedBookRepository;
@@ -84,7 +84,7 @@ public class BookDetailActivity extends AppCompatActivity {
         setContentView(R.layout.activity_book_detail);
 
         bookRepository = new BookRepository(this);
-        creatorAudiobookRepository = new CreatorAudiobookRepository(this);
+        creatorAudiobookRepository = FonosApplication.container(this).creatorCommandRepository();
         progressRepository = new ProgressRepository(this);
         downloadedAudioRepository = new DownloadedAudioRepository(this);
         savedBookRepository = new SavedBookRepository(this);

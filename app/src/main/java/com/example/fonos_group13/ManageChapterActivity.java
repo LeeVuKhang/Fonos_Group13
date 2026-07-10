@@ -19,7 +19,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.example.fonos_group13.data.auth.AuthRepository;
 import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.example.fonos_group13.data.creator.BackendApiException;
-import com.example.fonos_group13.data.creator.CreatorAudiobookRepository;
+import com.example.fonos_group13.controller.creator.ManageChapterController;
 import com.example.fonos_group13.data.creator.DraftSavedGenerationRequestException;
 import com.example.fonos_group13.model.CreateChapterDraftInput;
 import com.example.fonos_group13.model.CreatorVoiceOption;
@@ -32,7 +32,7 @@ public class ManageChapterActivity extends AppCompatActivity {
     public static final String EXTRA_BOOK_ID = "com.example.fonos_group13.EXTRA_BOOK_ID";
     public static final String EXTRA_CHAPTER_ID = "com.example.fonos_group13.EXTRA_CHAPTER_ID";
 
-    private CreatorAudiobookRepository repository;
+    private ManageChapterController repository;
     private GenerationNotificationSetup notificationSetup;
     private TextView headerTitle;
     private EditText inputChapterTitle;
@@ -54,7 +54,9 @@ public class ManageChapterActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_manage_chapter);
 
-        repository = new CreatorAudiobookRepository(this);
+        repository = new ManageChapterController(
+                FonosApplication.container(this).creatorCommandRepository()
+        );
         notificationSetup = new GenerationNotificationSetup(this);
         bookId = trimToNull(getIntent().getStringExtra(EXTRA_BOOK_ID));
         chapterId = trimToNull(getIntent().getStringExtra(EXTRA_CHAPTER_ID));
@@ -436,6 +438,12 @@ public class ManageChapterActivity extends AppCompatActivity {
 
     private String textFrom(EditText input) {
         return input == null || input.getText() == null ? "" : input.getText().toString().trim();
+    }
+
+    @Override
+    protected void onStop() {
+        repository.stop();
+        super.onStop();
     }
 
     private boolean isEditMode() {

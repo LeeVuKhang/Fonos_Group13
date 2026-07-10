@@ -7,6 +7,8 @@ import com.example.fonos_group13.model.EditableAudiobookDraft;
 import com.example.fonos_group13.model.EditableChapterDraft;
 
 public interface CreatorCommandRepository {
+    void cancelPendingRequests();
+
     void createDraft(CreateAudiobookDraftInput input, RepositoryCallback<String> callback);
 
     void createDraftAndRequestGeneration(CreateAudiobookDraftInput input, RepositoryCallback<String> callback);
