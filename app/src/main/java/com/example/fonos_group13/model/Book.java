@@ -1,7 +1,5 @@
 package com.example.fonos_group13.model;
 
-import com.google.firebase.firestore.DocumentSnapshot;
-
 public class Book {
     private final String id;
     private final String title;
@@ -57,36 +55,6 @@ public class Book {
         this.featured = featured;
         this.published = published;
         this.order = order;
-    }
-
-    public static Book fromDocument(DocumentSnapshot document) {
-        return new Book(
-                document.getId(),
-                valueOrDefault(FirestoreValueReader.string(document, "title"), "Untitled"),
-                valueOrDefault(FirestoreValueReader.string(document, "author"), "Unknown author"),
-                valueOrDefault(FirestoreValueReader.string(document, "chapterTitle"), "Chapter 1"),
-                valueOrDefault(FirestoreValueReader.string(document, "contentSample"), ""),
-                firstNonBlank(
-                        FirestoreValueReader.string(document, "coverUrl"),
-                        FirestoreValueReader.string(document, "coverImageUrl"),
-                        FirestoreValueReader.string(document, "imageUrl"),
-                        FirestoreValueReader.string(document, "thumbnailUrl")
-                ),
-                optionalString(FirestoreValueReader.string(document, "isbn")),
-                firstNonBlank(
-                        FirestoreValueReader.string(document, "audioUrl"),
-                        FirestoreValueReader.string(document, "url")
-                ),
-                optionalString(FirestoreValueReader.string(document, "audioStoragePath")),
-                FirestoreValueReader.longValue(document, "durationSec"),
-                valueOrDefault(FirestoreValueReader.string(document, "languageCode"), "en-US"),
-                valueOrDefault(FirestoreValueReader.string(document, "voiceGender"), "female"),
-                FirestoreValueReader.string(document, "creatorUid"),
-                AudiobookGenerationStatus.fromValue(FirestoreValueReader.string(document, "generationStatus")),
-                FirestoreValueReader.booleanValue(document, "featured", false),
-                FirestoreValueReader.booleanValue(document, "published", false),
-                (int) FirestoreValueReader.longValue(document, "order")
-        );
     }
 
     private static String valueOrDefault(String value, String fallback) {

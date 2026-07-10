@@ -1,7 +1,5 @@
 package com.example.fonos_group13.model;
 
-import com.google.firebase.firestore.DocumentSnapshot;
-
 public class BookChapter {
     public static final String LEGACY_CHAPTER_ID = "chapter_1";
 
@@ -38,31 +36,6 @@ public class BookChapter {
         this.order = order;
         this.published = published;
         this.legacyFallback = legacyFallback;
-    }
-
-    public static BookChapter fromDocument(String bookId, DocumentSnapshot document) {
-        long order = FirestoreValueReader.longValue(document, "order");
-        return new BookChapter(
-                document.getId(),
-                bookId,
-                valueOrDefault(
-                        firstNonBlank(
-                                FirestoreValueReader.string(document, "title"),
-                                FirestoreValueReader.string(document, "chapterTitle")
-                        ),
-                        titleFromOrder(order)
-                ),
-                valueOrDefault(FirestoreValueReader.string(document, "contentSample"), ""),
-                firstNonBlank(
-                        FirestoreValueReader.string(document, "audioUrl"),
-                        FirestoreValueReader.string(document, "url")
-                ),
-                optionalString(FirestoreValueReader.string(document, "audioStoragePath")),
-                FirestoreValueReader.longValue(document, "durationSec"),
-                (int) order,
-                FirestoreValueReader.booleanValue(document, "published", true),
-                false
-        );
     }
 
     public static BookChapter fromLegacyBook(Book book) {

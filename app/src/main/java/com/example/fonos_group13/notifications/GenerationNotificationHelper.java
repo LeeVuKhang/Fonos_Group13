@@ -99,7 +99,16 @@ public final class GenerationNotificationHelper {
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true);
 
-        NotificationManagerCompat.from(context).notify(notificationId(bookId), builder.build());
+        if (Build.VERSION.SDK_INT >= 33
+                && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        try {
+            NotificationManagerCompat.from(context).notify(notificationId(bookId), builder.build());
+        } catch (SecurityException ignored) {
+            // Permission can be revoked between the explicit check and the notification call.
+        }
     }
 
     private static boolean canPostNotifications(Context context) {

@@ -23,9 +23,10 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.example.fonos_group13.data.AuthRepository;
-import com.example.fonos_group13.data.CreatorAudiobookRepository;
-import com.example.fonos_group13.data.RepositoryCallback;
+import com.example.fonos_group13.data.auth.AuthErrorFormatter;
+import com.example.fonos_group13.controller.creator.MyUploadsController;
+import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.data.repository.CreatorCommandRepository;
 import com.example.fonos_group13.model.AudiobookGenerationStatus;
 import com.example.fonos_group13.model.UserGeneratedAudiobook;
 import com.example.fonos_group13.model.UserGeneratedChapter;
@@ -34,21 +35,18 @@ import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.shape.ShapeAppearanceModel;
-import com.google.firebase.Timestamp;
-import com.google.firebase.firestore.ListenerRegistration;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
-public class MyUploadsActivity extends AppCompatActivity {
-    private CreatorAudiobookRepository repository;
+public class MyUploadsActivity extends AppCompatActivity implements MyUploadsController.View {
+    private CreatorCommandRepository repository;
+    private MyUploadsController uploadsController;
     private GenerationNotificationSetup notificationSetup;
     private LinearLayout uploadsContainer;
     private LinearLayout statePanel;
@@ -56,9 +54,7 @@ public class MyUploadsActivity extends AppCompatActivity {
     private TextView stateMessage;
     private MaterialButton stateAction;
     private MaterialButton createButton;
-    private ListenerRegistration uploadsRegistration;
     private List<UserGeneratedAudiobook> currentUploads = Collections.emptyList();
-    private final Map<String, ListenerRegistration> chapterRegistrations = new HashMap<>();
     private final Map<String, List<UserGeneratedChapter>> chaptersByBookId = new HashMap<>();
     private String loadingBookId;
     private String loadingChapterKey;
@@ -72,7 +68,9 @@ public class MyUploadsActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_my_uploads);
 
-        repository = new CreatorAudiobookRepository(this);
+        AppContainer container = FonosApplication.container(this);
+        repository = container.creatorCommandRepository();
+        uploadsController = new MyUploadsController(container.creatorUploadsRepository(), this);
         notificationSetup = new GenerationNotificationSetup(this);
         bindViews();
         setupInsets();
@@ -82,12 +80,13 @@ public class MyUploadsActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        startObservingUploads();
+        uploadsController.start();
     }
 
     @Override
     protected void onStop() {
-        stopObservingUploads();
+        uploadsController.stop();
+        repository.cancelPendingRequests();
         super.onStop();
     }
 
@@ -121,111 +120,39 @@ public class MyUploadsActivity extends AppCompatActivity {
         }
     }
 
-    private void startObservingUploads() {
-        stopObservingUploads();
+    @Override
+    public void showUploadsLoading() {
         if (currentUploads.isEmpty()) {
             if (uploadsContainer != null) {
                 uploadsContainer.removeAllViews();
             }
             showMessage("Loading uploads...");
         }
-        uploadsRegistration = repository.observeMyUploads(new RepositoryCallback<List<UserGeneratedAudiobook>>() {
-            @Override
-            public void onSuccess(List<UserGeneratedAudiobook> uploads) {
-                currentUploads = uploads == null ? Collections.emptyList() : uploads;
-                syncChapterObservers(currentUploads);
-                renderUploads(currentUploads);
-                if (hasPendingUploads(currentUploads) || hasPendingChapters()) {
-                    ensureGenerationNotifications();
-                }
-            }
-
-            @Override
-            public void onError(Exception exception) {
-                currentUploads = Collections.emptyList();
-                stopObservingChapters();
-                if (uploadsContainer != null) {
-                    uploadsContainer.removeAllViews();
-                }
-                showMessage("Could not load your uploads.");
-                Toast.makeText(
-                        MyUploadsActivity.this,
-                        AuthRepository.friendlyError(exception),
-                        Toast.LENGTH_LONG
-                ).show();
-            }
-        });
     }
 
-    private void stopObservingUploads() {
-        if (uploadsRegistration != null) {
-            uploadsRegistration.remove();
-            uploadsRegistration = null;
-        }
-        stopObservingChapters();
-    }
-
-    private void syncChapterObservers(List<UserGeneratedAudiobook> uploads) {
-        Set<String> activeBookIds = new HashSet<>();
-        if (uploads != null) {
-            for (UserGeneratedAudiobook upload : uploads) {
-                if (upload == null || upload.getId() == null || upload.getId().trim().isEmpty()) {
-                    continue;
-                }
-                activeBookIds.add(upload.getId());
-                if (!chapterRegistrations.containsKey(upload.getId())) {
-                    ListenerRegistration registration = repository.observeUploadChapters(
-                            upload.getId(),
-                            new RepositoryCallback<List<UserGeneratedChapter>>() {
-                                @Override
-                                public void onSuccess(List<UserGeneratedChapter> chapters) {
-                                    chaptersByBookId.put(
-                                            upload.getId(),
-                                            chapters == null ? Collections.emptyList() : chapters
-                                    );
-                                    if (hasPendingChapters()) {
-                                        ensureGenerationNotifications();
-                                    }
-                                    renderUploads(currentUploads);
-                                }
-
-                                @Override
-                                public void onError(Exception exception) {
-                                    chaptersByBookId.put(upload.getId(), Collections.emptyList());
-                                    renderUploads(currentUploads);
-                                }
-                            }
-                    );
-                    if (registration != null) {
-                        chapterRegistrations.put(upload.getId(), registration);
-                    }
-                }
-            }
-        }
-
-        List<String> staleBookIds = new ArrayList<>();
-        for (String bookId : chapterRegistrations.keySet()) {
-            if (!activeBookIds.contains(bookId)) {
-                staleBookIds.add(bookId);
-            }
-        }
-        for (String bookId : staleBookIds) {
-            ListenerRegistration registration = chapterRegistrations.remove(bookId);
-            if (registration != null) {
-                registration.remove();
-            }
-            chaptersByBookId.remove(bookId);
-        }
-    }
-
-    private void stopObservingChapters() {
-        for (ListenerRegistration registration : chapterRegistrations.values()) {
-            if (registration != null) {
-                registration.remove();
-            }
-        }
-        chapterRegistrations.clear();
+    @Override
+    public void showUploads(
+            List<UserGeneratedAudiobook> uploads,
+            Map<String, List<UserGeneratedChapter>> chapters
+    ) {
+        currentUploads = uploads == null ? Collections.emptyList() : uploads;
         chaptersByBookId.clear();
+        chaptersByBookId.putAll(chapters);
+        renderUploads(currentUploads);
+        if (hasPendingUploads(currentUploads) || hasPendingChapters()) {
+            ensureGenerationNotifications();
+        }
+    }
+
+    @Override
+    public void showUploadsError(Exception exception) {
+        currentUploads = Collections.emptyList();
+        chaptersByBookId.clear();
+        if (uploadsContainer != null) {
+            uploadsContainer.removeAllViews();
+        }
+        showMessage("Could not load your uploads.");
+        Toast.makeText(this, AuthErrorFormatter.friendlyMessage(exception), Toast.LENGTH_LONG).show();
     }
 
     private void renderUploads(List<UserGeneratedAudiobook> uploads) {
@@ -942,7 +869,7 @@ public class MyUploadsActivity extends AppCompatActivity {
                 loadingBookId = null;
                 Toast.makeText(
                         MyUploadsActivity.this,
-                        AuthRepository.friendlyError(exception),
+                        AuthErrorFormatter.friendlyMessage(exception),
                         Toast.LENGTH_LONG
                 ).show();
                 renderUploads(currentUploads);
@@ -995,7 +922,7 @@ public class MyUploadsActivity extends AppCompatActivity {
                 visibilityBookId = null;
                 Toast.makeText(
                         MyUploadsActivity.this,
-                        AuthRepository.friendlyError(exception),
+                        AuthErrorFormatter.friendlyMessage(exception),
                         Toast.LENGTH_LONG
                 ).show();
                 renderUploads(currentUploads);
@@ -1022,7 +949,7 @@ public class MyUploadsActivity extends AppCompatActivity {
                 publishingBookId = null;
                 Toast.makeText(
                         MyUploadsActivity.this,
-                        AuthRepository.friendlyError(exception),
+                        AuthErrorFormatter.friendlyMessage(exception),
                         Toast.LENGTH_LONG
                 ).show();
                 renderUploads(currentUploads);
@@ -1050,7 +977,7 @@ public class MyUploadsActivity extends AppCompatActivity {
                 loadingChapterKey = null;
                 Toast.makeText(
                         MyUploadsActivity.this,
-                        AuthRepository.friendlyError(exception),
+                        AuthErrorFormatter.friendlyMessage(exception),
                         Toast.LENGTH_LONG
                 ).show();
                 renderUploads(currentUploads);
@@ -1096,7 +1023,7 @@ public class MyUploadsActivity extends AppCompatActivity {
                 deletingChapterKey = null;
                 Toast.makeText(
                         MyUploadsActivity.this,
-                        AuthRepository.friendlyError(exception),
+                        AuthErrorFormatter.friendlyMessage(exception),
                         Toast.LENGTH_LONG
                 ).show();
                 renderUploads(currentUploads);
@@ -1270,7 +1197,7 @@ public class MyUploadsActivity extends AppCompatActivity {
                     "Could not load your uploads.",
                     "Check your connection and try again.",
                     "Try Again",
-                    v -> startObservingUploads()
+                    v -> uploadsController.start()
             );
         } else {
             showStatePanel(trimmed, "", null, null);
@@ -1298,12 +1225,14 @@ public class MyUploadsActivity extends AppCompatActivity {
     }
 
     private String formatTimestamp(UserGeneratedAudiobook upload) {
-        Timestamp timestamp = upload.getUpdatedAt() == null ? upload.getCreatedAt() : upload.getUpdatedAt();
-        if (timestamp == null) {
+        long timestampMillis = upload.getUpdatedAtMillis() > 0
+                ? upload.getUpdatedAtMillis()
+                : upload.getCreatedAtMillis();
+        if (timestampMillis <= 0) {
             return "Recently updated";
         }
         SimpleDateFormat formatter = new SimpleDateFormat("MMM d, yyyy", Locale.US);
-        return "Updated " + formatter.format(timestamp.toDate());
+        return "Updated " + formatter.format(new java.util.Date(timestampMillis));
     }
 
     private int statusBackgroundColor(AudiobookGenerationStatus status) {

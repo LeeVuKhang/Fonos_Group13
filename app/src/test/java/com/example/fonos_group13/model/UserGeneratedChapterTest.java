@@ -46,7 +46,7 @@ public class UserGeneratedChapterTest {
                 status,
                 published,
                 0,
-                null,
+                0,
                 null,
                 hasAudio
         );

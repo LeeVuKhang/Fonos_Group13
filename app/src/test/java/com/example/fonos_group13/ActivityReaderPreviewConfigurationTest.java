@@ -17,7 +17,7 @@ public class ActivityReaderPreviewConfigurationTest {
         assertTrue(reader.contains("loadingCreatorPreview && isCurrentCreator(book)"));
         assertTrue(reader.contains("creatorPreview == creatorPreviewActive"));
         assertTrue(reader.contains("BookAccessMode accessMode = creatorPreviewActive"));
-        assertTrue(reader.contains("FirebaseAuth.getInstance().getCurrentUser()"));
+        assertTrue(reader.contains("dataController.isCurrentCreator(book)"));
         assertFalse(reader.contains("loadingCreatorPreview && !book.isPublished()"));
         assertFalse(reader.contains("loadingCreatorPreview\n                        && book.getGenerationStatus() == AudiobookGenerationStatus.READY_FOR_REVIEW"));
         assertFalse(reader.contains("currentBook.isPublished() || creatorPreview == creatorPreviewActive"));

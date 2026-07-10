@@ -38,7 +38,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.example.fonos_group13.FonosTestRunner"
     }
 
     buildFeatures {

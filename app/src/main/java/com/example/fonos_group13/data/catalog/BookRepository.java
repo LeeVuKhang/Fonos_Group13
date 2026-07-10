@@ -1,0 +1,272 @@
+package com.example.fonos_group13.data.catalog;
+
+import android.content.Context;
+
+import com.example.fonos_group13.data.core.FirebaseConfig;
+import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.data.firestore.BookChapterDocumentMapper;
+import com.example.fonos_group13.data.firestore.BookDocumentMapper;
+import com.example.fonos_group13.data.firestore.FirestoreValueReader;
+import com.example.fonos_group13.model.AudiobookGenerationStatus;
+import com.example.fonos_group13.model.Book;
+import com.example.fonos_group13.model.BookChapter;
+import com.example.fonos_group13.model.CatalogSnapshot;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+
+public class BookRepository implements com.example.fonos_group13.data.repository.CatalogRepository {
+    private final boolean configured;
+    private FirebaseAuth auth;
+    private FirebaseFirestore firestore;
+
+    public BookRepository(Context context) {
+        configured = FirebaseConfig.isConfigured(context);
+        if (configured) {
+            auth = FirebaseAuth.getInstance();
+            firestore = FirebaseFirestore.getInstance();
+        }
+    }
+
+    public void getPublishedBooks(RepositoryCallback<List<Book>> callback) {
+        if (!configured || firestore == null) {
+            callback.onError(FirebaseConfig.missingConfigException());
+            return;
+        }
+
+        firestore.collection("books")
+                .whereEqualTo("published", true)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    List<Book> books = new ArrayList<>();
+                    querySnapshot.getDocuments().forEach(document -> {
+                        if (!isPubliclyHidden(document)) {
+                            books.add(BookDocumentMapper.fromDocument(document));
+                        }
+                    });
+                    Collections.sort(books, (left, right) -> Integer.compare(left.getOrder(), right.getOrder()));
+                    callback.onSuccess(books);
+                })
+                .addOnFailureListener(callback::onError);
+    }
+
+    public void getBook(String bookId, RepositoryCallback<Book> callback) {
+        getBook(bookId, BookAccessMode.PUBLISHED_ONLY, callback);
+    }
+
+    public void getBook(
+            String bookId,
+            BookAccessMode accessMode,
+            RepositoryCallback<Book> callback
+    ) {
+        if (!configured || firestore == null) {
+            callback.onError(FirebaseConfig.missingConfigException());
+            return;
+        }
+
+        firestore.collection("books")
+                .document(bookId)
+                .get()
+                .addOnSuccessListener(document -> {
+                    BookAccessMode resolvedAccessMode = accessMode == null
+                            ? BookAccessMode.PUBLISHED_ONLY
+                            : accessMode;
+                    AudiobookGenerationStatus generationStatus = AudiobookGenerationStatus.fromValue(
+                            FirestoreValueReader.string(document, "generationStatus")
+                    );
+                    if (document.exists()
+                            && BookAccessPolicy.canReadBook(
+                            FirestoreValueReader.booleanValue(document, "published", false),
+                            isPubliclyHidden(document),
+                            FirestoreValueReader.string(document, "creatorUid"),
+                            generationStatus,
+                            currentUserUid(),
+                            resolvedAccessMode
+                    )) {
+                        callback.onSuccess(BookDocumentMapper.fromDocument(document));
+                    } else {
+                        callback.onError(unavailableBookException());
+                    }
+                })
+                .addOnFailureListener(callback::onError);
+    }
+
+    public void getChapters(String bookId, RepositoryCallback<List<BookChapter>> callback) {
+        getChapters(bookId, BookAccessMode.PUBLISHED_ONLY, callback);
+    }
+
+    public void getChapters(
+            String bookId,
+            BookAccessMode accessMode,
+            RepositoryCallback<List<BookChapter>> callback
+    ) {
+        if (!configured || firestore == null) {
+            callback.onError(FirebaseConfig.missingConfigException());
+            return;
+        }
+
+        BookAccessMode resolvedAccessMode = accessMode == null
+                ? BookAccessMode.PUBLISHED_ONLY
+                : accessMode;
+        getBook(bookId, resolvedAccessMode, new RepositoryCallback<Book>() {
+            @Override
+            public void onSuccess(Book book) {
+                loadAuthorizedChapters(book, resolvedAccessMode, callback);
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                callback.onError(exception);
+            }
+        });
+    }
+
+    @Override
+    public void getChapters(Book book, RepositoryCallback<List<BookChapter>> callback) {
+        if (book == null) {
+            callback.onError(new IllegalArgumentException("Missing book."));
+            return;
+        }
+        loadAuthorizedChapters(book, BookAccessMode.PUBLISHED_ONLY, callback);
+    }
+
+    @Override
+    public void getPublishedCatalog(RepositoryCallback<CatalogSnapshot> callback) {
+        getPublishedBooks(new RepositoryCallback<List<Book>>() {
+            @Override
+            public void onSuccess(List<Book> books) {
+                if (books == null || books.isEmpty()) {
+                    callback.onSuccess(new CatalogSnapshot(
+                            Collections.emptyList(),
+                            Collections.emptyMap(),
+                            false
+                    ));
+                    return;
+                }
+                Map<String, List<BookChapter>> chaptersByBookId = new HashMap<>();
+                int[] remaining = {books.size()};
+                boolean[] partial = {false};
+                for (Book book : books) {
+                    getChapters(book, new RepositoryCallback<List<BookChapter>>() {
+                        @Override
+                        public void onSuccess(List<BookChapter> chapters) {
+                            chaptersByBookId.put(
+                                    book.getId(),
+                                    chapters == null ? Collections.emptyList() : chapters
+                            );
+                            finishCatalogLoad(books, chaptersByBookId, remaining, partial, callback);
+                        }
+
+                        @Override
+                        public void onError(Exception exception) {
+                            partial[0] = true;
+                            chaptersByBookId.put(
+                                    book.getId(),
+                                    Collections.singletonList(BookChapter.fromLegacyBook(book))
+                            );
+                            finishCatalogLoad(books, chaptersByBookId, remaining, partial, callback);
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                callback.onError(exception);
+            }
+        });
+    }
+
+    private void finishCatalogLoad(
+            List<Book> books,
+            Map<String, List<BookChapter>> chaptersByBookId,
+            int[] remaining,
+            boolean[] partial,
+            RepositoryCallback<CatalogSnapshot> callback
+    ) {
+        remaining[0]--;
+        if (remaining[0] == 0) {
+            callback.onSuccess(new CatalogSnapshot(books, chaptersByBookId, partial[0]));
+        }
+    }
+
+    private void loadAuthorizedChapters(
+            Book book,
+            BookAccessMode accessMode,
+            RepositoryCallback<List<BookChapter>> callback
+    ) {
+        String bookId = book.getId();
+        boolean creatorPreviewAuthorized = BookAccessPolicy.canPreviewUnpublishedChapters(
+                book.getCreatorUid(),
+                book.getGenerationStatus(),
+                currentUserUid(),
+                accessMode
+        );
+        firestore.collection("books")
+                .document(bookId)
+                .collection("chapters")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    List<BookChapter> chapters = new ArrayList<>();
+                    boolean hasChapterDocuments = !querySnapshot.isEmpty();
+                    querySnapshot.getDocuments().forEach(document -> {
+                        if (isDeletedChapter(document)) {
+                            return;
+                        }
+                        BookChapter chapter = BookChapterDocumentMapper.fromDocument(bookId, document);
+                        if (BookAccessPolicy.shouldIncludeChapter(
+                                book.isPublished(),
+                                creatorPreviewAuthorized,
+                                chapter.isPublished()
+                        )) {
+                            chapters.add(chapter);
+                        }
+                    });
+                    Collections.sort(chapters, (left, right) -> {
+                        int orderCompare = Integer.compare(left.getOrder(), right.getOrder());
+                        if (orderCompare != 0) {
+                            return orderCompare;
+                        }
+                        return left.getTitle().compareToIgnoreCase(right.getTitle());
+                    });
+                    if (!hasChapterDocuments) {
+                        List<BookChapter> fallbackChapters = new ArrayList<>();
+                        fallbackChapters.add(BookChapter.fromLegacyBook(book));
+                        callback.onSuccess(fallbackChapters);
+                    } else {
+                        callback.onSuccess(chapters);
+                    }
+                })
+                .addOnFailureListener(callback::onError);
+    }
+
+    private String currentUserUid() {
+        FirebaseUser user = auth == null ? null : auth.getCurrentUser();
+        return user == null ? null : user.getUid();
+    }
+
+    private boolean isPubliclyHidden(DocumentSnapshot document) {
+        return FirestoreValueReader.booleanValue(document, "hiddenByCreator", false)
+                || FirestoreValueReader.booleanValue(document, "archivedByCreator", false)
+                || FirestoreValueReader.hasTimestamp(document, "archivedAt");
+    }
+
+    private boolean isDeletedChapter(DocumentSnapshot document) {
+        return FirestoreValueReader.booleanValue(document, "deletedByCreator", false)
+                || FirestoreValueReader.hasTimestamp(document, "deletedAt")
+                || AudiobookGenerationStatus.DELETED == AudiobookGenerationStatus.fromValue(
+                FirestoreValueReader.string(document, "generationStatus")
+        );
+    }
+
+    private Exception unavailableBookException() {
+        return new SecurityException("This audiobook is unavailable.");
+    }
+}

@@ -6,7 +6,7 @@ import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.fonos_group13.data.AuthRepository;
+import com.example.fonos_group13.data.repository.AuthRepository;
 
 public class MainActivity extends AppCompatActivity {
     private static final long HANDOFF_DELAY_MS = 32L;
@@ -30,7 +30,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         handoffStarted = true;
-        AuthRepository authRepository = new AuthRepository(this);
+        AuthRepository authRepository = FonosApplication.container(this).authRepository();
         Intent intent = new Intent(
                 this,
                 authRepository.getCurrentUser() == null ? LoginActivity.class : DiscoverActivity.class

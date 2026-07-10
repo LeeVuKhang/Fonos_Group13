@@ -3,6 +3,7 @@ package com.example.fonos_group13.audio;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
@@ -19,9 +20,12 @@ import androidx.media3.session.MediaSession;
 import androidx.media3.session.MediaSessionService;
 
 import com.example.fonos_group13.ActivityReader;
+import com.example.fonos_group13.FonosApplication;
 import com.example.fonos_group13.MainActivity;
 import com.example.fonos_group13.R;
-import com.example.fonos_group13.data.ProgressRepository;
+import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.data.repository.ProgressRepository;
+import com.example.fonos_group13.model.BookChapter;
 import com.google.common.collect.ImmutableList;
 
 @OptIn(markerClass = UnstableApi.class)
@@ -29,6 +33,7 @@ public class PlaybackService extends MediaSessionService {
     public static final String NOTIFICATION_CHANNEL_ID = "audiobook_playback";
 
     private static final int NOTIFICATION_ID = 1001;
+    private static final String TAG = "PlaybackService";
 
     private ExoPlayer player;
     private MediaSession mediaSession;
@@ -37,7 +42,7 @@ public class PlaybackService extends MediaSessionService {
     @Override
     public void onCreate() {
         super.onCreate();
-        progressRepository = new ProgressRepository(this);
+        progressRepository = FonosApplication.container(this).progressRepository();
 
         player = new ExoPlayer.Builder(this)
                 .build();
@@ -228,14 +233,37 @@ public class PlaybackService extends MediaSessionService {
             String chapterId = extras.getString(ActivityReader.METADATA_CHAPTER_ID);
             if (bookId != null && !bookId.trim().isEmpty()
                     && chapterId != null && !chapterId.trim().isEmpty()) {
-                progressRepository.saveProgress(bookId, chapterId, positionMs, durationMs);
+                progressRepository.saveProgress(
+                        bookId,
+                        chapterId,
+                        positionMs,
+                        durationMs,
+                        progressSaveCallback()
+                );
                 return;
             }
         }
         if (currentItem.mediaId == null || currentItem.mediaId.trim().isEmpty()) {
             return;
         }
-        progressRepository.saveProgress(currentItem.mediaId, positionMs, durationMs);
+        progressRepository.saveProgress(
+                currentItem.mediaId,
+                BookChapter.LEGACY_CHAPTER_ID,
+                positionMs,
+                durationMs,
+                progressSaveCallback()
+        );
+    }
+
+    private RepositoryCallback<Void> progressSaveCallback() {
+        return new RepositoryCallback<Void>() {
+            @Override public void onSuccess(Void data) { }
+
+            @Override
+            public void onError(Exception exception) {
+                Log.w(TAG, "Could not persist playback progress.", exception);
+            }
+        };
     }
 
     private long getDurationMs() {

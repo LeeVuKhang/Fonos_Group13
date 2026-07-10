@@ -18,30 +18,29 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.example.fonos_group13.data.AuthRepository;
-import com.example.fonos_group13.data.BookRepository;
-import com.example.fonos_group13.data.ProgressRepository;
-import com.example.fonos_group13.data.RepositoryCallback;
-import com.example.fonos_group13.model.Book;
-import com.example.fonos_group13.model.BookChapter;
-import com.example.fonos_group13.model.UserProgress;
-import com.google.firebase.auth.FirebaseUser;
+import com.example.fonos_group13.controller.profile.ProfileController;
+import com.example.fonos_group13.controller.profile.ProfileStats;
+import com.example.fonos_group13.data.auth.AuthErrorFormatter;
+import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.data.repository.AuthRepository;
+import com.example.fonos_group13.model.UserAccount;
 
-import java.util.List;
-
-public class ProfileActivity extends AppCompatActivity {
+public class ProfileActivity extends AppCompatActivity implements ProfileController.View {
     private AuthRepository authRepository;
-    private BookRepository bookRepository;
-    private ProgressRepository progressRepository;
+    private ProfileController profileController;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_profile);
-        authRepository = new AuthRepository(this);
-        bookRepository = new BookRepository(this);
-        progressRepository = new ProgressRepository(this);
+        AppContainer container = FonosApplication.container(this);
+        authRepository = container.authRepository();
+        profileController = new ProfileController(
+                container.catalogRepository(),
+                container.progressRepository(),
+                this
+        );
 
         View mainView = findViewById(R.id.main);
         if (mainView != null) {
@@ -53,13 +52,13 @@ public class ProfileActivity extends AppCompatActivity {
         }
         
         bindProfile();
-        loadStats();
+        updateStats(0, 0);
         setupProfileActions();
         setupBottomNavigation();
     }
 
     private void bindProfile() {
-        FirebaseUser user = authRepository.getCurrentUser();
+        UserAccount user = authRepository.getCurrentUser();
         TextView name = findViewById(R.id.tv_profile_name);
         TextView email = findViewById(R.id.tv_profile_email);
 
@@ -105,7 +104,7 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void showDisplayNameDialog() {
-        FirebaseUser user = authRepository.getCurrentUser();
+        UserAccount user = authRepository.getCurrentUser();
         if (user == null) {
             Toast.makeText(this, "Please sign in again to update your profile.", Toast.LENGTH_LONG).show();
             return;
@@ -140,9 +139,9 @@ public class ProfileActivity extends AppCompatActivity {
             save.setEnabled(false);
             save.setAlpha(0.65f);
             save.setText("Saving...");
-            authRepository.updateDisplayName(displayName, new RepositoryCallback<FirebaseUser>() {
+            authRepository.updateDisplayName(displayName, new RepositoryCallback<UserAccount>() {
                 @Override
-                public void onSuccess(FirebaseUser data) {
+                public void onSuccess(UserAccount data) {
                     runOnUiThread(() -> {
                         updateProfileName(displayName);
                         Toast.makeText(ProfileActivity.this, "Display name updated.", Toast.LENGTH_SHORT).show();
@@ -158,7 +157,11 @@ public class ProfileActivity extends AppCompatActivity {
                         save.setEnabled(true);
                         save.setAlpha(1f);
                         save.setText("Save");
-                        Toast.makeText(ProfileActivity.this, AuthRepository.friendlyError(exception), Toast.LENGTH_LONG).show();
+                        Toast.makeText(
+                                ProfileActivity.this,
+                                AuthErrorFormatter.friendlyMessage(exception),
+                                Toast.LENGTH_LONG
+                        ).show();
                     });
                 }
             });
@@ -187,136 +190,21 @@ public class ProfileActivity extends AppCompatActivity {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
-    private void loadStats() {
-        updateStats(0, 0);
-        bookRepository.getPublishedBooks(new RepositoryCallback<List<Book>>() {
-            @Override
-            public void onSuccess(List<Book> books) {
-                if (books == null || books.isEmpty()) {
-                    updateStats(0, 0);
-                    return;
-                }
-                loadProgressStats(books);
-            }
-
-            @Override
-            public void onError(Exception exception) {
-                updateStats(0, 0);
-            }
-        });
+    @Override
+    public void renderProfileStats(ProfileStats stats, boolean partial) {
+        updateStats(stats.getCompletedBooks(), stats.getListenedMs());
     }
 
-    private void loadProgressStats(List<Book> books) {
-        final int[] remaining = {books.size()};
-        final int[] completedCount = {0};
-        final long[] listenedMs = {0};
-
-        for (Book book : books) {
-            loadBookStats(book, remaining, completedCount, listenedMs);
-        }
+    @Override
+    protected void onStart() {
+        super.onStart();
+        profileController.start();
     }
 
-    private void loadBookStats(Book book, int[] remaining, int[] completedCount, long[] listenedMs) {
-        bookRepository.getChapters(book.getId(), new RepositoryCallback<List<BookChapter>>() {
-            @Override
-            public void onSuccess(List<BookChapter> chapters) {
-                if (chapters == null || chapters.isEmpty()) {
-                    finishOneBookStatLoad(remaining, completedCount, listenedMs, false, 0);
-                    return;
-                }
-                loadChapterStats(chapters, remaining, completedCount, listenedMs);
-            }
-
-            @Override
-            public void onError(Exception exception) {
-                finishOneBookStatLoad(remaining, completedCount, listenedMs, false, 0);
-            }
-        });
-    }
-
-    private void loadChapterStats(
-            List<BookChapter> chapters,
-            int[] remainingBooks,
-            int[] completedBooks,
-            long[] totalListenedMs
-    ) {
-        final int[] remainingChapters = {chapters.size()};
-        final boolean[] allCompleted = {true};
-        final long[] bookListenedMs = {0};
-
-        for (BookChapter chapter : chapters) {
-            progressRepository.getProgress(chapter.getBookId(), chapter.getId(), new RepositoryCallback<UserProgress>() {
-                @Override
-                public void onSuccess(UserProgress progress) {
-                    if (progress != null) {
-                        if (!progress.isCompleted()) {
-                            allCompleted[0] = false;
-                        }
-                        bookListenedMs[0] += Math.max(progress.getPositionMs(), 0);
-                    } else {
-                        allCompleted[0] = false;
-                    }
-                    finishOneChapterStatLoad(
-                            remainingChapters,
-                            remainingBooks,
-                            completedBooks,
-                            totalListenedMs,
-                            allCompleted,
-                            bookListenedMs
-                    );
-                }
-
-                @Override
-                public void onError(Exception exception) {
-                    allCompleted[0] = false;
-                    finishOneChapterStatLoad(
-                            remainingChapters,
-                            remainingBooks,
-                            completedBooks,
-                            totalListenedMs,
-                            allCompleted,
-                            bookListenedMs
-                    );
-                }
-            });
-        }
-    }
-
-    private void finishOneChapterStatLoad(
-            int[] remainingChapters,
-            int[] remainingBooks,
-            int[] completedBooks,
-            long[] totalListenedMs,
-            boolean[] allCompleted,
-            long[] bookListenedMs
-    ) {
-        remainingChapters[0]--;
-        if (remainingChapters[0] <= 0) {
-            finishOneBookStatLoad(
-                    remainingBooks,
-                    completedBooks,
-                    totalListenedMs,
-                    allCompleted[0],
-                    bookListenedMs[0]
-            );
-        }
-    }
-
-    private void finishOneBookStatLoad(
-            int[] remaining,
-            int[] completedCount,
-            long[] listenedMs,
-            boolean completed,
-            long bookListenedMs
-    ) {
-        if (completed) {
-            completedCount[0]++;
-        }
-        listenedMs[0] += Math.max(bookListenedMs, 0);
-        remaining[0]--;
-        if (remaining[0] <= 0) {
-            updateStats(completedCount[0], listenedMs[0]);
-        }
+    @Override
+    protected void onStop() {
+        profileController.stop();
+        super.onStop();
     }
 
     private void updateStats(int completedBooks, long listenedMs) {

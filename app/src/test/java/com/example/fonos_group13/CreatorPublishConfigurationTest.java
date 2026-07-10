@@ -13,8 +13,8 @@ public class CreatorPublishConfigurationTest {
     public void reviewPreviewHasPublishActionBackedByCreatorRepository() throws Exception {
         String activity = readFile("src/main/java/com/example/fonos_group13/BookDetailActivity.java");
         String layout = readFile("src/main/res/layout/activity_book_detail.xml");
-        String repository = readFile("src/main/java/com/example/fonos_group13/data/CreatorAudiobookRepository.java");
-        String apiClient = readFile("src/main/java/com/example/fonos_group13/data/CreatorApiClient.java");
+        String repository = readFile("src/main/java/com/example/fonos_group13/data/creator/CreatorAudiobookRepository.java");
+        String apiClient = readFile("src/main/java/com/example/fonos_group13/data/creator/CreatorApiClient.java");
 
         assertTrue(layout.contains("btn_publish_audiobook"));
         assertTrue(activity.contains("publishCurrentBook()"));
@@ -22,8 +22,8 @@ public class CreatorPublishConfigurationTest {
         assertTrue(activity.contains("creatorPreviewRequested && isCurrentCreator(book)"));
         assertTrue(activity.contains("canPublishCurrentBook()"));
         assertTrue(activity.contains("currentBook.getGenerationStatus() == AudiobookGenerationStatus.READY_FOR_REVIEW"));
-        assertTrue(activity.contains("FirebaseAuth.getInstance().getCurrentUser()"));
-        assertTrue(activity.contains("publishAudiobook(bookId"));
+        assertTrue(activity.contains("dataController.isCurrentCreator(book)"));
+        assertTrue(activity.contains("dataController.publish(bookId"));
         assertTrue(repository.contains("publishAudiobook(String bookId"));
         assertTrue(apiClient.contains("/publications"));
     }

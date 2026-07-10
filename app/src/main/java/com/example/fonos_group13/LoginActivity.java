@@ -16,9 +16,10 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.example.fonos_group13.data.AuthRepository;
-import com.example.fonos_group13.data.RepositoryCallback;
-import com.google.firebase.auth.FirebaseUser;
+import com.example.fonos_group13.data.auth.AuthErrorFormatter;
+import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.data.repository.AuthRepository;
+import com.example.fonos_group13.model.UserAccount;
 
 public class LoginActivity extends AppCompatActivity {
     private static final String DEMO_EMAIL = "admin@gmail.com";
@@ -35,7 +36,7 @@ public class LoginActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_login);
 
-        authRepository = new AuthRepository(this);
+        authRepository = FonosApplication.container(this).authRepository();
         if (authRepository.getCurrentUser() != null) {
             openDiscover();
             return;
@@ -95,9 +96,9 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         setLoading(true);
-        authRepository.signIn(email, password, new RepositoryCallback<FirebaseUser>() {
+        authRepository.signIn(email, password, new RepositoryCallback<UserAccount>() {
             @Override
-            public void onSuccess(FirebaseUser data) {
+            public void onSuccess(UserAccount data) {
                 setLoading(false);
                 openDiscover();
             }
@@ -105,7 +106,7 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onError(Exception exception) {
                 setLoading(false);
-                Toast.makeText(LoginActivity.this, AuthRepository.friendlyError(exception), Toast.LENGTH_LONG).show();
+                Toast.makeText(LoginActivity.this, AuthErrorFormatter.friendlyMessage(exception), Toast.LENGTH_LONG).show();
             }
         });
     }
