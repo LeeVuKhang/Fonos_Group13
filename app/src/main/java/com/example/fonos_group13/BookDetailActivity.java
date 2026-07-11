@@ -60,6 +60,7 @@ public class BookDetailActivity extends AppCompatActivity {
     private boolean creatorPreviewActive;
     private boolean reviewsLoading;
     private boolean reviewSubmitting;
+    private boolean reviewsLoadFailed;
     private double displayedRatingAverage;
     private int displayedRatingCount;
     private int displayedSaveCount;
@@ -211,7 +212,9 @@ public class BookDetailActivity extends AppCompatActivity {
         }
         if (submitReviewButton != null) submitReviewButton.setOnClickListener(v -> submitReview());
         if (deleteReviewButton != null) deleteReviewButton.setOnClickListener(v -> confirmDeleteReview());
-        if (loadMoreReviewsButton != null) loadMoreReviewsButton.setOnClickListener(v -> loadReviews(false));
+        if (loadMoreReviewsButton != null) {
+            loadMoreReviewsButton.setOnClickListener(v -> loadReviews(reviews.isEmpty()));
+        }
     }
 
     private void handleIntent(Intent intent) {
@@ -449,6 +452,7 @@ public class BookDetailActivity extends AppCompatActivity {
     private void loadReviews(boolean reset) {
         if (currentBook == null || !currentBook.isPublished() || reviewsLoading) return;
         reviewsLoading = true;
+        reviewsLoadFailed = false;
         if (reset) {
             reviews.clear();
             nextReviewCursor = null;
@@ -458,6 +462,7 @@ public class BookDetailActivity extends AppCompatActivity {
                 new RepositoryCallback<BookReviewPage>() {
                     @Override public void onSuccess(BookReviewPage page) {
                         reviewsLoading = false;
+                        reviewsLoadFailed = false;
                         if (page != null) {
                             reviews.addAll(page.getReviews());
                             if (reset) viewerReview = page.getViewerReview();
@@ -470,6 +475,7 @@ public class BookDetailActivity extends AppCompatActivity {
 
                     @Override public void onError(Exception exception) {
                         reviewsLoading = false;
+                        reviewsLoadFailed = true;
                         showReviewsMessage(getString(R.string.community_load_error));
                         updateReviewUi();
                     }
@@ -580,7 +586,7 @@ public class BookDetailActivity extends AppCompatActivity {
             deleteReviewButton.setEnabled(!reviewSubmitting);
         }
         if (loadMoreReviewsButton != null) {
-            loadMoreReviewsButton.setVisibility(nextReviewCursor != null ? View.VISIBLE : View.GONE);
+            loadMoreReviewsButton.setVisibility(nextReviewCursor != null || reviewsLoadFailed ? View.VISIBLE : View.GONE);
             loadMoreReviewsButton.setEnabled(!reviewsLoading);
         }
         if (reviewsLoading && reviews.isEmpty()) showReviewsMessage(getString(R.string.community_loading_reviews));
