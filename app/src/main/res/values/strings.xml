@@ -27,4 +27,24 @@
     <string name="my_uploads_add_chapter">+ Add Chapter</string>
     <string name="playback_notification_channel_name">Audiobook playback</string>
     <string name="generation_notification_channel_name">Audiobook generation</string>
+    <string name="community_no_ratings">No ratings yet</string>
+    <string name="community_rating_summary">★ %1$.1f (%2$d ratings)</string>
+    <string name="community_save_count">%1$d saves</string>
+    <string name="community_zero_saves">0 saves</string>
+    <string name="community_reviews_title">Ratings &amp; reviews</string>
+    <string name="community_comment_hint">Write an optional comment</string>
+    <string name="community_character_count">%1$d / 1000</string>
+    <string name="community_character_count_zero">0 / 1000</string>
+    <string name="community_submit_review">Submit review</string>
+    <string name="community_update_review">Update review</string>
+    <string name="community_delete_action">Delete</string>
+    <string name="community_delete_title">Delete review?</string>
+    <string name="community_delete_message">Your rating and comment will be removed.</string>
+    <string name="community_load_more">Load more reviews</string>
+    <string name="community_loading_reviews">Loading reviews…</string>
+    <string name="community_no_comments">No written reviews yet.</string>
+    <string name="community_load_error">Could not load reviews. Tap Load more to retry.</string>
+    <string name="community_choose_rating">Choose a rating from 1 to 5 stars.</string>
+    <string name="community_review_saved">Review saved.</string>
+    <string name="community_edited_date">%1$s · Edited</string>
 </resources>

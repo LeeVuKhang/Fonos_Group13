@@ -12,14 +12,10 @@ import com.example.fonos_group13.model.SaveMutationResult;
 import com.example.fonos_group13.data.firestore.FirestoreValueReader;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.SetOptions;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 public class SavedBookRepository implements com.example.fonos_group13.data.repository.SavedBooksRepository {

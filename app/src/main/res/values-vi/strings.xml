@@ -28,4 +28,24 @@
     <string name="my_uploads_add_chapter">+ Thêm chương</string>
     <string name="playback_notification_channel_name">Phát sách nói</string>
     <string name="generation_notification_channel_name">Tạo sách nói</string>
+    <string name="community_no_ratings">Chưa có đánh giá</string>
+    <string name="community_rating_summary">★ %1$.1f (%2$d đánh giá)</string>
+    <string name="community_save_count">%1$d lượt lưu</string>
+    <string name="community_zero_saves">0 lượt lưu</string>
+    <string name="community_reviews_title">Xếp hạng và nhận xét</string>
+    <string name="community_comment_hint">Viết nhận xét không bắt buộc</string>
+    <string name="community_character_count">%1$d / 1000</string>
+    <string name="community_character_count_zero">0 / 1000</string>
+    <string name="community_submit_review">Gửi đánh giá</string>
+    <string name="community_update_review">Cập nhật đánh giá</string>
+    <string name="community_delete_action">Xóa</string>
+    <string name="community_delete_title">Xóa đánh giá?</string>
+    <string name="community_delete_message">Điểm xếp hạng và nhận xét của bạn sẽ bị xóa.</string>
+    <string name="community_load_more">Tải thêm đánh giá</string>
+    <string name="community_loading_reviews">Đang tải đánh giá…</string>
+    <string name="community_no_comments">Chưa có nhận xét bằng văn bản.</string>
+    <string name="community_load_error">Không thể tải đánh giá. Nhấn tải thêm để thử lại.</string>
+    <string name="community_choose_rating">Chọn từ 1 đến 5 sao.</string>
+    <string name="community_review_saved">Đã lưu đánh giá.</string>
+    <string name="community_edited_date">%1$s · Đã chỉnh sửa</string>
 </resources>
