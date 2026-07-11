@@ -35,6 +35,7 @@ public class ArchitectureBoundaryTest {
         List<String> contractNames = Arrays.asList(
                 "AuthRepository",
                 "CatalogRepository",
+                "BookCommunityRepository",
                 "SavedBooksRepository",
                 "ProgressRepository",
                 "AudioDownloadRepository",

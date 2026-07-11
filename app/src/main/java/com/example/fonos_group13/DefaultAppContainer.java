@@ -5,12 +5,14 @@ import android.os.Handler;
 import android.os.Looper;
 
 import com.example.fonos_group13.data.creator.CreatorAudiobookRepository;
+import com.example.fonos_group13.data.community.DefaultBookCommunityRepository;
 import com.example.fonos_group13.data.creator.FirestoreCreatorUploadsRepository;
 import com.example.fonos_group13.data.library.DefaultAudioDownloadRepository;
 import com.example.fonos_group13.data.library.DownloadedAudioStore;
 import com.example.fonos_group13.data.library.HttpAudioDownloader;
 import com.example.fonos_group13.data.notification.UploadNotificationTokenRepository;
 import com.example.fonos_group13.data.repository.AudioDownloadRepository;
+import com.example.fonos_group13.data.repository.BookCommunityRepository;
 import com.example.fonos_group13.data.repository.AuthRepository;
 import com.example.fonos_group13.data.repository.CatalogRepository;
 import com.example.fonos_group13.data.repository.CreatorCommandRepository;
@@ -25,6 +27,7 @@ final class DefaultAppContainer implements AppContainer {
     private final AuthRepository authRepository;
     private final CatalogRepository catalogRepository;
     private final SavedBooksRepository savedBooksRepository;
+    private final BookCommunityRepository bookCommunityRepository;
     private final ProgressRepository progressRepository;
     private final AudioDownloadRepository audioDownloadRepository;
     private final CreatorCommandRepository creatorCommandRepository;
@@ -39,7 +42,8 @@ final class DefaultAppContainer implements AppContainer {
         mainHandler = new Handler(Looper.getMainLooper());
         authRepository = new com.example.fonos_group13.data.auth.AuthRepository(appContext);
         catalogRepository = new com.example.fonos_group13.data.catalog.BookRepository(appContext);
-        savedBooksRepository = new com.example.fonos_group13.data.library.SavedBookRepository(appContext);
+        savedBooksRepository = new com.example.fonos_group13.data.library.SavedBookRepository(appContext, ioExecutor, mainHandler);
+        bookCommunityRepository = new DefaultBookCommunityRepository(appContext, ioExecutor, mainHandler);
         progressRepository = new com.example.fonos_group13.data.library.ProgressRepository(appContext);
         audioDownloadRepository = new DefaultAudioDownloadRepository(
                 new DownloadedAudioStore(new java.io.File(appContext.getFilesDir(), "audiobooks")),
@@ -66,6 +70,8 @@ final class DefaultAppContainer implements AppContainer {
     public SavedBooksRepository savedBooksRepository() {
         return savedBooksRepository;
     }
+
+    @Override public BookCommunityRepository bookCommunityRepository() { return bookCommunityRepository; }
 
     @Override
     public ProgressRepository progressRepository() {

@@ -1,9 +1,14 @@
 package com.example.fonos_group13.data.library;
 
 import android.content.Context;
+import android.os.Handler;
 
 import com.example.fonos_group13.data.core.FirebaseConfig;
 import com.example.fonos_group13.data.core.RepositoryCallback;
+import com.example.fonos_group13.BuildConfig;
+import com.example.fonos_group13.data.community.CommunityApiClient;
+import com.example.fonos_group13.data.community.CommunityBackendDataSource;
+import com.example.fonos_group13.model.SaveMutationResult;
 import com.example.fonos_group13.data.firestore.FirestoreValueReader;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -15,17 +20,26 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 public class SavedBookRepository implements com.example.fonos_group13.data.repository.SavedBooksRepository {
     private final boolean configured;
     private FirebaseAuth auth;
     private FirebaseFirestore firestore;
+    private CommunityBackendDataSource backend;
 
     public SavedBookRepository(Context context) {
+        this(context, null, null);
+    }
+
+    public SavedBookRepository(Context context, ExecutorService executor, Handler mainHandler) {
         configured = FirebaseConfig.isConfigured(context);
         if (configured) {
             auth = FirebaseAuth.getInstance();
             firestore = FirebaseFirestore.getInstance();
+            if (executor != null && mainHandler != null) {
+                backend = new CommunityApiClient(BuildConfig.BACKEND_BASE_URL, auth, executor, mainHandler);
+            }
         }
     }
 
@@ -46,38 +60,21 @@ public class SavedBookRepository implements com.example.fonos_group13.data.repos
     }
 
     public void saveBook(String bookId, RepositoryCallback<Void> callback) {
-        FirebaseUser user = currentUser();
-        if (!canWrite(bookId, callback)) {
-            return;
-        }
-
-        Map<String, Object> savedBook = new HashMap<>();
-        savedBook.put("bookId", bookId);
-        savedBook.put("createdAt", FieldValue.serverTimestamp());
-        savedBook.put("updatedAt", FieldValue.serverTimestamp());
-
-        firestore.collection("users")
-                .document(user.getUid())
-                .collection("savedBooks")
-                .document(bookId)
-                .set(savedBook, SetOptions.merge())
-                .addOnSuccessListener(unused -> callback.onSuccess(null))
-                .addOnFailureListener(callback::onError);
+        setSavedWithResult(bookId, true, voidCallback(callback));
     }
 
     public void unsaveBook(String bookId, RepositoryCallback<Void> callback) {
-        FirebaseUser user = currentUser();
-        if (!canWrite(bookId, callback)) {
+        setSavedWithResult(bookId, false, voidCallback(callback));
+    }
+
+    @Override
+    public void setSavedWithResult(String bookId, boolean saved, RepositoryCallback<SaveMutationResult> callback) {
+        if (!canWrite(bookId, callback)) return;
+        if (backend == null) {
+            callback.onError(new IllegalStateException("Backend base URL is not configured."));
             return;
         }
-
-        firestore.collection("users")
-                .document(user.getUid())
-                .collection("savedBooks")
-                .document(bookId)
-                .delete()
-                .addOnSuccessListener(unused -> callback.onSuccess(null))
-                .addOnFailureListener(callback::onError);
+        backend.setSaved(bookId, saved, callback);
     }
 
     public void getSavedBookIds(RepositoryCallback<List<String>> callback) {
@@ -102,7 +99,7 @@ public class SavedBookRepository implements com.example.fonos_group13.data.repos
                 .addOnFailureListener(callback::onError);
     }
 
-    private boolean canWrite(String bookId, RepositoryCallback<Void> callback) {
+    private boolean canWrite(String bookId, RepositoryCallback<?> callback) {
         if (!configured || firestore == null) {
             callback.onError(FirebaseConfig.missingConfigException());
             return false;
@@ -116,6 +113,13 @@ public class SavedBookRepository implements com.example.fonos_group13.data.repos
             return false;
         }
         return true;
+    }
+
+    private RepositoryCallback<SaveMutationResult> voidCallback(RepositoryCallback<Void> callback) {
+        return new RepositoryCallback<SaveMutationResult>() {
+            @Override public void onSuccess(SaveMutationResult data) { callback.onSuccess(null); }
+            @Override public void onError(Exception exception) { callback.onError(exception); }
+        };
     }
 
     private FirebaseUser currentUser() {

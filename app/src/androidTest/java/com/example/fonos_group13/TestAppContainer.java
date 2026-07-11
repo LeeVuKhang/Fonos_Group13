@@ -6,6 +6,7 @@ import android.os.Looper;
 
 import com.example.fonos_group13.data.notification.UploadNotificationTokenRepository;
 import com.example.fonos_group13.data.repository.AudioDownloadRepository;
+import com.example.fonos_group13.data.repository.BookCommunityRepository;
 import com.example.fonos_group13.data.repository.AuthRepository;
 import com.example.fonos_group13.data.repository.CatalogRepository;
 import com.example.fonos_group13.data.repository.CreatorCommandRepository;
@@ -21,6 +22,7 @@ final class TestAppContainer implements AppContainer {
     private final AuthRepository auth = fake(AuthRepository.class);
     private final CatalogRepository catalog = fake(CatalogRepository.class);
     private final SavedBooksRepository savedBooks = fake(SavedBooksRepository.class);
+    private final BookCommunityRepository community = fake(BookCommunityRepository.class);
     private final ProgressRepository progress = fake(ProgressRepository.class);
     private final AudioDownloadRepository downloads = fake(AudioDownloadRepository.class);
     private final CreatorCommandRepository creatorCommands = fake(CreatorCommandRepository.class);
@@ -51,6 +53,7 @@ final class TestAppContainer implements AppContainer {
     @Override public AuthRepository authRepository() { return auth; }
     @Override public CatalogRepository catalogRepository() { return catalog; }
     @Override public SavedBooksRepository savedBooksRepository() { return savedBooks; }
+    @Override public BookCommunityRepository bookCommunityRepository() { return community; }
     @Override public ProgressRepository progressRepository() { return progress; }
     @Override public AudioDownloadRepository audioDownloadRepository() { return downloads; }
     @Override public CreatorCommandRepository creatorCommandRepository() { return creatorCommands; }
