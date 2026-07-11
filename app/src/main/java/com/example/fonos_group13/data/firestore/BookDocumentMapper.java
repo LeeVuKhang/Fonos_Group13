@@ -34,7 +34,10 @@ public final class BookDocumentMapper {
                 AudiobookGenerationStatus.fromValue(FirestoreValueReader.string(document, "generationStatus")),
                 FirestoreValueReader.booleanValue(document, "featured", false),
                 FirestoreValueReader.booleanValue(document, "published", false),
-                (int) FirestoreValueReader.longValue(document, "order")
+                (int) FirestoreValueReader.longValue(document, "order"),
+                FirestoreValueReader.doubleValue(document, "ratingAverage"),
+                (int) FirestoreValueReader.longValue(document, "ratingCount"),
+                (int) FirestoreValueReader.longValue(document, "saveCount")
         );
     }
 }
