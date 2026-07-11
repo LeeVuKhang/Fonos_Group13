@@ -5,6 +5,7 @@ import com.example.fonos_group13.data.catalog.BookAccessMode;
 import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.example.fonos_group13.data.core.RequestHandle;
 import com.example.fonos_group13.data.repository.AudioDownloadRepository;
+import com.example.fonos_group13.data.repository.BookCommunityRepository;
 import com.example.fonos_group13.data.repository.AuthRepository;
 import com.example.fonos_group13.data.repository.CatalogRepository;
 import com.example.fonos_group13.data.repository.CreatorCommandRepository;
@@ -12,6 +13,9 @@ import com.example.fonos_group13.data.repository.ProgressRepository;
 import com.example.fonos_group13.data.repository.SavedBooksRepository;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
+import com.example.fonos_group13.model.BookReviewPage;
+import com.example.fonos_group13.model.ReviewMutationResult;
+import com.example.fonos_group13.model.SaveMutationResult;
 import com.example.fonos_group13.model.UserAccount;
 import com.example.fonos_group13.model.UserProgress;
 
@@ -25,6 +29,7 @@ public final class BookDetailDataController {
     private final SavedBooksRepository savedBooks;
     private final CreatorCommandRepository creatorCommands;
     private final AuthRepository auth;
+    private final BookCommunityRepository community;
     private final RequestGate requestGate = new RequestGate();
     private RequestHandle downloadRequest = RequestHandle.NONE;
     private long generation;
@@ -35,7 +40,8 @@ public final class BookDetailDataController {
             AudioDownloadRepository audio,
             SavedBooksRepository savedBooks,
             CreatorCommandRepository creatorCommands,
-            AuthRepository auth
+            AuthRepository auth,
+            BookCommunityRepository community
     ) {
         this.catalog = catalog;
         this.progress = progress;
@@ -43,6 +49,7 @@ public final class BookDetailDataController {
         this.savedBooks = savedBooks;
         this.creatorCommands = creatorCommands;
         this.auth = auth;
+        this.community = community;
     }
 
     public void start() { generation = requestGate.open(); }
@@ -51,6 +58,7 @@ public final class BookDetailDataController {
         requestGate.invalidate();
         downloadRequest.cancel();
         creatorCommands.cancelPendingRequests();
+        community.cancelPendingRequests();
     }
 
     public void getBook(String id, BookAccessMode mode, RepositoryCallback<Book> callback) {
@@ -75,6 +83,27 @@ public final class BookDetailDataController {
         } else {
             savedBooks.unsaveBook(bookId, guarded(callback));
         }
+    }
+
+    public void setSavedWithResult(String bookId, boolean saved, RepositoryCallback<SaveMutationResult> callback) {
+        savedBooks.setSavedWithResult(bookId, saved, guarded(callback));
+    }
+
+    public void getReviews(String bookId, String cursor, RepositoryCallback<BookReviewPage> callback) {
+        community.getReviews(bookId, cursor, guarded(callback));
+    }
+
+    public void upsertReview(
+            String bookId,
+            int rating,
+            String comment,
+            RepositoryCallback<ReviewMutationResult> callback
+    ) {
+        community.upsertReview(bookId, rating, comment, guarded(callback));
+    }
+
+    public void deleteReview(String bookId, RepositoryCallback<ReviewMutationResult> callback) {
+        community.deleteReview(bookId, guarded(callback));
     }
 
     public void publish(String bookId, RepositoryCallback<Void> callback) {

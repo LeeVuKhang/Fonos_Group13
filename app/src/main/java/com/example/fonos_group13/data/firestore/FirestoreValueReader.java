@@ -18,6 +18,11 @@ public final class FirestoreValueReader {
         return longValue(rawValue(document, field));
     }
 
+    public static double doubleValue(DocumentSnapshot document, String field) {
+        Object value = rawValue(document, field);
+        return value instanceof Number ? ((Number) value).doubleValue() : 0d;
+    }
+
     public static boolean booleanValue(DocumentSnapshot document, String field, boolean fallback) {
         return booleanValue(rawValue(document, field), fallback);
     }

@@ -18,6 +18,9 @@ public class Book {
     private final boolean featured;
     private final boolean published;
     private final int order;
+    private final double ratingAverage;
+    private final int ratingCount;
+    private final int saveCount;
 
     public Book(
             String id,
@@ -38,6 +41,33 @@ public class Book {
             boolean published,
             int order
     ) {
+        this(id, title, author, chapterTitle, contentSample, coverUrl, isbn, audioUrl,
+                audioStoragePath, durationSec, languageCode, voiceGender, creatorUid,
+                generationStatus, featured, published, order, 0, 0, 0);
+    }
+
+    public Book(
+            String id,
+            String title,
+            String author,
+            String chapterTitle,
+            String contentSample,
+            String coverUrl,
+            String isbn,
+            String audioUrl,
+            String audioStoragePath,
+            long durationSec,
+            String languageCode,
+            String voiceGender,
+            String creatorUid,
+            AudiobookGenerationStatus generationStatus,
+            boolean featured,
+            boolean published,
+            int order,
+            double ratingAverage,
+            int ratingCount,
+            int saveCount
+    ) {
         this.id = id;
         this.title = title;
         this.author = author;
@@ -55,6 +85,9 @@ public class Book {
         this.featured = featured;
         this.published = published;
         this.order = order;
+        this.ratingAverage = Double.isFinite(ratingAverage) ? Math.max(0, ratingAverage) : 0;
+        this.ratingCount = Math.max(0, ratingCount);
+        this.saveCount = Math.max(0, saveCount);
     }
 
     private static String valueOrDefault(String value, String fallback) {
@@ -163,4 +196,10 @@ public class Book {
     public int getOrder() {
         return order;
     }
+
+    public double getRatingAverage() { return ratingAverage; }
+
+    public int getRatingCount() { return ratingCount; }
+
+    public int getSaveCount() { return saveCount; }
 }

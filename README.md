@@ -22,6 +22,11 @@ interfaces keep Firebase and network implementations out of the UI layer.
 - Seek, move between chapters, and choose a default playback speed.
 - Download chapter MP3 files to app-private storage and delete them later.
 - View completed-book and listening-time statistics on the profile screen.
+- View average ratings on Discover, Search, Library, and Book Detail.
+- Add one editable 1-5 star review per published book, optionally with a
+  comment of up to 1,000 characters, and delete that review later.
+- Browse written reviews newest-first in pages of ten and see the current
+  number of users who saved a book.
 
 ### Creator experience
 
@@ -105,6 +110,7 @@ UI and controllers depend on these interfaces:
 - `AudioDownloadRepository`
 - `CreatorCommandRepository`
 - `CreatorUploadsRepository`
+- `BookCommunityRepository`
 
 Production repositories map Firestore documents into pure Java models. Firebase
 snapshots and timestamps do not leak into controllers or Activities. Repository
@@ -144,12 +150,30 @@ Creator workflow:
 5. My Uploads renders `draft`, `pending_generation`, `failed`,
    `ready_for_review`, `published`, `rejected`, and `deleted` states.
 
+Community workflow:
+
+1. Catalog reads map `ratingAverage`, `ratingCount`, and `saveCount` from each
+   book document, defaulting missing legacy values to zero.
+2. Book Detail loads comment-bearing reviews through the authenticated backend
+   while keeping the caller's rating-only review available for editing.
+3. Review and save mutations wait for the backend transaction before changing
+   confirmed UI state; failed online requests remain retryable.
+4. The backend derives reviewer identity from Firebase Authentication and
+   returns updated aggregates after every mutation.
+
+Review loading depends on the backend Firestore composite index for
+`hasComment ASC`, `createdAt DESC`, and document ID descending. The index for
+project `fonos-group13-44726` was verified `READY` on 2026-07-11. If the index
+is missing or still building, Book Detail keeps the retry action visible while
+the backend reports `FAILED_PRECONDITION`.
+
 ## Data and Local Storage
 
 | Location | Purpose |
 | --- | --- |
 | `books/{bookId}` | Published catalog metadata and creator upload state |
 | `books/{bookId}/chapters/{chapterId}` | Chapter text, order, duration, audio, and generation state |
+| `books/{bookId}/reviews/{uid}` | One server-owned rating and optional comment per user |
 | `users/{uid}` | Basic account profile data |
 | `users/{uid}/savedBooks/{bookId}` | Saved-library membership |
 | `users/{uid}/progress/{progressId}` | Position, duration, completion, and update time per chapter |
@@ -160,6 +184,10 @@ Creator workflow:
 Firestore remains the source of truth for catalog, saved-book, progress, and
 creator metadata. Downloaded audio and playback-speed preferences are local to
 the current device.
+
+Review, aggregate, and saved-membership writes are backend-authoritative.
+Android can read its own saved membership but cannot directly update those
+documents after the community-feature rules cutover.
 
 ## Project Layout
 
@@ -284,6 +312,8 @@ The debug APK is written to `app/build/outputs/apk/debug/`. Instrumentation uses
   after reloads and lifecycle stops.
 - Creator draft creation preserves the partial-success case where the draft is
   saved but the generation request fails.
+- Review and save mutations require backend connectivity and do not use an
+  offline retry queue.
 - Notification permission denial does not block generation or other creator
   operations.
 
@@ -300,7 +330,7 @@ The debug APK is written to `app/build/outputs/apk/debug/`. Instrumentation uses
 - Generated/private audio needs a production-grade signed URL or authenticated
   delivery policy before a public deployment.
 - The project does not include Room caching, subscriptions, payments,
-  recommendations, analytics, or a moderation console.
+  recommendations, analytics, review replies/reporting, or a moderation console.
 
 ## Related Project
 

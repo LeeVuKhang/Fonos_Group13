@@ -23,6 +23,7 @@ import com.example.fonos_group13.model.BookChapter;
 import com.example.fonos_group13.model.ProgressKey;
 import com.example.fonos_group13.model.UserProgress;
 import com.example.fonos_group13.ui.BookCoverLoader;
+import com.example.fonos_group13.ui.BookRatingBinder;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -221,6 +222,7 @@ public class LibraryActivity extends AppCompatActivity implements LibraryControl
             textViews.get(1).setText(book.getAuthor());
         }
         bindProgress(row, book);
+        BookRatingBinder.bind(row, book);
     }
 
     private void bindProgress(View row, Book book) {
@@ -351,7 +353,7 @@ public class LibraryActivity extends AppCompatActivity implements LibraryControl
 
     private void collectTextViews(View view, List<TextView> textViews) {
         if (view instanceof TextView) {
-            textViews.add((TextView) view);
+            if (!BookRatingBinder.VIEW_TAG.equals(view.getTag())) textViews.add((TextView) view);
             return;
         }
         if (!(view instanceof ViewGroup)) {

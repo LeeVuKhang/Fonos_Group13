@@ -20,6 +20,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.example.fonos_group13.controller.catalog.CatalogController;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.ui.BookCoverLoader;
+import com.example.fonos_group13.ui.BookRatingBinder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -180,11 +181,12 @@ public class SearchActivity extends AppCompatActivity implements CatalogControll
             textViews.get(0).setText(book.getTitle());
             textViews.get(1).setText(book.getAuthor());
         }
+        BookRatingBinder.bind(row, book);
     }
 
     private void collectTextViews(View view, List<TextView> textViews) {
         if (view instanceof TextView) {
-            textViews.add((TextView) view);
+            if (!BookRatingBinder.VIEW_TAG.equals(view.getTag())) textViews.add((TextView) view);
             return;
         }
         if (!(view instanceof ViewGroup)) {
