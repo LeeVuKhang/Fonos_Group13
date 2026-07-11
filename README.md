@@ -161,6 +161,12 @@ Community workflow:
 4. The backend derives reviewer identity from Firebase Authentication and
    returns updated aggregates after every mutation.
 
+Review loading depends on the backend Firestore composite index for
+`hasComment ASC`, `createdAt DESC`, and document ID descending. The index for
+project `fonos-group13-44726` was verified `READY` on 2026-07-11. If the index
+is missing or still building, Book Detail keeps the retry action visible while
+the backend reports `FAILED_PRECONDITION`.
+
 ## Data and Local Storage
 
 | Location | Purpose |
