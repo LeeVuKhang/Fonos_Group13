@@ -47,4 +47,24 @@
     <string name="community_choose_rating">Choose a rating from 1 to 5 stars.</string>
     <string name="community_review_saved">Review saved.</string>
     <string name="community_edited_date">%1$s · Edited</string>
+    <string name="accessibility_selected">Selected</string>
+    <string name="accessibility_not_selected">Not selected</string>
+    <string name="accessibility_back">Back</string>
+    <string name="accessibility_play_audiobook">Play audiobook</string>
+    <string name="accessibility_pause_audiobook">Pause audiobook</string>
+    <string name="accessibility_previous_chapter">Previous chapter</string>
+    <string name="accessibility_next_chapter">Next chapter</string>
+    <string name="accessibility_playback_speed">Playback speed</string>
+    <string name="accessibility_playback_speed_value">Playback speed, %1$s</string>
+    <string name="accessibility_playback_position">Playback position</string>
+    <string name="accessibility_playback_position_value">%1$s of %2$s</string>
+    <string name="accessibility_download_chapter">Download chapter</string>
+    <string name="accessibility_downloading_chapter">Downloading chapter</string>
+    <string name="accessibility_chapter_downloaded">Chapter downloaded</string>
+    <string name="accessibility_download_unavailable">Download unavailable</string>
+    <string name="accessibility_book_action">%1$s by %2$s</string>
+    <string name="accessibility_your_rating">Your rating</string>
+    <string name="password_requirements">Use at least 6 characters.</string>
+    <string name="search_results_count">%1$d results</string>
+    <string name="search_no_results">No search results</string>
 </resources>

@@ -16,6 +16,7 @@
 
         <ImageView
             android:id="@+id/ivExit"
+            android:contentDescription="@string/accessibility_back"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
@@ -38,6 +39,7 @@
 
             <ImageView
                 android:layout_width="48dp"
+                android:importantForAccessibility="no"
                 android:layout_height="48dp"
                 android:layout_marginEnd="4dp"
                 android:alpha="0.45"
@@ -48,6 +50,7 @@
 
             <ImageView
                 android:id="@+id/ivDownloadAudio"
+                android:contentDescription="@string/accessibility_download_chapter"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -85,6 +88,7 @@
 
             <TextView
                 android:id="@+id/tvBookTitle"
+                android:accessibilityHeading="true"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
@@ -142,6 +146,7 @@
                     android:textSize="12sp" />
                 <SeekBar
                     android:id="@+id/seekBar"
+                    android:contentDescription="@string/accessibility_playback_position"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
@@ -166,6 +171,13 @@
                     android:id="@+id/tvPlaybackSpeed"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:contentDescription="@string/accessibility_playback_speed"
                     android:text="1.0x"
                     android:fontFeatureSettings="tnum"
                     android:textColor="@color/text_main"
@@ -177,19 +189,20 @@
                     android:layout_height="wrap_content"
                     android:layout_centerInParent="true"
                     android:gravity="center">
-                    <ImageView android:id="@+id/btnSkipBack" android:layout_width="48dp" android:layout_height="48dp" android:background="?attr/selectableItemBackgroundBorderless" android:padding="8dp" android:src="@drawable/ic_skip_back" />
+                    <ImageView android:id="@+id/btnSkipBack" android:layout_width="48dp" android:layout_height="48dp" android:background="?attr/selectableItemBackgroundBorderless" android:clickable="true" android:contentDescription="@string/accessibility_previous_chapter" android:focusable="true" android:padding="8dp" android:src="@drawable/ic_skip_back" />
                     <com.google.android.material.floatingactionbutton.FloatingActionButton
                         android:id="@+id/btnPlayPause"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginHorizontal="24dp"
+                        android:contentDescription="@string/accessibility_play_audiobook"
                         android:src="@drawable/ic_play"
                         app:backgroundTint="@color/accent_green"
                         app:tint="@android:color/white" />
-                    <ImageView android:id="@+id/btnSkipForward" android:layout_width="48dp" android:layout_height="48dp" android:background="?attr/selectableItemBackgroundBorderless" android:padding="8dp" android:src="@drawable/ic_skip_forward" />
+                    <ImageView android:id="@+id/btnSkipForward" android:layout_width="48dp" android:layout_height="48dp" android:background="?attr/selectableItemBackgroundBorderless" android:clickable="true" android:contentDescription="@string/accessibility_next_chapter" android:focusable="true" android:padding="8dp" android:src="@drawable/ic_skip_forward" />
                 </LinearLayout>
 
-                <ImageView android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_settings" android:layout_alignParentEnd="true" android:layout_centerVertical="true" android:alpha="0.45" android:enabled="false" android:padding="12dp"/>
+                <ImageView android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_settings" android:layout_alignParentEnd="true" android:layout_centerVertical="true" android:alpha="0.45" android:enabled="false" android:importantForAccessibility="no" android:padding="12dp"/>
             </RelativeLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>

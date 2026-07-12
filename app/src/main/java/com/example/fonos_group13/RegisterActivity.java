@@ -26,6 +26,7 @@ public class RegisterActivity extends AppCompatActivity {
     private EditText inputPassword;
     private EditText inputConfirmPassword;
     private MaterialButton btnRegister;
+    private TextView authStatus;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,6 +60,7 @@ public class RegisterActivity extends AppCompatActivity {
         inputPassword = findViewById(R.id.et_password);
         inputConfirmPassword = findViewById(R.id.et_confirm_password);
         btnRegister = findViewById(R.id.btn_register);
+        authStatus = findViewById(R.id.auth_status);
 
         // 4. Validation Engine
         btnRegister.setOnClickListener(new View.OnClickListener() {
@@ -104,7 +106,9 @@ public class RegisterActivity extends AppCompatActivity {
             @Override
             public void onError(Exception exception) {
                 setLoading(false);
-                Toast.makeText(RegisterActivity.this, AuthErrorFormatter.friendlyMessage(exception), Toast.LENGTH_LONG).show();
+                String message = AuthErrorFormatter.friendlyMessage(exception);
+                showAuthStatus(message, true);
+                Toast.makeText(RegisterActivity.this, message, Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -112,5 +116,17 @@ public class RegisterActivity extends AppCompatActivity {
     private void setLoading(boolean loading) {
         btnRegister.setEnabled(!loading);
         btnRegister.setText(loading ? "Creating account..." : getString(R.string.create_account));
+        if (loading) {
+            showAuthStatus("Creating account...", false);
+        }
+    }
+
+    private void showAuthStatus(String message, boolean error) {
+        if (authStatus == null) {
+            return;
+        }
+        authStatus.setText(message);
+        authStatus.setTextColor(getColor(error ? R.color.error_text : R.color.text_muted));
+        authStatus.setVisibility(message == null || message.trim().isEmpty() ? View.GONE : View.VISIBLE);
     }
 }

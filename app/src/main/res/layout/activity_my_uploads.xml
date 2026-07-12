@@ -33,6 +33,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
+            android:accessibilityHeading="true"
             android:ellipsize="end"
             android:fontFamily="serif"
             android:maxLines="1"
@@ -44,14 +45,14 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_create_upload"
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
             android:layout_marginStart="10dp"
             android:minWidth="0dp"
-            android:minHeight="0dp"
             android:paddingHorizontal="14dp"
             android:text="+ Create New"
             android:textAllCaps="false"
-            android:textColor="@color/accent"
+            android:textColor="@color/accent_text"
             android:textSize="13sp"
             app:backgroundTint="@color/accent_soft"
             app:cornerRadius="14dp" />
@@ -74,6 +75,7 @@
 
             <LinearLayout
                 android:id="@+id/uploads_state_panel"
+                android:accessibilityLiveRegion="polite"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
@@ -86,6 +88,7 @@
 
                 <TextView
                     android:id="@+id/uploads_state_title"
+                    android:accessibilityHeading="true"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="start"
@@ -106,7 +109,8 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/uploads_state_action"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
                     android:layout_marginTop="16dp"
                     android:text="+ Create New Audiobook"
                     android:textAllCaps="false"

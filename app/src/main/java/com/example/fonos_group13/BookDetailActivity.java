@@ -823,11 +823,14 @@ public class BookDetailActivity extends AppCompatActivity {
         download.setImageResource(downloaded ? R.drawable.ic_download_done : R.drawable.ic_download);
         download.setColorFilter(ContextCompat.getColor(this, R.color.accent));
         download.setPadding(dp(10), dp(10), dp(10), dp(10));
-        download.setContentDescription(downloaded ? "Chapter downloaded" : "Download chapter");
+        download.setContentDescription(
+                downloaded ? chapter.getTitle() + " downloaded" : "Download " + chapter.getTitle()
+        );
+        download.setFocusable(true);
         download.setEnabled(!downloaded && !downloading && chapter.hasAudio());
         download.setAlpha(download.isEnabled() || downloaded ? 1f : 0.35f);
         download.setOnClickListener(v -> downloadChapter(chapter));
-        contentRow.addView(download, new LinearLayout.LayoutParams(dp(44), dp(44)));
+        contentRow.addView(download, new LinearLayout.LayoutParams(dp(48), dp(48)));
 
         row.addView(contentRow);
         ProgressBar progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);

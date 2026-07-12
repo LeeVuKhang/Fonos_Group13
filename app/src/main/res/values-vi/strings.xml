@@ -48,4 +48,24 @@
     <string name="community_choose_rating">Chọn từ 1 đến 5 sao.</string>
     <string name="community_review_saved">Đã lưu đánh giá.</string>
     <string name="community_edited_date">%1$s · Đã chỉnh sửa</string>
+    <string name="accessibility_selected">Đã chọn</string>
+    <string name="accessibility_not_selected">Chưa chọn</string>
+    <string name="accessibility_back">Quay lại</string>
+    <string name="accessibility_play_audiobook">Phát sách nói</string>
+    <string name="accessibility_pause_audiobook">Tạm dừng sách nói</string>
+    <string name="accessibility_previous_chapter">Chương trước</string>
+    <string name="accessibility_next_chapter">Chương tiếp theo</string>
+    <string name="accessibility_playback_speed">Tốc độ phát</string>
+    <string name="accessibility_playback_speed_value">Tốc độ phát, %1$s</string>
+    <string name="accessibility_playback_position">Vị trí phát</string>
+    <string name="accessibility_playback_position_value">%1$s trên %2$s</string>
+    <string name="accessibility_download_chapter">Tải chương xuống</string>
+    <string name="accessibility_downloading_chapter">Đang tải chương xuống</string>
+    <string name="accessibility_chapter_downloaded">Đã tải chương xuống</string>
+    <string name="accessibility_download_unavailable">Không thể tải xuống</string>
+    <string name="accessibility_book_action">%1$s của %2$s</string>
+    <string name="accessibility_your_rating">Đánh giá của bạn</string>
+    <string name="password_requirements">Sử dụng ít nhất 6 ký tự.</string>
+    <string name="search_results_count">%1$d kết quả</string>
+    <string name="search_no_results">Không có kết quả tìm kiếm</string>
 </resources>

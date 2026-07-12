@@ -21,6 +21,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:accessibilityHeading="true"
             android:text="@string/app_lumina"
             android:textSize="24sp"
             android:textColor="@color/text_dark"
@@ -103,7 +104,7 @@
                             android:paddingVertical="4dp"
                             android:text="@string/best_seller"
                             android:textColor="@color/text_dark"
-                            android:textSize="10sp"
+                            android:textSize="12sp"
                             android:textStyle="bold" />
 
                         <LinearLayout
@@ -125,7 +126,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:text=""
-                                android:textColor="#CCCCCC"
+                                android:textColor="@color/white"
                                 android:textSize="12sp" />
                         </LinearLayout>
 
@@ -181,7 +182,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:text=""
-                                android:textColor="#CCCCCC"
+                                android:textColor="@color/white"
                                 android:textSize="12sp" />
                         </LinearLayout>
 
@@ -206,6 +207,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:accessibilityHeading="true"
                     android:text="@string/audiobooks_for_you"
                     android:textColor="@color/text_dark"
                     android:textSize="22sp"
@@ -221,6 +223,7 @@
 
                 <TextView
                     android:id="@+id/discover_empty_state"
+                    android:accessibilityLiveRegion="polite"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
@@ -479,6 +482,7 @@
 
         <!-- Discover -->
         <LinearLayout android:id="@+id/nav_discover"
+            android:foreground="@drawable/focusable_item_foreground"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -493,13 +497,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/discover"
-                android:textSize="10sp"
-                android:textColor="@color/accent"
+                android:textSize="12sp"
+                android:textColor="@color/accent_text"
                 android:layout_marginTop="4dp" />
         </LinearLayout>
 
         <!-- Search -->
         <LinearLayout android:id="@+id/nav_search"
+            android:foreground="@drawable/focusable_item_foreground"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -514,13 +519,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/search"
-                android:textSize="10sp"
+                android:textSize="12sp"
                 android:textColor="@color/text_muted"
                 android:layout_marginTop="4dp" />
         </LinearLayout>
 
         <!-- Library -->
         <LinearLayout android:id="@+id/nav_library"
+            android:foreground="@drawable/focusable_item_foreground"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -535,13 +541,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/library"
-                android:textSize="10sp"
+                android:textSize="12sp"
                 android:textColor="@color/text_muted"
                 android:layout_marginTop="4dp" />
         </LinearLayout>
 
         <!-- Profile -->
         <LinearLayout android:id="@+id/nav_profile"
+            android:foreground="@drawable/focusable_item_foreground"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -556,7 +563,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/profile"
-                android:textSize="10sp"
+                android:textSize="12sp"
                 android:textColor="@color/text_muted"
                 android:layout_marginTop="4dp" />
         </LinearLayout>

@@ -297,7 +297,8 @@ public class MyUploadsActivity extends AppCompatActivity implements MyUploadsCon
         ShapeableImageView cover = new ShapeableImageView(this);
         cover.setScaleType(ImageView.ScaleType.CENTER_CROP);
         cover.setBackgroundResource(R.drawable.bg_cover_placeholder);
-        cover.setContentDescription(upload.getTitle() + " cover");
+        cover.setContentDescription(null);
+        cover.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         cover.setShapeAppearanceModel(
                 ShapeAppearanceModel.builder()
                         .setAllCornerSizes(dp(14))
@@ -344,6 +345,7 @@ public class MyUploadsActivity extends AppCompatActivity implements MyUploadsCon
         error.setTextColor(getColor(R.color.error_text));
         error.setTextSize(13);
         error.setLineSpacing(dp(2), 1f);
+        error.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_ASSERTIVE);
         return error;
     }
 
@@ -402,6 +404,7 @@ public class MyUploadsActivity extends AppCompatActivity implements MyUploadsCon
         heading.setTextSize(15);
         heading.setTypeface(null, Typeface.BOLD);
         heading.setIncludeFontPadding(false);
+        ViewCompat.setAccessibilityHeading(heading, true);
         headingRow.addView(heading, new LinearLayout.LayoutParams(
                 0,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -410,7 +413,7 @@ public class MyUploadsActivity extends AppCompatActivity implements MyUploadsCon
 
         LinearLayout.LayoutParams addChapterParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-                dp(36)
+                dp(48)
         );
         addChapterParams.setMargins(dp(12), 0, 0, 0);
         headingRow.addView(createAddChapterButton(upload), addChapterParams);
@@ -571,7 +574,7 @@ public class MyUploadsActivity extends AppCompatActivity implements MyUploadsCon
         ImageView button = new ImageView(this);
         button.setImageResource(R.drawable.ic_more_vert);
         button.setColorFilter(getColor(R.color.text_muted));
-        button.setContentDescription("Chapter actions");
+        button.setContentDescription("Chapter actions for " + chapter.getTitle());
         button.setClickable(true);
         button.setFocusable(true);
         button.setPadding(dp(10), dp(10), dp(10), dp(10));
@@ -833,7 +836,7 @@ public class MyUploadsActivity extends AppCompatActivity implements MyUploadsCon
     private LinearLayout.LayoutParams chapterActionButtonParams(boolean hasStartMargin, int visibleActionCount) {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-                dp(40)
+                dp(48)
         );
         if (hasStartMargin) {
             params.setMargins(dp(8), 0, 0, 0);
@@ -842,7 +845,7 @@ public class MyUploadsActivity extends AppCompatActivity implements MyUploadsCon
     }
 
     private LinearLayout.LayoutParams overflowButtonParams(boolean hasStartMargin) {
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(44), dp(40));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(48), dp(48));
         if (hasStartMargin) {
             params.setMargins(dp(8), 0, 0, 0);
         }

@@ -124,6 +124,7 @@ public class LibraryActivity extends AppCompatActivity implements LibraryControl
         chip.setBackgroundResource(active ? R.drawable.bg_chip_active : R.drawable.bg_chip_white);
         chip.setTextColor(getColor(active ? R.color.white : R.color.text_muted));
         chip.setTypeface(null, active ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+        chip.setSelected(active);
     }
 
     @Override
@@ -212,6 +213,7 @@ public class LibraryActivity extends AppCompatActivity implements LibraryControl
         }
         row.setVisibility(View.VISIBLE);
         row.setOnClickListener(v -> openBookDetail(book));
+        row.setFocusable(true);
         ImageView cover = BookCoverLoader.findCoverView(row, coverId);
         BookCoverLoader.load(cover, book);
 
@@ -395,7 +397,21 @@ public class LibraryActivity extends AppCompatActivity implements LibraryControl
     private void setupBottomNavigation() {
         View navDiscover = findViewById(R.id.nav_discover);
         View navSearch = findViewById(R.id.nav_search);
+        View navLibrary = findViewById(R.id.nav_library);
         View navProfile = findViewById(R.id.nav_profile);
+
+        if (navDiscover != null) {
+            navDiscover.setSelected(false);
+        }
+        if (navSearch != null) {
+            navSearch.setSelected(false);
+        }
+        if (navLibrary != null) {
+            navLibrary.setSelected(true);
+        }
+        if (navProfile != null) {
+            navProfile.setSelected(false);
+        }
 
         if (navDiscover != null) {
             navDiscover.setOnClickListener(v -> {

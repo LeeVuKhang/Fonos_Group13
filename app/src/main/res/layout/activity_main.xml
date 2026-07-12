@@ -10,7 +10,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:text="Fonos"
-        android:textColor="@color/accent"
+        android:textColor="@color/accent_text"
         android:textSize="28sp"
         android:textStyle="bold" />
 </FrameLayout>

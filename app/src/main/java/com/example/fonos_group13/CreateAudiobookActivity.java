@@ -139,6 +139,7 @@ public class CreateAudiobookActivity extends AppCompatActivity {
         chip.setBackgroundResource(active ? R.drawable.bg_chip_active : R.drawable.bg_chip_white);
         chip.setTextColor(getColor(active ? R.color.white : R.color.text_muted));
         chip.setTypeface(null, active ? Typeface.BOLD : Typeface.NORMAL);
+        chip.setSelected(active);
     }
 
     private void saveDraft(boolean requestGeneration) {

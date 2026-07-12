@@ -29,6 +29,7 @@ public class SearchActivity extends AppCompatActivity implements CatalogControll
     private final List<Book> allBooks = new ArrayList<>();
     private CatalogController catalogController;
     private EditText searchInput;
+    private Runnable pendingSearchAnnouncement;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -141,6 +142,7 @@ public class SearchActivity extends AppCompatActivity implements CatalogControll
         } else {
             showMessage(null);
         }
+        scheduleSearchResultsAnnouncement(searching, results.size());
     }
 
     private List<Book> filterBooks(String query) {
@@ -172,6 +174,8 @@ public class SearchActivity extends AppCompatActivity implements CatalogControll
 
         row.setVisibility(View.VISIBLE);
         row.setOnClickListener(v -> openReader(book));
+        row.setFocusable(true);
+        row.setContentDescription(getString(R.string.accessibility_book_action, book.getTitle(), book.getAuthor()));
         ImageView cover = BookCoverLoader.findCoverView(row, coverId);
         BookCoverLoader.load(cover, book);
 
@@ -212,6 +216,21 @@ public class SearchActivity extends AppCompatActivity implements CatalogControll
         }
     }
 
+    private void scheduleSearchResultsAnnouncement(boolean searching, int resultCount) {
+        if (!searching || searchInput == null) {
+            return;
+        }
+        if (pendingSearchAnnouncement != null) {
+            searchInput.removeCallbacks(pendingSearchAnnouncement);
+        }
+        pendingSearchAnnouncement = () -> searchInput.announceForAccessibility(
+                resultCount == 0
+                        ? getString(R.string.search_no_results)
+                        : getString(R.string.search_results_count, resultCount)
+        );
+        searchInput.postDelayed(pendingSearchAnnouncement, 400L);
+    }
+
     private void openReader(Book book) {
         Intent intent = new Intent(this, BookDetailActivity.class);
         intent.putExtra(BookDetailActivity.EXTRA_BOOK_ID, book.getId());
@@ -220,8 +239,22 @@ public class SearchActivity extends AppCompatActivity implements CatalogControll
 
     private void setupBottomNavigation() {
         View navDiscover = findViewById(R.id.nav_discover);
+        View navSearch = findViewById(R.id.nav_search);
         View navLibrary = findViewById(R.id.nav_library);
         View navProfile = findViewById(R.id.nav_profile);
+
+        if (navDiscover != null) {
+            navDiscover.setSelected(false);
+        }
+        if (navSearch != null) {
+            navSearch.setSelected(true);
+        }
+        if (navLibrary != null) {
+            navLibrary.setSelected(false);
+        }
+        if (navProfile != null) {
+            navProfile.setSelected(false);
+        }
 
         if (navDiscover != null) {
             navDiscover.setOnClickListener(v -> {

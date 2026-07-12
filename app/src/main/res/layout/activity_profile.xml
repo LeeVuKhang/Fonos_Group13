@@ -21,6 +21,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:accessibilityHeading="true"
             android:text="@string/profile"
             android:textSize="28sp"
             android:textColor="@color/text_dark"
@@ -118,13 +119,13 @@
                             android:layout_width="18dp"
                             android:layout_height="18dp"
                             android:src="@android:drawable/ic_menu_agenda"
-                            app:tint="#8BA888" />
+                            app:tint="@color/accent_text" />
                         <TextView
                             android:id="@+id/tv_books_read"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="0"
-                            android:textColor="#8BA888"
+                            android:textColor="@color/accent_text"
                             android:textSize="22sp"
                             android:textStyle="bold"
                             android:layout_marginStart="8dp" />
@@ -135,7 +136,7 @@
                         android:layout_height="wrap_content"
                         android:text="BOOKS READ"
                         android:textColor="@color/text_muted"
-                        android:textSize="10sp"
+                        android:textSize="12sp"
                         android:textStyle="bold"
                         android:layout_marginTop="8dp" />
                 </LinearLayout>
@@ -159,13 +160,13 @@
                             android:layout_width="18dp"
                             android:layout_height="18dp"
                             android:src="@android:drawable/ic_menu_recent_history"
-                            app:tint="#8BA888" />
+                            app:tint="@color/accent_text" />
                         <TextView
                             android:id="@+id/tv_hours_listened"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="0h"
-                            android:textColor="#8BA888"
+                            android:textColor="@color/accent_text"
                             android:textSize="22sp"
                             android:textStyle="bold"
                             android:layout_marginStart="8dp" />
@@ -176,7 +177,7 @@
                         android:layout_height="wrap_content"
                         android:text="LISTENED"
                         android:textColor="@color/text_muted"
-                        android:textSize="10sp"
+                        android:textSize="12sp"
                         android:textStyle="bold"
                         android:layout_marginTop="8dp" />
                 </LinearLayout>
@@ -194,6 +195,7 @@
                 <!-- Account Settings -->
                 <LinearLayout
                     android:id="@+id/btn_account_settings"
+                    android:foreground="@drawable/focusable_item_foreground"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:orientation="horizontal"
@@ -206,7 +208,7 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_settings"
-                        app:tint="#8BA888" />
+                        app:tint="@color/accent_text" />
                         
                     <TextView
                         android:layout_width="0dp"
@@ -235,6 +237,7 @@
                 <!-- Audio Preferences -->
                 <LinearLayout
                     android:id="@+id/btn_audio_preferences"
+                    android:foreground="@drawable/focusable_item_foreground"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:orientation="horizontal"
@@ -247,7 +250,7 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@android:drawable/ic_lock_silent_mode"
-                        app:tint="#8BA888" />
+                        app:tint="@color/accent_text" />
                         
                     <TextView
                         android:layout_width="0dp"
@@ -276,6 +279,7 @@
                 <!-- Create Audiobook -->
                 <LinearLayout
                     android:id="@+id/btn_create_audiobook"
+                    android:foreground="@drawable/focusable_item_foreground"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:orientation="horizontal"
@@ -288,7 +292,7 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_book_add"
-                        app:tint="#8BA888" />
+                        app:tint="@color/accent_text" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -317,6 +321,7 @@
                 <!-- My Uploads -->
                 <LinearLayout
                     android:id="@+id/btn_my_uploads"
+                    android:foreground="@drawable/focusable_item_foreground"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:orientation="horizontal"
@@ -329,7 +334,7 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_library"
-                        app:tint="#8BA888" />
+                        app:tint="@color/accent_text" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -394,6 +399,7 @@
         <!-- Discover -->
         <LinearLayout
             android:id="@+id/nav_discover"
+            android:foreground="@drawable/focusable_item_foreground"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -408,7 +414,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/discover"
-                android:textSize="10sp"
+                android:textSize="12sp"
                 android:textColor="@color/text_muted"
                 android:layout_marginTop="4dp" />
         </LinearLayout>
@@ -416,6 +422,7 @@
         <!-- Search -->
         <LinearLayout
             android:id="@+id/nav_search"
+            android:foreground="@drawable/focusable_item_foreground"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -430,7 +437,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/search"
-                android:textSize="10sp"
+                android:textSize="12sp"
                 android:textColor="@color/text_muted"
                 android:layout_marginTop="4dp" />
         </LinearLayout>
@@ -438,6 +445,7 @@
         <!-- Library -->
         <LinearLayout
             android:id="@+id/nav_library"
+            android:foreground="@drawable/focusable_item_foreground"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -452,7 +460,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/library"
-                android:textSize="10sp"
+                android:textSize="12sp"
                 android:textColor="@color/text_muted"
                 android:layout_marginTop="4dp" />
         </LinearLayout>
@@ -460,6 +468,7 @@
         <!-- Profile -->
         <LinearLayout
             android:id="@+id/nav_profile"
+            android:foreground="@drawable/focusable_item_foreground"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -474,8 +483,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/profile"
-                android:textSize="10sp"
-                android:textColor="@color/accent"
+                android:textSize="12sp"
+                android:textColor="@color/accent_text"
                 android:layout_marginTop="4dp" />
         </LinearLayout>
     </LinearLayout>

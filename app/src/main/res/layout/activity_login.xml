@@ -26,6 +26,7 @@
                 android:background="@drawable/circle_bg">
 
                 <ImageView
+                    android:importantForAccessibility="no"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:layout_gravity="center"
@@ -37,6 +38,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/welcome_back"
+                android:accessibilityHeading="true"
                 android:textSize="32sp"
                 android:textColor="#2D2D2D"
                 android:fontFamily="serif"
@@ -46,7 +48,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/sign_in_continue"
-                android:textColor="#7A7A7A"
+                android:textColor="@color/text_secondary"
                 android:layout_marginTop="8dp" />
 
             <LinearLayout
@@ -59,16 +61,17 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/username"
+                    android:labelFor="@id/inputUsername"
                     android:textColor="#2D2D2D"
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp" />
 
                 <EditText
                     android:layout_width="match_parent"
-                    android:layout_height="56dp"
+                    android:layout_height="wrap_content"
+                    android:minHeight="56dp"
                     android:id="@+id/inputUsername"
                     android:background="@drawable/edittext_bg_new"
-                    android:hint="@string/hint_username"
                     android:paddingHorizontal="16dp"
                     android:inputType="textEmailAddress"
                     android:autofillHints="emailAddress"
@@ -79,6 +82,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/password"
+                    android:labelFor="@id/inputPassword"
                     android:textColor="#2D2D2D"
                     android:textStyle="bold"
                     android:layout_marginTop="16dp"
@@ -86,10 +90,10 @@
 
                 <EditText
                     android:layout_width="match_parent"
-                    android:layout_height="56dp"
+                    android:layout_height="wrap_content"
+                    android:minHeight="56dp"
                     android:id="@+id/inputPassword"
                     android:background="@drawable/edittext_bg_new"
-                    android:hint="@string/password"
                     android:paddingHorizontal="16dp"
                     android:inputType="textPassword"
                     android:autofillHints="password"
@@ -98,10 +102,22 @@
 
             </LinearLayout>
 
+            <TextView
+                android:id="@+id/auth_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:accessibilityLiveRegion="assertive"
+                android:gravity="center"
+                android:textColor="@color/error_text"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_login"
                 android:layout_width="match_parent"
-                android:layout_height="64dp"
+                android:layout_height="wrap_content"
+                android:minHeight="64dp"
                 android:layout_marginTop="48dp"
                 android:text="@string/sign_in"
                 android:textAllCaps="false"
@@ -121,14 +137,16 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/dont_have_account"
-                    android:textColor="#7A7A7A" />
+                    android:textColor="@color/text_secondary" />
 
                 <TextView
                     android:id="@+id/tv_register"
+                    android:minHeight="48dp"
+                    android:gravity="center_vertical"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/register"
-                    android:textColor="@color/accent"
+                    android:textColor="@color/accent_text"
                     android:textStyle="bold"
                     android:paddingStart="4dp" />
             </LinearLayout>
