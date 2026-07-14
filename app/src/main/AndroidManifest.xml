@@ -40,6 +40,9 @@
         <activity android:name=".AudioPreferencesActivity" />
         <activity android:name=".BookDetailActivity" />
         <activity
+            android:name=".AiChatActivity"
+            android:exported="false" />
+        <activity
             android:name=".ActivityReader"
             android:exported="false" />
 

@@ -36,6 +36,8 @@ import com.example.fonos_group13.data.catalog.BookAccessMode;
 import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
+import com.example.fonos_group13.model.AiStatus;
+import com.google.android.material.button.MaterialButton;
 import com.example.fonos_group13.model.UserProgress;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -124,6 +126,8 @@ public class ActivityReader extends AppCompatActivity {
     private ImageView btnSkipBack;
     private ImageView btnSkipForward;
     private ImageView btnDownloadAudio;
+    private MaterialButton btnAskAi;
+    private TextView tvAiStatus;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -173,6 +177,8 @@ public class ActivityReader extends AppCompatActivity {
         btnSkipBack = findViewById(R.id.btnSkipBack);
         btnSkipForward = findViewById(R.id.btnSkipForward);
         btnDownloadAudio = findViewById(R.id.ivDownloadAudio);
+        btnAskAi = findViewById(R.id.btnAskAiReader);
+        tvAiStatus = findViewById(R.id.tvAiStatus);
     }
 
     private void setupInsets() {
@@ -206,6 +212,8 @@ public class ActivityReader extends AppCompatActivity {
         View exit = findViewById(R.id.ivExit);
         if (exit != null) {
             exit.setOnClickListener(v -> finish());
+            exit.setFocusable(true);
+            exit.setContentDescription(getString(R.string.accessibility_back));
         }
     }
 
@@ -215,18 +223,30 @@ public class ActivityReader extends AppCompatActivity {
         }
         if (btnSkipBack != null) {
             btnSkipBack.setOnClickListener(v -> skipToPreviousChapter());
+            btnSkipBack.setFocusable(true);
+            btnSkipBack.setContentDescription(getString(R.string.accessibility_previous_chapter));
         }
         if (btnSkipForward != null) {
             btnSkipForward.setOnClickListener(v -> skipToNextChapter());
+            btnSkipForward.setFocusable(true);
+            btnSkipForward.setContentDescription(getString(R.string.accessibility_next_chapter));
         }
         if (tvPlaybackSpeed != null) {
             tvPlaybackSpeed.setText(formatSpeed());
             tvPlaybackSpeed.setOnClickListener(v -> cyclePlaybackSpeed());
+            tvPlaybackSpeed.setFocusable(true);
+            updatePlaybackSpeedAccessibility();
         }
         if (btnDownloadAudio != null) {
             btnDownloadAudio.setOnClickListener(v -> downloadCurrentBook());
+            btnDownloadAudio.setFocusable(true);
+        }
+        if (btnAskAi != null) {
+            btnAskAi.setOnClickListener(v -> openAiChat());
+            updateAiButton();
         }
         if (seekBar != null) {
+            seekBar.setContentDescription(getString(R.string.accessibility_playback_position));
             seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                 @Override
                 public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -457,6 +477,51 @@ public class ActivityReader extends AppCompatActivity {
             seekBar.setMax(safeDuration(chapter.getDurationSec() * 1000L));
         }
         updateDownloadButton();
+        updateAiButton();
+    }
+
+    private void openAiChat() {
+        if (currentBook == null || currentChapter == null || creatorPreviewActive
+                || !currentBook.isPublished() || currentBook.getAiStatus() != AiStatus.READY) {
+            return;
+        }
+        startActivity(AiChatActivity.newIntent(
+                this,
+                currentBook,
+                currentChapters,
+                currentChapter.getId()
+        ));
+    }
+
+    private void updateAiButton() {
+        if (btnAskAi == null || tvAiStatus == null) return;
+        boolean ready = currentBook != null
+                && currentBook.isPublished()
+                && !creatorPreviewActive
+                && currentBook.getAiStatus() == AiStatus.READY
+                && currentChapter != null;
+        btnAskAi.setEnabled(ready);
+        btnAskAi.setAlpha(ready ? 1f : 0.45f);
+        if (currentBook == null) {
+            tvAiStatus.setVisibility(View.GONE);
+            return;
+        }
+        int reason = 0;
+        if (creatorPreviewActive || !currentBook.isPublished()) {
+            reason = R.string.ai_not_ready_preview;
+        } else if (currentBook.getAiStatus() == AiStatus.INDEXING) {
+            reason = R.string.ai_not_ready_indexing;
+        } else if (currentBook.getAiStatus() == AiStatus.FAILED) {
+            reason = R.string.ai_not_ready_failed;
+        } else if (currentBook.getAiStatus() != AiStatus.READY) {
+            reason = R.string.ai_not_ready_unavailable;
+        }
+        if (reason == 0) {
+            tvAiStatus.setVisibility(View.GONE);
+        } else {
+            tvAiStatus.setText(reason);
+            tvAiStatus.setVisibility(View.VISIBLE);
+        }
     }
 
     private void prepareAudio(Book book, BookChapter chapter) {
@@ -703,6 +768,19 @@ public class ActivityReader extends AppCompatActivity {
         btnDownloadAudio.setImageResource(downloaded ? R.drawable.ic_download_done : R.drawable.ic_download);
         btnDownloadAudio.setEnabled(!downloadingAudio && !downloaded && hasRemoteAudio);
         btnDownloadAudio.setAlpha(btnDownloadAudio.isEnabled() || downloaded ? 1f : 0.35f);
+        if (downloadingAudio) {
+            btnDownloadAudio.setContentDescription(getString(R.string.accessibility_downloading_chapter));
+            ViewCompat.setStateDescription(btnDownloadAudio, getString(R.string.accessibility_downloading_chapter));
+        } else if (downloaded) {
+            btnDownloadAudio.setContentDescription(getString(R.string.accessibility_chapter_downloaded));
+            ViewCompat.setStateDescription(btnDownloadAudio, getString(R.string.accessibility_chapter_downloaded));
+        } else if (!hasRemoteAudio) {
+            btnDownloadAudio.setContentDescription(getString(R.string.accessibility_download_unavailable));
+            ViewCompat.setStateDescription(btnDownloadAudio, getString(R.string.accessibility_download_unavailable));
+        } else {
+            btnDownloadAudio.setContentDescription(getString(R.string.accessibility_download_chapter));
+            ViewCompat.setStateDescription(btnDownloadAudio, null);
+        }
     }
 
     private String missingAudioMessage() {
@@ -784,6 +862,19 @@ public class ActivityReader extends AppCompatActivity {
         if (mediaController != null) {
             mediaController.setPlaybackParameters(new PlaybackParameters(AudioPreferences.getSpeedAt(speedIndex)));
         }
+        updatePlaybackSpeedAccessibility();
+        if (tvPlaybackSpeed != null) {
+            tvPlaybackSpeed.announceForAccessibility(
+                    getString(R.string.accessibility_playback_speed_value, formatSpeed())
+            );
+        }
+    }
+
+    private void updatePlaybackSpeedAccessibility() {
+        if (tvPlaybackSpeed != null) {
+            ViewCompat.setStateDescription(tvPlaybackSpeed, formatSpeed());
+            tvPlaybackSpeed.setContentDescription(getString(R.string.accessibility_playback_speed));
+        }
     }
 
     private String formatSpeed() {
@@ -809,6 +900,14 @@ public class ActivityReader extends AppCompatActivity {
             if (!userSeeking) {
                 seekBar.setProgress(safeDuration(positionMs));
             }
+            ViewCompat.setStateDescription(
+                    seekBar,
+                    getString(
+                            R.string.accessibility_playback_position_value,
+                            formatTime(positionMs),
+                            formatTime(durationMs)
+                    )
+            );
         }
     }
 
@@ -845,7 +944,11 @@ public class ActivityReader extends AppCompatActivity {
         if (btnPlayPause == null) {
             return;
         }
-        btnPlayPause.setImageResource(mediaController != null && mediaController.isPlaying() ? R.drawable.ic_pause : R.drawable.ic_play);
+        boolean playing = mediaController != null && mediaController.isPlaying();
+        btnPlayPause.setImageResource(playing ? R.drawable.ic_pause : R.drawable.ic_play);
+        btnPlayPause.setContentDescription(getString(
+                playing ? R.string.accessibility_pause_audiobook : R.string.accessibility_play_audiobook
+        ));
     }
 
     private void setPlayerEnabled(boolean enabled) {

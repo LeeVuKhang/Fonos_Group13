@@ -74,7 +74,7 @@ public class ProfileActivity extends AppCompatActivity implements ProfileControl
     private void setupProfileActions() {
         View accountSettings = findViewById(R.id.btn_account_settings);
         if (accountSettings != null) {
-            accountSettings.setOnClickListener(v -> showDisplayNameDialog());
+            accountSettings.setOnClickListener(v -> showDisplayNameDialog(accountSettings));
         }
 
         View audioPreferences = findViewById(R.id.btn_audio_preferences);
@@ -103,7 +103,7 @@ public class ProfileActivity extends AppCompatActivity implements ProfileControl
         }
     }
 
-    private void showDisplayNameDialog() {
+    private void showDisplayNameDialog(View trigger) {
         UserAccount user = authRepository.getCurrentUser();
         if (user == null) {
             Toast.makeText(this, "Please sign in again to update your profile.", Toast.LENGTH_LONG).show();
@@ -168,6 +168,12 @@ public class ProfileActivity extends AppCompatActivity implements ProfileControl
         });
 
         dialog.show();
+        View dialogRoot = dialog.findViewById(R.id.dialog_root);
+        if (dialogRoot != null) {
+            ViewCompat.setAccessibilityPaneTitle(dialogRoot, "Account Settings");
+        }
+        input.requestFocus();
+        dialog.setOnDismissListener(ignored -> trigger.requestFocus());
         Window window = dialog.getWindow();
         if (window != null) {
             window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
@@ -223,6 +229,20 @@ public class ProfileActivity extends AppCompatActivity implements ProfileControl
         View navDiscover = findViewById(R.id.nav_discover);
         View navSearch = findViewById(R.id.nav_search);
         View navLibrary = findViewById(R.id.nav_library);
+        View navProfile = findViewById(R.id.nav_profile);
+
+        if (navDiscover != null) {
+            navDiscover.setSelected(false);
+        }
+        if (navSearch != null) {
+            navSearch.setSelected(false);
+        }
+        if (navLibrary != null) {
+            navLibrary.setSelected(false);
+        }
+        if (navProfile != null) {
+            navProfile.setSelected(true);
+        }
 
         if (navDiscover != null) {
             navDiscover.setOnClickListener(v -> {

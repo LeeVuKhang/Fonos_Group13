@@ -148,6 +148,7 @@ public class DiscoverActivity extends AppCompatActivity implements CatalogContro
         }
         BookRatingBinder.bind(card, book);
         card.setOnClickListener(v -> openReader(book));
+        card.setContentDescription(getString(R.string.accessibility_book_action, book.getTitle(), book.getAuthor()));
     }
 
     private void showMessage(String message) {
@@ -185,9 +186,23 @@ public class DiscoverActivity extends AppCompatActivity implements CatalogContro
     }
 
     private void setupBottomNavigation() {
+        View navDiscover = findViewById(R.id.nav_discover);
         View navSearch = findViewById(R.id.nav_search);
         View navLibrary = findViewById(R.id.nav_library);
         View navProfile = findViewById(R.id.nav_profile);
+
+        if (navDiscover != null) {
+            navDiscover.setSelected(true);
+        }
+        if (navSearch != null) {
+            navSearch.setSelected(false);
+        }
+        if (navLibrary != null) {
+            navLibrary.setSelected(false);
+        }
+        if (navProfile != null) {
+            navProfile.setSelected(false);
+        }
 
         if (navSearch != null) {
             navSearch.setOnClickListener(v -> {

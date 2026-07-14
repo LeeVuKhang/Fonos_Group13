@@ -29,6 +29,7 @@ public class LoginActivity extends AppCompatActivity {
     private EditText inputEmail;
     private EditText inputPassword;
     private Button btnLogin;
+    private TextView authStatus;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +63,7 @@ public class LoginActivity extends AppCompatActivity {
 
         inputEmail = findViewById(R.id.inputUsername);
         inputPassword = findViewById(R.id.inputPassword);
+        authStatus = findViewById(R.id.auth_status);
         prefillDemoCredentials();
         btnLogin = findViewById(R.id.btn_login);
         btnLogin.setOnClickListener(new View.OnClickListener() {
@@ -106,7 +108,9 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onError(Exception exception) {
                 setLoading(false);
-                Toast.makeText(LoginActivity.this, AuthErrorFormatter.friendlyMessage(exception), Toast.LENGTH_LONG).show();
+                String message = AuthErrorFormatter.friendlyMessage(exception);
+                showAuthStatus(message, true);
+                Toast.makeText(LoginActivity.this, message, Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -114,6 +118,18 @@ public class LoginActivity extends AppCompatActivity {
     private void setLoading(boolean loading) {
         btnLogin.setEnabled(!loading);
         btnLogin.setText(loading ? "Signing in..." : getString(R.string.sign_in));
+        if (loading) {
+            showAuthStatus("Signing in...", false);
+        }
+    }
+
+    private void showAuthStatus(String message, boolean error) {
+        if (authStatus == null) {
+            return;
+        }
+        authStatus.setText(message);
+        authStatus.setTextColor(getColor(error ? R.color.error_text : R.color.text_muted));
+        authStatus.setVisibility(message == null || message.trim().isEmpty() ? View.GONE : View.VISIBLE);
     }
 
     private void openDiscover() {

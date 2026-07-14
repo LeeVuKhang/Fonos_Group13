@@ -17,6 +17,8 @@ public final class BookCoverLoader {
         if (imageView == null) {
             return;
         }
+        imageView.setContentDescription(null);
+        imageView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
 
         if (book == null || TextUtils.isEmpty(book.getCoverUrl())) {
             Glide.with(imageView).clear(imageView);
@@ -25,7 +27,6 @@ public final class BookCoverLoader {
             return;
         }
 
-        imageView.setContentDescription(book.getTitle() + " cover");
         Glide.with(imageView)
                 .load(book.getCoverUrl())
                 .centerCrop()

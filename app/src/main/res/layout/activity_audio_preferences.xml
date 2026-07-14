@@ -22,7 +22,7 @@
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:clickable="true"
-            android:contentDescription="Exit"
+            android:contentDescription="@string/accessibility_back"
             android:focusable="true"
             android:padding="12dp"
             android:src="@drawable/ic_logout"
@@ -33,6 +33,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
+            android:accessibilityHeading="true"
             android:fontFamily="serif"
             android:text="Audio Preferences"
             android:textColor="@color/text_dark"
@@ -88,7 +89,8 @@
                     <TextView
                         android:id="@+id/speed_1_0"
                         android:layout_width="0dp"
-                        android:layout_height="44dp"
+                        android:layout_height="wrap_content"
+                        android:minHeight="48dp"
                         android:layout_marginEnd="8dp"
                         android:layout_weight="1"
                         android:background="@drawable/bg_chip_white"
@@ -103,7 +105,8 @@
                     <TextView
                         android:id="@+id/speed_1_2"
                         android:layout_width="0dp"
-                        android:layout_height="44dp"
+                        android:layout_height="wrap_content"
+                        android:minHeight="48dp"
                         android:layout_marginEnd="8dp"
                         android:layout_weight="1"
                         android:background="@drawable/bg_chip_white"
@@ -118,7 +121,8 @@
                     <TextView
                         android:id="@+id/speed_1_5"
                         android:layout_width="0dp"
-                        android:layout_height="44dp"
+                        android:layout_height="wrap_content"
+                        android:minHeight="48dp"
                         android:layout_marginEnd="8dp"
                         android:layout_weight="1"
                         android:background="@drawable/bg_chip_white"
@@ -133,7 +137,8 @@
                     <TextView
                         android:id="@+id/speed_2_0"
                         android:layout_width="0dp"
-                        android:layout_height="44dp"
+                        android:layout_height="wrap_content"
+                        android:minHeight="48dp"
                         android:layout_weight="1"
                         android:background="@drawable/bg_chip_white"
                         android:clickable="true"
@@ -172,6 +177,7 @@
 
                 <TextView
                     android:id="@+id/downloads_empty_state"
+                    android:accessibilityLiveRegion="polite"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="18dp"

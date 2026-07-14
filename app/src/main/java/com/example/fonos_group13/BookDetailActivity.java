@@ -28,6 +28,7 @@ import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
 import com.example.fonos_group13.model.AudiobookGenerationStatus;
+import com.example.fonos_group13.model.AiStatus;
 import com.example.fonos_group13.model.UserProgress;
 import com.example.fonos_group13.model.BookReview;
 import com.example.fonos_group13.model.BookReviewPage;
@@ -81,6 +82,8 @@ public class BookDetailActivity extends AppCompatActivity {
     private ImageView downloadAllButton;
     private MaterialButton publishButton;
     private MaterialButton addChapterButton;
+    private MaterialButton askAiButton;
+    private TextView aiAvailabilityMessage;
     private LinearLayout chaptersContainer;
     private TextView ratingSummaryView;
     private TextView saveCountView;
@@ -149,6 +152,8 @@ public class BookDetailActivity extends AppCompatActivity {
         downloadAllButton = findViewById(R.id.btn_download_all);
         publishButton = findViewById(R.id.btn_publish_audiobook);
         addChapterButton = findViewById(R.id.btn_add_chapter);
+        askAiButton = findViewById(R.id.btn_ask_ai);
+        aiAvailabilityMessage = findViewById(R.id.ai_availability_message);
         chaptersContainer = findViewById(R.id.chapters_container);
         ratingSummaryView = findViewById(R.id.detail_rating_summary);
         saveCountView = findViewById(R.id.detail_save_count);
@@ -202,6 +207,10 @@ public class BookDetailActivity extends AppCompatActivity {
         if (addChapterButton != null) {
             addChapterButton.setOnClickListener(v -> openAddChapter());
             updateAddChapterButton();
+        }
+        if (askAiButton != null) {
+            askAiButton.setOnClickListener(v -> openAiChat());
+            updateAiButton();
         }
         if (reviewCommentInput != null) {
             reviewCommentInput.addTextChangedListener(new android.text.TextWatcher() {
@@ -262,6 +271,7 @@ public class BookDetailActivity extends AppCompatActivity {
                 updateAddChapterButton();
                 updateCommunitySummary();
                 updateCommunityVisibility();
+                updateAiButton();
                 loadChapters(bookId);
                 if (book.isPublished()) loadReviews(true);
             }
@@ -277,6 +287,7 @@ public class BookDetailActivity extends AppCompatActivity {
                 publishLoading = false;
                 updatePublishButton();
                 updateAddChapterButton();
+                updateAiButton();
                 Toast.makeText(BookDetailActivity.this, "This audiobook is unavailable.", Toast.LENGTH_SHORT).show();
             }
         });
@@ -343,6 +354,7 @@ public class BookDetailActivity extends AppCompatActivity {
                 updateSummary();
                 renderChapters();
                 showMessage("Could not load chapters.");
+                updateAiButton();
             }
         });
     }
@@ -361,6 +373,46 @@ public class BookDetailActivity extends AppCompatActivity {
         renderChapters();
         showMessage(chapters.isEmpty() ? "No chapters are available yet." : null);
         updatePlayButtonState();
+        updateAiButton();
+    }
+
+    private void openAiChat() {
+        if (currentBook == null || currentBook.getAiStatus() != AiStatus.READY
+                || creatorPreviewActive || !currentBook.isPublished() || chapters.isEmpty()) {
+            return;
+        }
+        startActivity(AiChatActivity.newIntent(this, currentBook, chapters, null));
+    }
+
+    private void updateAiButton() {
+        if (askAiButton == null || aiAvailabilityMessage == null) return;
+        boolean ready = currentBook != null
+                && currentBook.isPublished()
+                && !creatorPreviewActive
+                && currentBook.getAiStatus() == AiStatus.READY
+                && !chapters.isEmpty();
+        askAiButton.setEnabled(ready);
+        askAiButton.setAlpha(ready ? 1f : 0.5f);
+        if (currentBook == null) {
+            aiAvailabilityMessage.setVisibility(View.GONE);
+            return;
+        }
+        int reason = 0;
+        if (creatorPreviewActive || !currentBook.isPublished()) {
+            reason = R.string.ai_not_ready_preview;
+        } else if (currentBook.getAiStatus() == AiStatus.INDEXING) {
+            reason = R.string.ai_not_ready_indexing;
+        } else if (currentBook.getAiStatus() == AiStatus.FAILED) {
+            reason = R.string.ai_not_ready_failed;
+        } else if (currentBook.getAiStatus() != AiStatus.READY || chapters.isEmpty()) {
+            reason = R.string.ai_not_ready_unavailable;
+        }
+        if (reason == 0) {
+            aiAvailabilityMessage.setVisibility(View.GONE);
+        } else {
+            aiAvailabilityMessage.setText(reason);
+            aiAvailabilityMessage.setVisibility(View.VISIBLE);
+        }
     }
 
     private void refreshProgress() {
@@ -823,11 +875,14 @@ public class BookDetailActivity extends AppCompatActivity {
         download.setImageResource(downloaded ? R.drawable.ic_download_done : R.drawable.ic_download);
         download.setColorFilter(ContextCompat.getColor(this, R.color.accent));
         download.setPadding(dp(10), dp(10), dp(10), dp(10));
-        download.setContentDescription(downloaded ? "Chapter downloaded" : "Download chapter");
+        download.setContentDescription(
+                downloaded ? chapter.getTitle() + " downloaded" : "Download " + chapter.getTitle()
+        );
+        download.setFocusable(true);
         download.setEnabled(!downloaded && !downloading && chapter.hasAudio());
         download.setAlpha(download.isEnabled() || downloaded ? 1f : 0.35f);
         download.setOnClickListener(v -> downloadChapter(chapter));
-        contentRow.addView(download, new LinearLayout.LayoutParams(dp(44), dp(44)));
+        contentRow.addView(download, new LinearLayout.LayoutParams(dp(48), dp(48)));
 
         row.addView(contentRow);
         ProgressBar progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);

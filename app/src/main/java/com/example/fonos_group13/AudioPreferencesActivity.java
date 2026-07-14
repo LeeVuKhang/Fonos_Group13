@@ -123,6 +123,7 @@ public class AudioPreferencesActivity extends AppCompatActivity implements Catal
             chip.setBackgroundResource(active ? R.drawable.bg_chip_active : R.drawable.bg_chip_white);
             chip.setTextColor(getColor(active ? R.color.white : R.color.text_muted));
             chip.setTypeface(null, active ? Typeface.BOLD : Typeface.NORMAL);
+            chip.setSelected(active);
         }
     }
 
@@ -197,6 +198,7 @@ public class AudioPreferencesActivity extends AppCompatActivity implements Catal
         groupTitle.setTextColor(getColor(R.color.text_dark));
         groupTitle.setTextSize(16);
         groupTitle.setTypeface(null, Typeface.BOLD);
+        ViewCompat.setAccessibilityHeading(groupTitle, true);
         LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -249,6 +251,7 @@ public class AudioPreferencesActivity extends AppCompatActivity implements Catal
         MaterialButton deleteButton = new MaterialButton(this);
         deleteButton.setAllCaps(false);
         deleteButton.setText("Delete");
+        deleteButton.setContentDescription("Delete downloaded " + chapter.getTitle());
         deleteButton.setTextSize(13);
         deleteButton.setTextColor(getColor(R.color.white));
         deleteButton.setBackgroundTintList(ColorStateList.valueOf(getColor(android.R.color.holo_red_dark)));

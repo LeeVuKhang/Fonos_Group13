@@ -27,6 +27,8 @@ interfaces keep Firebase and network implementations out of the UI layer.
   comment of up to 1,000 characters, and delete that review later.
 - Browse written reviews newest-first in pages of ten and see the current
   number of users who saved a book.
+- Ask AI for a grounded chapter or whole-book summary, ask follow-up questions,
+  switch scope, and inspect exact source citation cards in English or Vietnamese.
 
 ### Creator experience
 
@@ -55,6 +57,7 @@ trusted generation settings from the user.
 | Images | Glide |
 | Local state | App-private files and SharedPreferences |
 | Creator generation | Node.js backend, AWS Polly, and S3 |
+| Book AI | Authenticated backend, Gemini chat/embeddings, Firestore vector search |
 | Tests | JUnit 4, AndroidX Test, and Espresso |
 
 ## Architecture
@@ -111,6 +114,7 @@ UI and controllers depend on these interfaces:
 - `CreatorCommandRepository`
 - `CreatorUploadsRepository`
 - `BookCommunityRepository`
+- `AiChatRepository`
 
 Production repositories map Firestore documents into pure Java models. Firebase
 snapshots and timestamps do not leak into controllers or Activities. Repository
@@ -167,12 +171,29 @@ project `fonos-group13-44726` was verified `READY` on 2026-07-11. If the index
 is missing or still building, Book Detail keeps the retry action visible while
 the backend reports `FAILED_PRECONDITION`.
 
+Ask AI workflow:
+
+1. `BookDocumentMapper` maps `aiStatus`; missing legacy values default to
+   `unavailable`.
+2. Book Detail opens whole-book scope and Reader opens the current chapter.
+   `unavailable`, `indexing`, `failed`, draft, hidden, and creator-preview
+   states keep the action disabled and show the reason.
+3. `AiChatController` sends complete non-streamed requests through
+   `AiChatRepository` with the current Firebase ID token.
+4. The backend validates the published active content version, builds summaries
+   from all scoped chunks or performs book/chapter vector retrieval for Q&amp;A,
+   and returns backend-validated citation excerpts.
+5. The screen retains at most the open session's in-memory conversation,
+   restores it across rotation, warns once before whole-book spoilers, and
+   cancels outstanding work when stopped. Closing the screen clears the chat.
+
 ## Data and Local Storage
 
 | Location | Purpose |
 | --- | --- |
 | `books/{bookId}` | Published catalog metadata and creator upload state |
 | `books/{bookId}/chapters/{chapterId}` | Chapter text, order, duration, audio, and generation state |
+| `books/{bookId}/aiIndexVersions/...` | Backend-only immutable AI chunks and summary cache; Android access is denied |
 | `books/{bookId}/reviews/{uid}` | One server-owned rating and optional comment per user |
 | `users/{uid}` | Basic account profile data |
 | `users/{uid}/savedBooks/{bookId}` | Saved-library membership |
@@ -221,7 +242,7 @@ Fonos_Group13/
 - An emulator or device running Android 7.0 (API 24) or newer.
 - A Firebase project with Authentication, Cloud Firestore, and Cloud Messaging
   configured.
-- The companion backend when testing creator operations.
+- The companion backend when testing creator operations or Ask AI.
 
 ### Firebase
 
@@ -252,8 +273,11 @@ needed. Use the development machine's reachable LAN address for a physical
 device. Release builds require an explicitly configured HTTPS URL; otherwise
 their backend URL is empty.
 
-Run and configure the companion backend with Firebase Admin, AWS, and S3
-credentials before testing generation. Backend setup and route contracts are
+Run and configure the companion backend with Firebase Admin, AWS, S3, and a
+backend-only Gemini API key before testing generation or Ask AI. Deploy its
+Firestore rules and both 768-dimensional vector indexes, populate complete
+`sourceText` for every published chapter, then run `npm run ai:index -- --all`.
+Backend setup and route contracts are
 documented in the [Fonos Backend repository](https://github.com/LeeVuKhang/Fonos_Backend).
 
 ## Build and Verify
@@ -314,6 +338,10 @@ The debug APK is written to `app/build/outputs/apk/debug/`. Instrumentation uses
   saved but the generation request fails.
 - Review and save mutations require backend connectivity and do not use an
   offline retry queue.
+- Ask AI requires a signed-in user, a running backend, an AI-ready visible
+  published book, and network connectivity. It uses non-streamed responses,
+  keeps no persistent history, limits questions to 1,000 characters, and maps
+  readiness, rate-limit, provider, and offline failures to retryable UI states.
 - Notification permission denial does not block generation or other creator
   operations.
 

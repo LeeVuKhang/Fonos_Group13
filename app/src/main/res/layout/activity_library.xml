@@ -21,6 +21,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:accessibilityHeading="true"
             android:text="Your Library"
             android:textSize="28sp"
             android:textColor="@color/text_dark"
@@ -57,41 +58,45 @@
                     
                     <TextView
                         android:id="@+id/chip_listening"
+                        android:minHeight="48dp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Listening"
                         android:textColor="@color/white"
                         android:background="@drawable/bg_chip_active"
                         android:paddingHorizontal="20dp"
-                        android:paddingVertical="10dp"
+                        android:paddingVertical="12dp"
                         android:textStyle="bold"
                         android:layout_marginEnd="12dp" />
-                        
+
                     <TextView
                         android:id="@+id/chip_downloaded"
+                        android:minHeight="48dp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Downloaded"
                         android:textColor="@color/text_muted"
                         android:background="@drawable/bg_chip_white"
                         android:paddingHorizontal="20dp"
-                        android:paddingVertical="10dp"
+                        android:paddingVertical="12dp"
                         android:layout_marginEnd="12dp" />
                         
                     <TextView
                         android:id="@+id/chip_finished"
+                        android:minHeight="48dp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Finished"
                         android:textColor="@color/text_muted"
                         android:background="@drawable/bg_chip_white"
                         android:paddingHorizontal="20dp"
-                        android:paddingVertical="10dp" />
+                        android:paddingVertical="12dp" />
                 </LinearLayout>
             </HorizontalScrollView>
 
             <TextView
                 android:id="@+id/library_empty_state"
+                android:accessibilityLiveRegion="polite"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
@@ -106,6 +111,7 @@
             <!-- Book Item 1 -->
             <LinearLayout
                 android:id="@+id/library_book_1"
+                android:foreground="@drawable/focusable_item_foreground"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_card_white"
@@ -182,14 +188,14 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text=""
-                            android:textSize="10sp"
+                            android:textSize="12sp"
                             android:textColor="@color/text_muted"
                             android:textStyle="bold" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text=""
-                            android:textSize="10sp"
+                            android:textSize="12sp"
                             android:textColor="@color/text_muted"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -207,6 +213,7 @@
             <!-- Book Item 2 -->
             <LinearLayout
                 android:id="@+id/library_book_2"
+                android:foreground="@drawable/focusable_item_foreground"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_card_white"
@@ -283,14 +290,14 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text=""
-                            android:textSize="10sp"
+                            android:textSize="12sp"
                             android:textColor="@color/text_muted"
                             android:textStyle="bold" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text=""
-                            android:textSize="10sp"
+                            android:textSize="12sp"
                             android:textColor="@color/text_muted"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -308,6 +315,7 @@
             <!-- Book Item 3 -->
             <LinearLayout
                 android:id="@+id/library_book_3"
+                android:foreground="@drawable/focusable_item_foreground"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_card_white"
@@ -384,14 +392,14 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text=""
-                            android:textSize="10sp"
+                            android:textSize="12sp"
                             android:textColor="@color/text_muted"
                             android:textStyle="bold" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text=""
-                            android:textSize="10sp"
+                            android:textSize="12sp"
                             android:textColor="@color/text_muted"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -422,6 +430,7 @@
         <!-- Discover -->
         <LinearLayout
             android:id="@+id/nav_discover"
+            android:foreground="@drawable/focusable_item_foreground"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -436,7 +445,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/discover"
-                android:textSize="10sp"
+                android:textSize="12sp"
                 android:textColor="@color/text_muted"
                 android:layout_marginTop="4dp" />
         </LinearLayout>
@@ -444,6 +453,7 @@
         <!-- Search -->
         <LinearLayout
             android:id="@+id/nav_search"
+            android:foreground="@drawable/focusable_item_foreground"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -458,7 +468,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/search"
-                android:textSize="10sp"
+                android:textSize="12sp"
                 android:textColor="@color/text_muted"
                 android:layout_marginTop="4dp" />
         </LinearLayout>
@@ -466,6 +476,7 @@
         <!-- Library -->
         <LinearLayout
             android:id="@+id/nav_library"
+            android:foreground="@drawable/focusable_item_foreground"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -480,14 +491,15 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/library"
-                android:textSize="10sp"
-                android:textColor="@color/accent"
+                android:textSize="12sp"
+                android:textColor="@color/accent_text"
                 android:layout_marginTop="4dp" />
         </LinearLayout>
 
         <!-- Profile -->
         <LinearLayout
             android:id="@+id/nav_profile"
+            android:foreground="@drawable/focusable_item_foreground"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -502,7 +514,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/profile"
-                android:textSize="10sp"
+                android:textSize="12sp"
                 android:textColor="@color/text_muted"
                 android:layout_marginTop="4dp" />
         </LinearLayout>
