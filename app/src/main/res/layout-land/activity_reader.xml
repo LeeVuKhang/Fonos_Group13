@@ -37,16 +37,22 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent">
 
-            <ImageView
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAskAiReader"
                 android:layout_width="48dp"
-                android:importantForAccessibility="no"
                 android:layout_height="48dp"
                 android:layout_marginEnd="4dp"
                 android:alpha="0.45"
                 android:enabled="false"
-                android:padding="12dp"
-                android:src="@drawable/ic_text_format"
-                app:tint="@color/text_main" />
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                android:minWidth="0dp"
+                android:padding="0dp"
+                android:text="AI"
+                android:textAllCaps="false"
+                android:textColor="@color/accent_text"
+                app:backgroundTint="@color/accent_soft"
+                app:cornerRadius="16dp" />
 
             <ImageView
                 android:id="@+id/ivDownloadAudio"
@@ -97,6 +103,16 @@
                 android:fontFamily="serif"
                 android:textColor="@color/text_main"
                 android:layout_marginTop="8dp" />
+
+            <TextView
+                android:id="@+id/tvAiStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:textColor="@color/text_muted"
+                android:textSize="13sp"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/tvBookContent"

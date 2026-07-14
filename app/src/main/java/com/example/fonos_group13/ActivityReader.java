@@ -36,6 +36,8 @@ import com.example.fonos_group13.data.catalog.BookAccessMode;
 import com.example.fonos_group13.data.core.RepositoryCallback;
 import com.example.fonos_group13.model.Book;
 import com.example.fonos_group13.model.BookChapter;
+import com.example.fonos_group13.model.AiStatus;
+import com.google.android.material.button.MaterialButton;
 import com.example.fonos_group13.model.UserProgress;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -124,6 +126,8 @@ public class ActivityReader extends AppCompatActivity {
     private ImageView btnSkipBack;
     private ImageView btnSkipForward;
     private ImageView btnDownloadAudio;
+    private MaterialButton btnAskAi;
+    private TextView tvAiStatus;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -173,6 +177,8 @@ public class ActivityReader extends AppCompatActivity {
         btnSkipBack = findViewById(R.id.btnSkipBack);
         btnSkipForward = findViewById(R.id.btnSkipForward);
         btnDownloadAudio = findViewById(R.id.ivDownloadAudio);
+        btnAskAi = findViewById(R.id.btnAskAiReader);
+        tvAiStatus = findViewById(R.id.tvAiStatus);
     }
 
     private void setupInsets() {
@@ -234,6 +240,10 @@ public class ActivityReader extends AppCompatActivity {
         if (btnDownloadAudio != null) {
             btnDownloadAudio.setOnClickListener(v -> downloadCurrentBook());
             btnDownloadAudio.setFocusable(true);
+        }
+        if (btnAskAi != null) {
+            btnAskAi.setOnClickListener(v -> openAiChat());
+            updateAiButton();
         }
         if (seekBar != null) {
             seekBar.setContentDescription(getString(R.string.accessibility_playback_position));
@@ -467,6 +477,51 @@ public class ActivityReader extends AppCompatActivity {
             seekBar.setMax(safeDuration(chapter.getDurationSec() * 1000L));
         }
         updateDownloadButton();
+        updateAiButton();
+    }
+
+    private void openAiChat() {
+        if (currentBook == null || currentChapter == null || creatorPreviewActive
+                || !currentBook.isPublished() || currentBook.getAiStatus() != AiStatus.READY) {
+            return;
+        }
+        startActivity(AiChatActivity.newIntent(
+                this,
+                currentBook,
+                currentChapters,
+                currentChapter.getId()
+        ));
+    }
+
+    private void updateAiButton() {
+        if (btnAskAi == null || tvAiStatus == null) return;
+        boolean ready = currentBook != null
+                && currentBook.isPublished()
+                && !creatorPreviewActive
+                && currentBook.getAiStatus() == AiStatus.READY
+                && currentChapter != null;
+        btnAskAi.setEnabled(ready);
+        btnAskAi.setAlpha(ready ? 1f : 0.45f);
+        if (currentBook == null) {
+            tvAiStatus.setVisibility(View.GONE);
+            return;
+        }
+        int reason = 0;
+        if (creatorPreviewActive || !currentBook.isPublished()) {
+            reason = R.string.ai_not_ready_preview;
+        } else if (currentBook.getAiStatus() == AiStatus.INDEXING) {
+            reason = R.string.ai_not_ready_indexing;
+        } else if (currentBook.getAiStatus() == AiStatus.FAILED) {
+            reason = R.string.ai_not_ready_failed;
+        } else if (currentBook.getAiStatus() != AiStatus.READY) {
+            reason = R.string.ai_not_ready_unavailable;
+        }
+        if (reason == 0) {
+            tvAiStatus.setVisibility(View.GONE);
+        } else {
+            tvAiStatus.setText(reason);
+            tvAiStatus.setVisibility(View.VISIBLE);
+        }
     }
 
     private void prepareAudio(Book book, BookChapter chapter) {

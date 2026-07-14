@@ -4,6 +4,7 @@ import android.os.Handler;
 
 import com.example.fonos_group13.data.notification.UploadNotificationTokenRepository;
 import com.example.fonos_group13.data.repository.AudioDownloadRepository;
+import com.example.fonos_group13.data.repository.AiChatRepository;
 import com.example.fonos_group13.data.repository.BookCommunityRepository;
 import com.example.fonos_group13.data.repository.AuthRepository;
 import com.example.fonos_group13.data.repository.CatalogRepository;
@@ -23,6 +24,8 @@ public interface AppContainer {
     SavedBooksRepository savedBooksRepository();
 
     BookCommunityRepository bookCommunityRepository();
+
+    AiChatRepository aiChatRepository();
 
     ProgressRepository progressRepository();
 

@@ -2,6 +2,7 @@ package com.example.fonos_group13.data.firestore;
 
 import com.example.fonos_group13.model.AudiobookGenerationStatus;
 import com.example.fonos_group13.model.Book;
+import com.example.fonos_group13.model.AiStatus;
 import com.google.firebase.firestore.DocumentSnapshot;
 
 public final class BookDocumentMapper {
@@ -37,7 +38,9 @@ public final class BookDocumentMapper {
                 (int) FirestoreValueReader.longValue(document, "order"),
                 FirestoreValueReader.doubleValue(document, "ratingAverage"),
                 (int) FirestoreValueReader.longValue(document, "ratingCount"),
-                (int) FirestoreValueReader.longValue(document, "saveCount")
+                (int) FirestoreValueReader.longValue(document, "saveCount"),
+                AiStatus.fromValue(FirestoreValueReader.string(document, "aiStatus")),
+                FirestoreValueReader.string(document, "aiStatusReason")
         );
     }
 }

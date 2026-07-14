@@ -21,6 +21,8 @@ public class Book {
     private final double ratingAverage;
     private final int ratingCount;
     private final int saveCount;
+    private final AiStatus aiStatus;
+    private final String aiStatusReason;
 
     public Book(
             String id,
@@ -43,7 +45,8 @@ public class Book {
     ) {
         this(id, title, author, chapterTitle, contentSample, coverUrl, isbn, audioUrl,
                 audioStoragePath, durationSec, languageCode, voiceGender, creatorUid,
-                generationStatus, featured, published, order, 0, 0, 0);
+                generationStatus, featured, published, order, 0, 0, 0,
+                AiStatus.UNAVAILABLE, null);
     }
 
     public Book(
@@ -68,6 +71,36 @@ public class Book {
             int ratingCount,
             int saveCount
     ) {
+        this(id, title, author, chapterTitle, contentSample, coverUrl, isbn, audioUrl,
+                audioStoragePath, durationSec, languageCode, voiceGender, creatorUid,
+                generationStatus, featured, published, order, ratingAverage, ratingCount,
+                saveCount, AiStatus.UNAVAILABLE, null);
+    }
+
+    public Book(
+            String id,
+            String title,
+            String author,
+            String chapterTitle,
+            String contentSample,
+            String coverUrl,
+            String isbn,
+            String audioUrl,
+            String audioStoragePath,
+            long durationSec,
+            String languageCode,
+            String voiceGender,
+            String creatorUid,
+            AudiobookGenerationStatus generationStatus,
+            boolean featured,
+            boolean published,
+            int order,
+            double ratingAverage,
+            int ratingCount,
+            int saveCount,
+            AiStatus aiStatus,
+            String aiStatusReason
+    ) {
         this.id = id;
         this.title = title;
         this.author = author;
@@ -88,6 +121,8 @@ public class Book {
         this.ratingAverage = Double.isFinite(ratingAverage) ? Math.max(0, ratingAverage) : 0;
         this.ratingCount = Math.max(0, ratingCount);
         this.saveCount = Math.max(0, saveCount);
+        this.aiStatus = aiStatus == null ? AiStatus.UNAVAILABLE : aiStatus;
+        this.aiStatusReason = optionalString(aiStatusReason);
     }
 
     private static String valueOrDefault(String value, String fallback) {
@@ -202,4 +237,8 @@ public class Book {
     public int getRatingCount() { return ratingCount; }
 
     public int getSaveCount() { return saveCount; }
+
+    public AiStatus getAiStatus() { return aiStatus; }
+
+    public String getAiStatusReason() { return aiStatusReason; }
 }
