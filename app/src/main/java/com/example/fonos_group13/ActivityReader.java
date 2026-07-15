@@ -59,6 +59,7 @@ public class ActivityReader extends AppCompatActivity {
     public static final String METADATA_BOOK_ID = "metadata_book_id";
     public static final String METADATA_CHAPTER_ID = "metadata_chapter_id";
     public static final String METADATA_CREATOR_PREVIEW = "metadata_creator_review_preview";
+    public static final String METADATA_SINGLE_CHAPTER_PREVIEW = "metadata_single_chapter_preview";
 
     private final List<BookChapter> currentChapters = new ArrayList<>();
     private final Handler progressHandler = new Handler(Looper.getMainLooper());
@@ -683,6 +684,7 @@ public class ActivityReader extends AppCompatActivity {
         extras.putString(METADATA_BOOK_ID, book.getId());
         extras.putString(METADATA_CHAPTER_ID, chapter.getId());
         extras.putBoolean(METADATA_CREATOR_PREVIEW, creatorPreviewActive);
+        extras.putBoolean(METADATA_SINGLE_CHAPTER_PREVIEW, requestedSingleChapterPreview);
 
         MediaMetadata.Builder metadataBuilder = new MediaMetadata.Builder()
                 .setTitle(chapter.getTitle())

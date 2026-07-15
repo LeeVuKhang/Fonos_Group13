@@ -143,6 +143,7 @@ public class PlaybackService extends MediaSessionService {
             intent = new Intent(this, ActivityReader.class);
             intent.putExtra(ActivityReader.EXTRA_BOOK_ID, bookId);
             intent.putExtra(ActivityReader.EXTRA_CREATOR_PREVIEW, isCurrentCreatorPreview());
+            intent.putExtra(ActivityReader.EXTRA_SINGLE_CHAPTER_PREVIEW, isCurrentSingleChapterPreview());
             if (chapterId != null) {
                 intent.putExtra(ActivityReader.EXTRA_CHAPTER_ID, chapterId);
             }
@@ -212,6 +213,20 @@ public class PlaybackService extends MediaSessionService {
         }
         return currentItem.mediaMetadata.extras.getBoolean(
                 ActivityReader.METADATA_CREATOR_PREVIEW,
+                false
+        );
+    }
+
+    private boolean isCurrentSingleChapterPreview() {
+        if (player == null) {
+            return false;
+        }
+        MediaItem currentItem = player.getCurrentMediaItem();
+        if (currentItem == null || currentItem.mediaMetadata.extras == null) {
+            return false;
+        }
+        return currentItem.mediaMetadata.extras.getBoolean(
+                ActivityReader.METADATA_SINGLE_CHAPTER_PREVIEW,
                 false
         );
     }

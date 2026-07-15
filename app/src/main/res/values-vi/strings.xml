@@ -27,6 +27,8 @@
     <string name="book_content_sample">Nội dung mẫu</string>
     <string name="my_uploads_add_chapter">+ Thêm chương</string>
     <string name="playback_notification_channel_name">Phát sách nói</string>
+    <string name="mini_player_book_author">%1$s &#8226; %2$s</string>
+    <string name="mini_player_open_reader">Mở trình phát cho %1$s, %2$s</string>
     <string name="generation_notification_channel_name">Tạo sách nói</string>
     <string name="community_no_ratings">Chưa có đánh giá</string>
     <string name="community_rating_summary">★ %1$.1f (%2$d đánh giá)</string>

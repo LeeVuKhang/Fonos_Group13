@@ -26,6 +26,8 @@
     <string name="book_content_sample">Sample content</string>
     <string name="my_uploads_add_chapter">+ Add Chapter</string>
     <string name="playback_notification_channel_name">Audiobook playback</string>
+    <string name="mini_player_book_author">%1$s &#8226; %2$s</string>
+    <string name="mini_player_open_reader">Open audiobook player for %1$s, %2$s</string>
     <string name="generation_notification_channel_name">Audiobook generation</string>
     <string name="community_no_ratings">No ratings yet</string>
     <string name="community_rating_summary">★ %1$.1f (%2$d ratings)</string>
