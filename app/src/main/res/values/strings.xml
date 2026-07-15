@@ -94,6 +94,7 @@
     <string name="ai_not_ready_preview">Ask AI is available only for published, visible audiobooks.</string>
     <string name="ai_error_rate_limit">You have reached the AI usage limit. Please try again later.</string>
     <string name="ai_error_provider">The AI provider is temporarily unavailable. Please retry.</string>
+    <string name="ai_error_provider_retry_after">The AI provider is temporarily unavailable. Retry in %1$d seconds.</string>
     <string name="ai_error_not_ready">This book is not ready for Ask AI yet.</string>
     <string name="ai_error_generic">Could not get an answer. Check your connection and retry.</string>
     <string name="ai_rotation_cancelled">The request was canceled during the screen change. Tap Retry.</string>

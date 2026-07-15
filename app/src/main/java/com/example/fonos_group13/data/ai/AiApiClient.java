@@ -101,6 +101,12 @@ final class AiApiClient implements AiBackendDataSource {
                 }
                 int status = connection.getResponseCode();
                 String response = readBody(connection, status);
+                if (status < 200 || status >= 300) {
+                    Integer retryAfterSeconds = AiApiContract.parseRetryAfterSeconds(
+                            connection.getHeaderField("Retry-After")
+                    );
+                    throw AiApiContract.parseError(status, response, retryAfterSeconds);
+                }
                 AiResponse parsed = AiApiContract.parseResponse(status, response);
                 mainHandler.post(() -> {
                     if (requestGeneration == generation.get()) callback.onSuccess(parsed);

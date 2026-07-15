@@ -36,6 +36,16 @@ public class AiChatFeatureConfigurationTest {
         assertTrue(layout.contains("app:strokeColor=\"@color/control_stroke\""));
     }
 
+    @Test public void providerRetryAfterSurvivesRotationAndLocksManualRetry() throws Exception {
+        String activity = read("src/main/java/com/example/fonos_group13/AiChatActivity.java");
+        String client = read("src/main/java/com/example/fonos_group13/data/ai/AiApiClient.java");
+
+        assertTrue(activity.contains("STATE_RETRY_REMAINING_MS"));
+        assertTrue(activity.contains("getRetryAfterSeconds()"));
+        assertTrue(activity.contains("retryButton.setEnabled(showRetry && retryRemainingMs() <= 0L)"));
+        assertTrue(client.contains("getHeaderField(\"Retry-After\")"));
+    }
+
     private static String read(String path) throws Exception {
         return new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.UTF_8);
     }

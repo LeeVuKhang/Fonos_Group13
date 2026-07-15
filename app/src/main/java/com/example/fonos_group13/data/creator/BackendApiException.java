@@ -8,12 +8,21 @@ public class BackendApiException extends Exception {
     private final int statusCode;
     private final String errorCode;
     private final String details;
+    private final Integer retryAfterSeconds;
 
     public BackendApiException(int statusCode, String errorCode, String message, String details) {
+        this(statusCode, errorCode, message, details, null);
+    }
+
+    public BackendApiException(int statusCode, String errorCode, String message, String details,
+                               Integer retryAfterSeconds) {
         super(message == null || message.trim().isEmpty() ? "Backend request failed." : message);
         this.statusCode = statusCode;
         this.errorCode = errorCode == null || errorCode.trim().isEmpty() ? "http_error" : errorCode;
         this.details = details;
+        this.retryAfterSeconds = retryAfterSeconds != null && retryAfterSeconds > 0
+                ? retryAfterSeconds
+                : null;
     }
 
     public int getStatusCode() {
@@ -26,6 +35,10 @@ public class BackendApiException extends Exception {
 
     public String getDetails() {
         return details;
+    }
+
+    public Integer getRetryAfterSeconds() {
+        return retryAfterSeconds;
     }
 
     public String getValidationMessageForField(String fieldName) {

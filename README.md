@@ -342,6 +342,8 @@ The debug APK is written to `app/build/outputs/apk/debug/`. Instrumentation uses
   published book, and network connectivity. It uses non-streamed responses,
   keeps no persistent history, limits questions to 1,000 characters, and maps
   readiness, rate-limit, provider, and offline failures to retryable UI states.
+  Provider `Retry-After` responses keep the pending request but disable manual
+  retry until the backend circuit permits another attempt.
 - Notification permission denial does not block generation or other creator
   operations.
 
