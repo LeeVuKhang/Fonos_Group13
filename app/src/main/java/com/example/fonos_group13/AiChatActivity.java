@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -52,6 +53,7 @@ public final class AiChatActivity extends AppCompatActivity {
     private static final String STATE_SPOILER_CONFIRMED = "ai_spoiler_confirmed";
     private static final String STATE_PENDING = "ai_pending";
     private static final String STATE_WAS_LOADING = "ai_was_loading";
+    private static final String STATE_RETRY_REMAINING_MS = "ai_retry_remaining_ms";
 
     private final ArrayList<AiChatMessage> messages = new ArrayList<>();
     private final ArrayList<String> chapterIds = new ArrayList<>();
@@ -62,6 +64,18 @@ public final class AiChatActivity extends AppCompatActivity {
     private boolean spoilerConfirmed;
     private boolean loading;
     private PendingRequest retryRequest;
+    private long retryBlockedUntilMs;
+    private final Runnable retryUnlockRunnable = this::unlockRetry;
+
+    private void unlockRetry() {
+        retryBlockedUntilMs = 0L;
+        if (retryButton != null) {
+            retryButton.setEnabled(true);
+            retryButton.setVisibility(retryRequest != null && statusMessage.getVisibility() == View.VISIBLE
+                    ? View.VISIBLE
+                    : View.GONE);
+        }
+    }
 
     private Spinner scopeSpinner;
     private androidx.core.widget.NestedScrollView messagesScroll;
@@ -126,6 +140,11 @@ public final class AiChatActivity extends AppCompatActivity {
         super.onStop();
     }
 
+    @Override protected void onDestroy() {
+        if (retryButton != null) retryButton.removeCallbacks(retryUnlockRunnable);
+        super.onDestroy();
+    }
+
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
@@ -133,6 +152,7 @@ public final class AiChatActivity extends AppCompatActivity {
         outState.putInt(STATE_SCOPE_INDEX, scopeSpinner.getSelectedItemPosition());
         outState.putBoolean(STATE_SPOILER_CONFIRMED, spoilerConfirmed);
         outState.putBoolean(STATE_WAS_LOADING, loading);
+        outState.putLong(STATE_RETRY_REMAINING_MS, retryRemainingMs());
         if (retryRequest != null) outState.putSerializable(STATE_PENDING, retryRequest);
     }
 
@@ -221,6 +241,8 @@ public final class AiChatActivity extends AppCompatActivity {
         spoilerConfirmed = state.getBoolean(STATE_SPOILER_CONFIRMED, false);
         Serializable pending = state.getSerializable(STATE_PENDING);
         if (pending instanceof PendingRequest) retryRequest = (PendingRequest) pending;
+        long retryRemainingMs = state.getLong(STATE_RETRY_REMAINING_MS, 0L);
+        if (retryRemainingMs > 0L) blockRetryForMs(retryRemainingMs);
         if (state.getBoolean(STATE_WAS_LOADING, false) && retryRequest != null) {
             showError(getString(R.string.ai_rotation_cancelled), true);
         }
@@ -232,6 +254,7 @@ public final class AiChatActivity extends AppCompatActivity {
         clearButton.setOnClickListener(view -> {
             messages.clear();
             retryRequest = null;
+            clearRetryBlock();
             hideStatus();
             renderMessages();
         });
@@ -247,7 +270,12 @@ public final class AiChatActivity extends AppCompatActivity {
         starterThemes.setOnClickListener(view -> beginRequest("question", getString(R.string.ai_prompt_themes)));
         starterCharacters.setOnClickListener(view -> beginRequest("question", getString(R.string.ai_prompt_characters)));
         retryButton.setOnClickListener(view -> {
-            if (retryRequest != null) dispatch(retryRequest);
+            int remainingSeconds = retryRemainingSeconds();
+            if (remainingSeconds > 0) {
+                showError(getString(R.string.ai_error_provider_retry_after, remainingSeconds), true);
+            } else if (retryRequest != null) {
+                dispatch(retryRequest);
+            }
         });
     }
 
@@ -301,11 +329,19 @@ public final class AiChatActivity extends AppCompatActivity {
                                 response.getCitations()
                         ));
                         retryRequest = null;
+                        clearRetryBlock();
                         renderMessages();
                     }
 
                     @Override public void onError(Exception exception) {
                         setLoading(false);
+                        if (exception instanceof BackendApiException) {
+                            BackendApiException apiException = (BackendApiException) exception;
+                            if ("ai_provider_unavailable".equals(apiException.getErrorCode())
+                                    && apiException.getRetryAfterSeconds() != null) {
+                                blockRetry(apiException.getRetryAfterSeconds());
+                            }
+                        }
                         showError(errorMessage(exception), true);
                     }
                 });
@@ -428,7 +464,9 @@ public final class AiChatActivity extends AppCompatActivity {
         statusMessage.setText(message);
         statusMessage.setTextColor(ContextCompat.getColor(this, R.color.error_text));
         statusMessage.setVisibility(View.VISIBLE);
-        retryButton.setVisibility(retry && retryRequest != null ? View.VISIBLE : View.GONE);
+        boolean showRetry = retry && retryRequest != null;
+        retryButton.setVisibility(showRetry ? View.VISIBLE : View.GONE);
+        retryButton.setEnabled(showRetry && retryRemainingMs() <= 0L);
     }
 
     private void hideStatus() {
@@ -440,12 +478,46 @@ public final class AiChatActivity extends AppCompatActivity {
 
     private String errorMessage(Exception exception) {
         if (exception instanceof BackendApiException) {
-            String code = ((BackendApiException) exception).getErrorCode();
+            BackendApiException apiException = (BackendApiException) exception;
+            String code = apiException.getErrorCode();
             if ("ai_rate_limit_exceeded".equals(code)) return getString(R.string.ai_error_rate_limit);
-            if ("ai_provider_unavailable".equals(code)) return getString(R.string.ai_error_provider);
+            if ("ai_provider_unavailable".equals(code)) {
+                Integer retryAfterSeconds = apiException.getRetryAfterSeconds();
+                return retryAfterSeconds == null
+                        ? getString(R.string.ai_error_provider)
+                        : getString(R.string.ai_error_provider_retry_after, retryAfterSeconds);
+            }
             if ("ai_not_ready".equals(code)) return getString(R.string.ai_error_not_ready);
         }
         return getString(R.string.ai_error_generic);
+    }
+
+    private void blockRetry(int seconds) {
+        blockRetryForMs(Math.max(1L, seconds) * 1000L);
+    }
+
+    private void blockRetryForMs(long durationMs) {
+        retryButton.removeCallbacks(retryUnlockRunnable);
+        retryBlockedUntilMs = SystemClock.elapsedRealtime() + Math.max(1L, durationMs);
+        retryButton.setEnabled(false);
+        retryButton.postDelayed(retryUnlockRunnable, durationMs);
+    }
+
+    private void clearRetryBlock() {
+        retryBlockedUntilMs = 0L;
+        if (retryButton != null) {
+            retryButton.removeCallbacks(retryUnlockRunnable);
+            retryButton.setEnabled(true);
+        }
+    }
+
+    private long retryRemainingMs() {
+        return Math.max(0L, retryBlockedUntilMs - SystemClock.elapsedRealtime());
+    }
+
+    private int retryRemainingSeconds() {
+        long remainingMs = retryRemainingMs();
+        return remainingMs <= 0L ? 0 : (int) Math.max(1L, (remainingMs + 999L) / 1000L);
     }
 
     private String appLocale() {

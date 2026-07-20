@@ -2,6 +2,7 @@ package com.example.fonos_group13.data.ai;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 
 import com.example.fonos_group13.data.creator.BackendApiException;
 import com.example.fonos_group13.model.AiChatMessage;
@@ -47,5 +48,12 @@ public class AiApiContractTest {
                 "{\"error\":{\"code\":\"ai_rate_limit_exceeded\",\"message\":\"Slow down\"}}");
         assertEquals(429, error.getStatusCode());
         assertEquals("ai_rate_limit_exceeded", error.getErrorCode());
+
+        BackendApiException unavailable = AiApiContract.parseError(503,
+                "{\"error\":{\"code\":\"ai_provider_unavailable\",\"message\":\"Retry later\"}}",
+                AiApiContract.parseRetryAfterSeconds("17"));
+        assertEquals(Integer.valueOf(17), unavailable.getRetryAfterSeconds());
+        assertEquals(Integer.valueOf(86400), AiApiContract.parseRetryAfterSeconds("999999"));
+        assertNull(AiApiContract.parseRetryAfterSeconds("not-a-number"));
     }
 }

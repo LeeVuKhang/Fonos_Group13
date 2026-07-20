@@ -26,6 +26,8 @@
     <string name="book_content_sample">Sample content</string>
     <string name="my_uploads_add_chapter">+ Add Chapter</string>
     <string name="playback_notification_channel_name">Audiobook playback</string>
+    <string name="mini_player_book_author">%1$s &#8226; %2$s</string>
+    <string name="mini_player_open_reader">Open audiobook player for %1$s, %2$s</string>
     <string name="generation_notification_channel_name">Audiobook generation</string>
     <string name="community_no_ratings">No ratings yet</string>
     <string name="community_rating_summary">★ %1$.1f (%2$d ratings)</string>
@@ -94,6 +96,7 @@
     <string name="ai_not_ready_preview">Ask AI is available only for published, visible audiobooks.</string>
     <string name="ai_error_rate_limit">You have reached the AI usage limit. Please try again later.</string>
     <string name="ai_error_provider">The AI provider is temporarily unavailable. Please retry.</string>
+    <string name="ai_error_provider_retry_after">The AI provider is temporarily unavailable. Retry in %1$d seconds.</string>
     <string name="ai_error_not_ready">This book is not ready for Ask AI yet.</string>
     <string name="ai_error_generic">Could not get an answer. Check your connection and retry.</string>
     <string name="ai_rotation_cancelled">The request was canceled during the screen change. Tap Retry.</string>

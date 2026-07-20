@@ -57,7 +57,7 @@ trusted generation settings from the user.
 | Images | Glide |
 | Local state | App-private files and SharedPreferences |
 | Creator generation | Node.js backend, AWS Polly, and S3 |
-| Book AI | Authenticated backend, Gemini chat/embeddings, Firestore vector search |
+| Book AI | Authenticated backend, DeepSeek chat, Gemini embeddings, Firestore vector search |
 | Tests | JUnit 4, AndroidX Test, and Espresso |
 
 ## Architecture
@@ -273,10 +273,11 @@ needed. Use the development machine's reachable LAN address for a physical
 device. Release builds require an explicitly configured HTTPS URL; otherwise
 their backend URL is empty.
 
-Run and configure the companion backend with Firebase Admin, AWS, S3, and a
-backend-only Gemini API key before testing generation or Ask AI. Deploy its
-Firestore rules and both 768-dimensional vector indexes, populate complete
-`sourceText` for every published chapter, then run `npm run ai:index -- --all`.
+Run and configure the companion backend with Firebase Admin, AWS, S3, a
+backend-only DeepSeek API key for chat, and a backend-only Gemini API key for
+embeddings before testing generation or Ask AI. Deploy its Firestore rules and
+both 768-dimensional vector indexes, populate complete `sourceText` for every
+published chapter, then run `npm run ai:index -- --all`.
 Backend setup and route contracts are
 documented in the [Fonos Backend repository](https://github.com/LeeVuKhang/Fonos_Backend).
 
@@ -342,6 +343,8 @@ The debug APK is written to `app/build/outputs/apk/debug/`. Instrumentation uses
   published book, and network connectivity. It uses non-streamed responses,
   keeps no persistent history, limits questions to 1,000 characters, and maps
   readiness, rate-limit, provider, and offline failures to retryable UI states.
+  Provider `Retry-After` responses keep the pending request but disable manual
+  retry until the backend circuit permits another attempt.
 - Notification permission denial does not block generation or other creator
   operations.
 

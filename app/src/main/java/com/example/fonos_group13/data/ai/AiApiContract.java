@@ -78,6 +78,10 @@ final class AiApiContract {
     }
 
     static BackendApiException parseError(int statusCode, String body) {
+        return parseError(statusCode, body, null);
+    }
+
+    static BackendApiException parseError(int statusCode, String body, Integer retryAfterSeconds) {
         try {
             JSONObject error = new JSONObject(emptyJson(body)).getJSONObject("error");
             Object details = error.opt("details");
@@ -85,10 +89,28 @@ final class AiApiContract {
                     statusCode,
                     error.optString("code", "http_error"),
                     error.optString("message", "AI request failed."),
-                    details == null || details == JSONObject.NULL ? null : String.valueOf(details)
+                    details == null || details == JSONObject.NULL ? null : String.valueOf(details),
+                    retryAfterSeconds
             );
         } catch (JSONException exception) {
-            return new BackendApiException(statusCode, "http_error", "AI request failed.", null);
+            return new BackendApiException(
+                    statusCode,
+                    "http_error",
+                    "AI request failed.",
+                    null,
+                    retryAfterSeconds
+            );
+        }
+    }
+
+    static Integer parseRetryAfterSeconds(String value) {
+        if (value == null || value.trim().isEmpty()) return null;
+        try {
+            long seconds = Long.parseLong(value.trim());
+            if (seconds <= 0) return null;
+            return (int) Math.min(seconds, 86_400L);
+        } catch (NumberFormatException ignored) {
+            return null;
         }
     }
 
